@@ -120,7 +120,7 @@ export default function Dashboard() {
       {/* TÍTULO */}
       <div>
         <h1 className="text-3xl font-bold">
-          Dashboard Executivo
+          Dashboard F.Vieira
         </h1>
         <p className="text-gray-500">
           Visão geral do sistema
