@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getAuth } from "firebase/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -16,12 +22,42 @@ export default function Dashboard() {
   const [filtro, setFiltro] = useState("");
   const [mostrarLista, setMostrarLista] = useState(false);
 
+  const [empresa, setEmpresa] = useState("...");
+
   const router = useRouter();
 
   useEffect(() => {
     carregarIndicadores();
     carregarMateriais();
+    carregarEmpresa();
   }, []);
+
+  // =========================
+  // CARREGAR EMPRESA DINÂMICA
+  // =========================
+  async function carregarEmpresa() {
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+
+      if (!user) {
+        setEmpresa("Sistema");
+        return;
+      }
+
+      const usuarioRef = doc(db, "usuarios", user.uid);
+      const usuarioSnap = await getDoc(usuarioRef);
+
+      if (usuarioSnap.exists()) {
+        setEmpresa(usuarioSnap.data().empresa || "Sistema");
+      } else {
+        setEmpresa("Sistema");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar empresa:", error);
+      setEmpresa("Sistema");
+    }
+  }
 
   // =========================
   // INDICADORES EXECUTIVOS
@@ -117,10 +153,10 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-10">
 
-      {/* TÍTULO */}
+      {/* TÍTULO DINÂMICO */}
       <div>
         <h1 className="text-3xl font-bold">
-          Dashboard F.Vieira
+          Dashboard {empresa}
         </h1>
         <p className="text-gray-500">
           Visão geral do sistema
