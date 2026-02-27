@@ -33,6 +33,7 @@ export default function Dashboard() {
 
   const [empresa, setEmpresa] = useState("...");
   const [graficoData, setGraficoData] = useState<any[]>([]);
+  const [mostrarGrafico, setMostrarGrafico] = useState(false);
 
   const router = useRouter();
 
@@ -42,9 +43,6 @@ export default function Dashboard() {
     carregarEmpresa();
   }, []);
 
-  // =========================
-  // EMPRESA DINÂMICA
-  // =========================
   async function carregarEmpresa() {
     try {
       const auth = getAuth();
@@ -69,9 +67,6 @@ export default function Dashboard() {
     }
   }
 
-  // =========================
-  // INDICADORES + GRÁFICO
-  // =========================
   async function carregarIndicadores() {
     const obrasSnap = await getDocs(collection(db, "obras"));
 
@@ -124,9 +119,6 @@ export default function Dashboard() {
     setTotalEstoque(estoqueTotal);
   }
 
-  // =========================
-  // BUSCA INTELIGENTE
-  // =========================
   async function carregarMateriais() {
     const obrasSnap = await getDocs(collection(db, "obras"));
 
@@ -175,7 +167,6 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-10">
 
-      {/* TÍTULO */}
       <div>
         <h1 className="text-3xl font-bold">
           Dashboard {empresa}
@@ -185,7 +176,6 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* BOTÃO */}
       <Link
         href="/dashboard/cadastrar-material"
         className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-medium"
@@ -193,32 +183,37 @@ export default function Dashboard() {
         + Cadastrar Material
       </Link>
 
-      {/* CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card titulo="Obras" valor={totalObras} />
         <Card titulo="Setores" valor={totalSetores} />
         <Card titulo="Materiais" valor={totalMateriais} />
-        <Card titulo="Total em Estoque" valor={totalEstoque} />
+
+        <div
+          onClick={() => setMostrarGrafico(!mostrarGrafico)}
+          className="cursor-pointer"
+        >
+          <Card titulo="Total em Estoque" valor={totalEstoque} />
+        </div>
       </div>
 
-      {/* GRÁFICO EXECUTIVO */}
-      <div className="bg-white p-6 rounded-xl shadow">
-        <h2 className="font-semibold text-lg mb-4">
-          Estoque por Obra
-        </h2>
+      {mostrarGrafico && (
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h2 className="font-semibold text-lg mb-4">
+            Estoque por Obra
+          </h2>
 
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={graficoData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="obra" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="estoque" fill="#7c3aed" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={graficoData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="obra" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="estoque" fill="#7c3aed" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
-      {/* BUSCA */}
       <div className="bg-white p-6 rounded-xl shadow relative">
         <h2 className="font-semibold text-lg mb-4">
           Buscar Material

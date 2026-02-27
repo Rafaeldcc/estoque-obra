@@ -116,6 +116,7 @@ export default function CadastrarMaterial() {
     carregarSetores();
   }
 
+  // 🔥 FUNÇÃO PRINCIPAL COM HISTÓRICO
   async function salvarMaterial() {
     if (
       !nomeMaterial.trim() ||
@@ -142,6 +143,7 @@ export default function CadastrarMaterial() {
     const snap = await getDocs(q);
 
     if (!snap.empty) {
+      // 🔹 Atualiza saldo
       const docRef = snap.docs[0].ref;
       const saldoAtual =
         snap.docs[0].data().saldo || 0;
@@ -149,7 +151,9 @@ export default function CadastrarMaterial() {
       await updateDoc(docRef, {
         saldo: saldoAtual + quantidade,
       });
+
     } else {
+      // 🔹 Cria novo material
       await addDoc(materiaisRef, {
         nome: nomeMaterial.trim(),
         saldo: quantidade,
@@ -157,6 +161,20 @@ export default function CadastrarMaterial() {
         criadoEm: new Date(),
       });
     }
+
+    // 🔥 REGISTRA HISTÓRICO GLOBAL
+    await addDoc(
+      collection(db, "historico_movimentacoes"),
+      {
+        tipo: "entrada",
+        nomeMaterial: nomeMaterial.trim(),
+        quantidade,
+        obraId,
+        setorId,
+        unidade,
+        data: new Date(),
+      }
+    );
 
     setNomeMaterial("");
     setQuantidade(0);
@@ -237,7 +255,7 @@ export default function CadastrarMaterial() {
         </button>
       </div>
 
-      {/* NOME MATERIAL INTELIGENTE */}
+      {/* MATERIAL */}
       <div className="relative">
         <input
           placeholder="Nome do material"
