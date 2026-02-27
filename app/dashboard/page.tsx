@@ -11,6 +11,15 @@ import { db } from "@/lib/firebase";
 import { getAuth } from "firebase/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 
 export default function Dashboard() {
   const [totalObras, setTotalObras] = useState(0);
@@ -23,6 +32,7 @@ export default function Dashboard() {
   const [mostrarLista, setMostrarLista] = useState(false);
 
   const [empresa, setEmpresa] = useState("...");
+  const [graficoData, setGraficoData] = useState<any[]>([]);
 
   const router = useRouter();
 
@@ -33,7 +43,7 @@ export default function Dashboard() {
   }, []);
 
   // =========================
-  // CARREGAR EMPRESA DINÂMICA
+  // EMPRESA DINÂMICA
   // =========================
   async function carregarEmpresa() {
     try {
@@ -60,7 +70,7 @@ export default function Dashboard() {
   }
 
   // =========================
-  // INDICADORES EXECUTIVOS
+  // INDICADORES + GRÁFICO
   // =========================
   async function carregarIndicadores() {
     const obrasSnap = await getDocs(collection(db, "obras"));
@@ -69,7 +79,11 @@ export default function Dashboard() {
     let materiaisCount = 0;
     let estoqueTotal = 0;
 
+    let dadosGrafico: any[] = [];
+
     for (const obraDoc of obrasSnap.docs) {
+      let estoquePorObra = 0;
+
       const setoresSnap = await getDocs(
         collection(db, "obras", obraDoc.id, "setores")
       );
@@ -91,11 +105,19 @@ export default function Dashboard() {
         materiaisCount += materiaisSnap.size;
 
         materiaisSnap.forEach((doc) => {
-          estoqueTotal += doc.data().saldo ?? 0;
+          const saldo = doc.data().saldo ?? 0;
+          estoqueTotal += saldo;
+          estoquePorObra += saldo;
         });
       }
+
+      dadosGrafico.push({
+        obra: obraDoc.data().nome,
+        estoque: estoquePorObra,
+      });
     }
 
+    setGraficoData(dadosGrafico);
     setTotalObras(obrasSnap.size);
     setTotalSetores(setoresCount);
     setTotalMateriais(materiaisCount);
@@ -153,7 +175,7 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-10">
 
-      {/* TÍTULO DINÂMICO */}
+      {/* TÍTULO */}
       <div>
         <h1 className="text-3xl font-bold">
           Dashboard {empresa}
@@ -163,7 +185,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* BOTÃO PRINCIPAL */}
+      {/* BOTÃO */}
       <Link
         href="/dashboard/cadastrar-material"
         className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-medium"
@@ -171,17 +193,32 @@ export default function Dashboard() {
         + Cadastrar Material
       </Link>
 
-      {/* CARDS EXECUTIVOS */}
+      {/* CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-
         <Card titulo="Obras" valor={totalObras} />
         <Card titulo="Setores" valor={totalSetores} />
         <Card titulo="Materiais" valor={totalMateriais} />
         <Card titulo="Total em Estoque" valor={totalEstoque} />
-
       </div>
 
-      {/* BUSCA INTELIGENTE */}
+      {/* GRÁFICO EXECUTIVO */}
+      <div className="bg-white p-6 rounded-xl shadow">
+        <h2 className="font-semibold text-lg mb-4">
+          Estoque por Obra
+        </h2>
+
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={graficoData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="obra" />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="estoque" fill="#7c3aed" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* BUSCA */}
       <div className="bg-white p-6 rounded-xl shadow relative">
         <h2 className="font-semibold text-lg mb-4">
           Buscar Material
