@@ -18,7 +18,6 @@ export default function RootLayout({
             <nav style={{ marginTop: 30 }}>
               <MenuLink href="/dashboard">Dashboard</MenuLink>
 
-              {/* NOVO BOTÃO OBRAS */}
               <MenuLink href="/dashboard/obras">
                 Obras
               </MenuLink>
@@ -30,6 +29,12 @@ export default function RootLayout({
               <MenuLink href="/dashboard/estoque-total">
                 Estoque Total
               </MenuLink>
+
+              {/* 🔥 NOVO BOTÃO */}
+              <MenuLink href="/dashboard/historico">
+                Movimentações
+              </MenuLink>
+
             </nav>
           </aside>
 
