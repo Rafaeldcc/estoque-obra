@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
+import { registrarMovimentacao } from "@/lib/movimentacoes";
+import { getAuth } from "firebase/auth";
 import {
   collection,
   getDocs,
@@ -65,7 +67,6 @@ export default function Controle() {
       });
     }
 
-    // 🔥 AGRUPA E SOMA MATERIAIS IGUAIS
     const agrupado: any = {};
 
     todos.forEach((item) => {
@@ -83,7 +84,9 @@ export default function Controle() {
     const qtd = quantidades[material.id];
     if (!qtd || qtd <= 0) return;
 
-    // Atualiza todos os setores que possuem esse material
+    const auth = getAuth();
+    const user = auth.currentUser;
+
     const setoresSnap = await getDocs(
       collection(db, "obras", obraSelecionada, "setores")
     );
@@ -104,6 +107,66 @@ export default function Controle() {
         atualizadoEm: new Date(),
       }).catch(() => {});
     }
+
+    await registrarMovimentacao({
+      materialId: material.id,
+      materialNome: material.nome,
+      tipo: "entrada",
+      quantidade: qtd,
+      obraId: obraSelecionada,
+      obraNome:
+        obras.find((o) => o.id === obraSelecionada)?.nome || "",
+      usuarioId: user?.uid || "",
+      usuarioNome: user?.email || "",
+    });
+
+    carregarMateriais(obraSelecionada);
+  }
+
+  async function saida(material: any) {
+    const qtd = quantidades[material.id];
+    if (!qtd || qtd <= 0) return;
+
+    if (qtd > material.saldo) {
+      alert("Quantidade maior que o saldo disponível.");
+      return;
+    }
+
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    const setoresSnap = await getDocs(
+      collection(db, "obras", obraSelecionada, "setores")
+    );
+
+    for (const setorDoc of setoresSnap.docs) {
+      const materialRef = doc(
+        db,
+        "obras",
+        obraSelecionada,
+        "setores",
+        setorDoc.id,
+        "materiais",
+        material.id
+      );
+
+      await updateDoc(materialRef, {
+        saldo: increment(-qtd),
+        atualizadoEm: new Date(),
+      }).catch(() => {});
+    }
+
+    await registrarMovimentacao({
+      materialId: material.id,
+      materialNome: material.nome,
+      tipo: "saida",
+      quantidade: qtd,
+      obraId: obraSelecionada,
+      obraNome:
+        obras.find((o) => o.id === obraSelecionada)?.nome || "",
+      usuarioId: user?.uid || "",
+      usuarioNome: user?.email || "",
+    });
 
     carregarMateriais(obraSelecionada);
   }
@@ -180,6 +243,13 @@ export default function Controle() {
               onClick={() => entrada(material)}
             >
               Entrada
+            </button>
+
+            <button
+              style={{ marginLeft: 10, background: "orange", color: "white" }}
+              onClick={() => saida(material)}
+            >
+              Saída
             </button>
 
             <button
