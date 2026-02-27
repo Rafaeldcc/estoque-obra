@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
-import { getAuth } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import {
   collection,
   getDocs,
@@ -13,10 +13,17 @@ import {
   increment,
 } from "firebase/firestore";
 
+type Material = {
+  id: string;
+  nome: string;
+  saldo: number;
+  unidade?: string;
+};
+
 export default function Controle() {
   const [obras, setObras] = useState<any[]>([]);
   const [obraSelecionada, setObraSelecionada] = useState("");
-  const [materiais, setMateriais] = useState<any[]>([]);
+  const [materiais, setMateriais] = useState<Material[]>([]);
   const [quantidades, setQuantidades] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
@@ -58,34 +65,39 @@ export default function Controle() {
       );
 
       materiaisSnap.docs.forEach((doc) => {
+        const data = doc.data();
         todos.push({
           id: doc.id,
-          setorId: setorDoc.id,
-          setorNome: setorDoc.data().nome,
-          ...doc.data(),
+          nome: data.nome,
+          saldo: data.saldo || 0,
+          unidade: data.unidade || "",
         });
       });
     }
 
-    const agrupado: any = {};
+    // Agrupar materiais iguais
+    const agrupado: { [key: string]: Material } = {};
 
     todos.forEach((item) => {
       if (!agrupado[item.id]) {
         agrupado[item.id] = { ...item };
       } else {
-        agrupado[item.id].saldo += item.saldo;
+        agrupado[item.id].saldo += item.saldo || 0;
       }
     });
 
     setMateriais(Object.values(agrupado));
   }
 
-  async function entrada(material: any) {
+  async function entrada(material: Material) {
     const qtd = quantidades[material.id];
     if (!qtd || qtd <= 0) return;
 
-    const auth = getAuth();
     const user = auth.currentUser;
+    if (!user) {
+      alert("Usuário não autenticado.");
+      return;
+    }
 
     const setoresSnap = await getDocs(
       collection(db, "obras", obraSelecionada, "setores")
@@ -110,20 +122,20 @@ export default function Controle() {
 
     await registrarMovimentacao({
       materialId: material.id,
-      materialNome: material.nome,
+      materialNome: material.nome || "",
       tipo: "entrada",
       quantidade: qtd,
       obraId: obraSelecionada,
       obraNome:
         obras.find((o) => o.id === obraSelecionada)?.nome || "",
-      usuarioId: user?.uid || "",
-      usuarioNome: user?.email || "",
+      usuarioId: user.uid,
+      usuarioNome: user.email || "",
     });
 
     carregarMateriais(obraSelecionada);
   }
 
-  async function saida(material: any) {
+  async function saida(material: Material) {
     const qtd = quantidades[material.id];
     if (!qtd || qtd <= 0) return;
 
@@ -132,8 +144,11 @@ export default function Controle() {
       return;
     }
 
-    const auth = getAuth();
     const user = auth.currentUser;
+    if (!user) {
+      alert("Usuário não autenticado.");
+      return;
+    }
 
     const setoresSnap = await getDocs(
       collection(db, "obras", obraSelecionada, "setores")
@@ -158,20 +173,20 @@ export default function Controle() {
 
     await registrarMovimentacao({
       materialId: material.id,
-      materialNome: material.nome,
+      materialNome: material.nome || "",
       tipo: "saida",
       quantidade: qtd,
       obraId: obraSelecionada,
       obraNome:
         obras.find((o) => o.id === obraSelecionada)?.nome || "",
-      usuarioId: user?.uid || "",
-      usuarioNome: user?.email || "",
+      usuarioId: user.uid,
+      usuarioNome: user.email || "",
     });
 
     carregarMateriais(obraSelecionada);
   }
 
-  async function excluir(material: any) {
+  async function excluir(material: Material) {
     const setoresSnap = await getDocs(
       collection(db, "obras", obraSelecionada, "setores")
     );

@@ -1,17 +1,19 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
+// 🔥 Configuração via variáveis de ambiente
 const firebaseConfig = {
-  apiKey: "AIzaSyDVPQV37mBO5QfknQcnhHCCu7KjAblwgzw",
-  authDomain: "estoque-obra.firebaseapp.com",
-  projectId: "estoque-obra",
-  storageBucket: "estoque-obra.firebasestorage.app",
-  messagingSenderId: "598372144788",
-  appId: "1:598372144788:web:25d3028b9d7f6684d0681"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
-const app = initializeApp(firebaseConfig);
+// 🔥 Evita erro de múltiplas inicializações no Next.js
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);

@@ -17,43 +17,59 @@ export default function EstoqueGlobalSection() {
 
   useEffect(() => {
     async function carregarMateriais() {
-      const obrasSnapshot = await getDocs(collection(db, "obras"));
+      try {
+        const obrasSnapshot = await getDocs(collection(db, "obras"));
 
-      const mapa: { [key: string]: number } = {};
+        const mapa: { [key: string]: number } = {};
 
-      for (const obraDoc of obrasSnapshot.docs) {
-        const setoresSnapshot = await getDocs(
-          collection(db, `obras/${obraDoc.id}/setores`)
-        );
+        for (const obraDoc of obrasSnapshot.docs) {
+          const obraId = obraDoc.id;
 
-        for (const setorDoc of setoresSnapshot.docs) {
-          const materiaisSnapshot = await getDocs(
-            collection(
-              db,
-              `obras/${obraDoc.id}/setores/${setorDoc.id}/materiais`
-            )
+          const setoresSnapshot = await getDocs(
+            collection(db, "obras", obraId, "setores")
           );
 
-          materiaisSnapshot.forEach((matDoc) => {
-            const mat = matDoc.data();
+          for (const setorDoc of setoresSnapshot.docs) {
+            const setorId = setorDoc.id;
 
-            if (!mapa[mat.nome]) {
-              mapa[mat.nome] = 0;
-            }
+            const materiaisSnapshot = await getDocs(
+              collection(
+                db,
+                "obras",
+                obraId,
+                "setores",
+                setorId,
+                "materiais"
+              )
+            );
 
-            mapa[mat.nome] += mat.quantidade;
-          });
+            materiaisSnapshot.forEach((matDoc) => {
+              const mat = matDoc.data();
+
+              if (!mat.nome) return;
+
+              const saldo = mat.saldo || 0; // 🔥 PADRONIZADO
+
+              if (!mapa[mat.nome]) {
+                mapa[mat.nome] = 0;
+              }
+
+              mapa[mat.nome] += saldo;
+            });
+          }
         }
+
+        const lista: MaterialGlobal[] = Object.keys(mapa).map((nome) => ({
+          nome,
+          total: mapa[nome],
+        }));
+
+        lista.sort((a, b) => a.nome.localeCompare(b.nome));
+
+        setMateriais(lista);
+      } catch (error) {
+        console.error("Erro ao carregar estoque global:", error);
       }
-
-      const lista: MaterialGlobal[] = Object.keys(mapa).map((nome) => ({
-        nome,
-        total: mapa[nome],
-      }));
-
-      lista.sort((a, b) => a.nome.localeCompare(b.nome));
-
-      setMateriais(lista);
     }
 
     carregarMateriais();
@@ -81,7 +97,9 @@ export default function EstoqueGlobalSection() {
             <div
               key={item.nome}
               onClick={() =>
-                router.push(`/dashboard/material/${encodeURIComponent(item.nome)}`)
+                router.push(
+                  `/dashboard/material/${encodeURIComponent(item.nome)}`
+                )
               }
               className="p-4 border rounded-lg shadow hover:shadow-lg cursor-pointer transition"
             >

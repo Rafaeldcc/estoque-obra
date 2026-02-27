@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
 import {
   collection,
   getDocs,
@@ -10,19 +10,15 @@ import {
 import { db } from "@/lib/firebase";
 
 export default function SyncEstoque() {
-  useEffect(() => {
-    sincronizar();
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   async function sincronizar() {
     try {
-      console.log("Iniciando sincronização...");
+      setLoading(true);
 
       const obrasSnap = await getDocs(
         collection(db, "obras")
       );
-
-      console.log("Obras encontradas:", obrasSnap.size);
 
       let estoqueGlobal: any = {};
 
@@ -32,13 +28,6 @@ export default function SyncEstoque() {
 
         const setoresSnap = await getDocs(
           collection(db, "obras", obraId, "setores")
-        );
-
-        console.log(
-          "Setores da obra",
-          obraNome,
-          ":",
-          setoresSnap.size
         );
 
         for (const setorDoc of setoresSnap.docs) {
@@ -56,15 +45,12 @@ export default function SyncEstoque() {
             )
           );
 
-          console.log(
-            "Materiais no setor",
-            setorNome,
-            ":",
-            materiaisSnap.size
-          );
-
           materiaisSnap.forEach((matDoc) => {
             const data = matDoc.data();
+
+            const saldo = data.saldo || 0;
+
+            if (!data.nome) return;
 
             if (!estoqueGlobal[data.nome]) {
               estoqueGlobal[data.nome] = {
@@ -74,21 +60,18 @@ export default function SyncEstoque() {
               };
             }
 
-            estoqueGlobal[data.nome].total +=
-              data.quantidade;
+            estoqueGlobal[data.nome].total += saldo;
 
             estoqueGlobal[data.nome].locais.push({
               obraId,
               obraNome,
               setorId,
               setorNome,
-              quantidade: data.quantidade,
+              quantidade: saldo,
             });
           });
         }
       }
-
-      console.log("Estoque consolidado:", estoqueGlobal);
 
       for (const nome in estoqueGlobal) {
         const materialId = nome.replace(/\s/g, "_");
@@ -102,13 +85,25 @@ export default function SyncEstoque() {
       alert("Estoque Global sincronizado!");
     } catch (error) {
       console.error("Erro:", error);
-      alert("Erro na sincronização. Veja o console.");
+      alert("Erro na sincronização.");
     }
+
+    setLoading(false);
   }
 
   return (
-    <div className="p-10">
-      Sincronizando estoque global...
+    <div className="p-10 space-y-6">
+      <h1 className="text-2xl font-bold">
+        Sincronizar Estoque Global
+      </h1>
+
+      <button
+        onClick={sincronizar}
+        disabled={loading}
+        className="bg-blue-600 text-white px-6 py-3 rounded"
+      >
+        {loading ? "Sincronizando..." : "Sincronizar Agora"}
+      </button>
     </div>
   );
 }

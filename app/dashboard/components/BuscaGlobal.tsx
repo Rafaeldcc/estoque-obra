@@ -1,10 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  collection,
-  getDocs,
-} from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 
@@ -26,15 +23,25 @@ export default function BuscaGlobal() {
       const resultados: any[] = [];
 
       for (const obra of obrasSnapshot.docs) {
+        const obraId = obra.id;
+        const obraNome = obra.data().nome || "";
+
         const setoresSnapshot = await getDocs(
-          collection(db, `obras/${obra.id}/setores`)
+          collection(db, "obras", obraId, "setores")
         );
 
         for (const setor of setoresSnapshot.docs) {
+          const setorId = setor.id;
+          const setorNome = setor.data().nome || "";
+
           const materiaisSnapshot = await getDocs(
             collection(
               db,
-              `obras/${obra.id}/setores/${setor.id}/materiais`
+              "obras",
+              obraId,
+              "setores",
+              setorId,
+              "materiais"
             )
           );
 
@@ -42,15 +49,16 @@ export default function BuscaGlobal() {
             const data = material.data();
 
             if (
+              data.nome &&
               data.nome
-                ?.toLowerCase()
+                .toLowerCase()
                 .includes(busca.toLowerCase())
             ) {
               resultados.push({
-                obraNome: obra.data().nome,
-                setorNome: setor.data().nome,
+                obraNome,
+                setorNome,
                 nome: data.nome,
-                quantidade: data.quantidade,
+                quantidade: data.saldo || 0, // 🔥 PADRONIZADO
               });
             }
           });

@@ -1,65 +1,88 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+type Resultado = {
+  obra: string;
+  setor: string;
+  quantidade: number;
+  unidade: string;
+};
+
 export default function CentralMateriais() {
   const [busca, setBusca] = useState("");
-  const [resultado, setResultado] = useState<any[]>([]);
+  const [resultado, setResultado] = useState<Resultado[]>([]);
   const [totalGeral, setTotalGeral] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   async function buscarMaterial() {
-    if (!busca) return;
+    if (!busca.trim()) return;
 
-    const obrasSnap = await getDocs(collection(db, "obras"));
+    setLoading(true);
+    setResultado([]);
+    setTotalGeral(0);
 
-    let encontrados: any[] = [];
-    let somaTotal = 0;
+    try {
+      const obrasSnap = await getDocs(collection(db, "obras"));
 
-    for (const obraDoc of obrasSnap.docs) {
-      const obraId = obraDoc.id;
-      const obraNome = obraDoc.data().nome;
+      let encontrados: Resultado[] = [];
+      let somaTotal = 0;
 
-      const setoresSnap = await getDocs(
-        collection(db, "obras", obraId, "setores")
-      );
+      for (const obraDoc of obrasSnap.docs) {
+        const obraId = obraDoc.id;
+        const obraNome = obraDoc.data().nome || "";
 
-      for (const setorDoc of setoresSnap.docs) {
-        const setorId = setorDoc.id;
-        const setorNome = setorDoc.data().nome;
-
-        const materiaisSnap = await getDocs(
-          collection(
-            db,
-            "obras",
-            obraId,
-            "setores",
-            setorId,
-            "materiais"
-          )
+        const setoresSnap = await getDocs(
+          collection(db, "obras", obraId, "setores")
         );
 
-        materiaisSnap.forEach((matDoc) => {
-          const data = matDoc.data();
+        for (const setorDoc of setoresSnap.docs) {
+          const setorId = setorDoc.id;
+          const setorNome = setorDoc.data().nome || "";
 
-          if (
-            data.nome.toLowerCase().includes(busca.toLowerCase())
-          ) {
-            encontrados.push({
-              obra: obraNome,
-              setor: setorNome,
-              quantidade: data.quantidade,
-            });
+          const materiaisSnap = await getDocs(
+            collection(
+              db,
+              "obras",
+              obraId,
+              "setores",
+              setorId,
+              "materiais"
+            )
+          );
 
-            somaTotal += data.quantidade;
-          }
-        });
+          materiaisSnap.forEach((matDoc) => {
+            const data = matDoc.data();
+
+            if (
+              data.nome &&
+              data.nome.toLowerCase().includes(busca.toLowerCase())
+            ) {
+              const saldo = data.saldo || 0;
+
+              encontrados.push({
+                obra: obraNome,
+                setor: setorNome,
+                quantidade: saldo,
+                unidade: data.unidade || "",
+              });
+
+              somaTotal += saldo;
+            }
+          });
+        }
       }
+
+      setResultado(encontrados);
+      setTotalGeral(somaTotal);
+    } catch (error) {
+      console.error("Erro ao buscar materiais:", error);
+      alert("Erro ao buscar materiais.");
     }
 
-    setResultado(encontrados);
-    setTotalGeral(somaTotal);
+    setLoading(false);
   }
 
   return (
@@ -83,14 +106,22 @@ export default function CentralMateriais() {
         </button>
       </div>
 
+      {loading && <p>Buscando...</p>}
+
+      {!loading && resultado.length === 0 && busca && (
+        <p>Nenhum material encontrado.</p>
+      )}
+
       {resultado.map((item, index) => (
         <div
           key={index}
-          className="border p-4 rounded mb-3 bg-white"
+          className="border p-4 rounded mb-3 bg-white shadow-sm"
         >
           <div className="font-bold">{item.obra}</div>
           <div>{item.setor}</div>
-          <div>Quantidade: {item.quantidade}</div>
+          <div>
+            Quantidade: {item.quantidade} {item.unidade}
+          </div>
         </div>
       ))}
 

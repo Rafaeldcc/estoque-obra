@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { collection, onSnapshot, getDocs } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface Resultado {
@@ -19,46 +19,53 @@ export default function ResultadoBuscaClient() {
 
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!materialBusca) return;
-
-    buscarTempoReal();
+    buscar();
   }, [materialBusca]);
 
-  async function buscarTempoReal() {
-    const obrasSnap = await getDocs(collection(db, "obras"));
+  async function buscar() {
+    setLoading(true);
+    setResultados([]);
+    setTotal(0);
 
-    let listaTemp: Resultado[] = [];
-    let somaTemp = 0;
+    try {
+      const obrasSnap = await getDocs(collection(db, "obras"));
 
-    for (const obraDoc of obrasSnap.docs) {
-      const obraId = obraDoc.id;
-      const obraNome = obraDoc.data().nome;
+      let listaTemp: Resultado[] = [];
+      let somaTemp = 0;
 
-      const setoresSnap = await getDocs(
-        collection(db, "obras", obraId, "setores")
-      );
+      for (const obraDoc of obrasSnap.docs) {
+        const obraId = obraDoc.id;
+        const obraNome = obraDoc.data().nome || "";
 
-      for (const setorDoc of setoresSnap.docs) {
-        const setorId = setorDoc.id;
-        const setorNome = setorDoc.data().nome;
-
-        const materiaisRef = collection(
-          db,
-          "obras",
-          obraId,
-          "setores",
-          setorId,
-          "materiais"
+        const setoresSnap = await getDocs(
+          collection(db, "obras", obraId, "setores")
         );
 
-        onSnapshot(materiaisRef, (snapshot) => {
-          snapshot.forEach((doc) => {
+        for (const setorDoc of setoresSnap.docs) {
+          const setorId = setorDoc.id;
+          const setorNome = setorDoc.data().nome || "";
+
+          const materiaisSnap = await getDocs(
+            collection(
+              db,
+              "obras",
+              obraId,
+              "setores",
+              setorId,
+              "materiais"
+            )
+          );
+
+          materiaisSnap.forEach((doc) => {
             const data = doc.data();
 
             if (
-              data.nome?.toLowerCase() === materialBusca
+              data.nome &&
+              data.nome.toLowerCase() === materialBusca
             ) {
               const saldo = data.saldo || 0;
 
@@ -72,12 +79,16 @@ export default function ResultadoBuscaClient() {
               somaTemp += saldo;
             }
           });
-
-          setResultados([...listaTemp]);
-          setTotal(somaTemp);
-        });
+        }
       }
+
+      setResultados(listaTemp);
+      setTotal(somaTemp);
+    } catch (error) {
+      console.error("Erro na busca:", error);
     }
+
+    setLoading(false);
   }
 
   return (
@@ -92,7 +103,11 @@ export default function ResultadoBuscaClient() {
         </p>
       </div>
 
-      {resultados.length === 0 && (
+      {loading && (
+        <p className="text-gray-500">Buscando...</p>
+      )}
+
+      {!loading && resultados.length === 0 && (
         <p className="text-gray-500">
           Nenhum material encontrado.
         </p>
