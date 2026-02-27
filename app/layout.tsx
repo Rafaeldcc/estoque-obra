@@ -30,11 +30,10 @@ export default function RootLayout({
                 Estoque Total
               </MenuLink>
 
-              {/* 🔥 NOVO BOTÃO */}
-              <MenuLink href="/dashboard/historico">
+              {/* ✅ BOTÃO CORRETO */}
+              <MenuLink href="/historico">
                 Movimentações
               </MenuLink>
-
             </nav>
           </aside>
 
