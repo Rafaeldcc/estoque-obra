@@ -13,7 +13,7 @@ export default function RootLayout({
           
           {/* MENU LATERAL */}
           <aside style={sidebar}>
-            <h2 style={{ color: "white" }}>Estoque Obra</h2>
+            <h2 style={{ color: "white" }}>Estoque Obra v2</h2>
 
             <nav style={{ marginTop: 30 }}>
               <MenuLink href="/dashboard">Dashboard</MenuLink>
