@@ -2,17 +2,8 @@
 
 import { useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from "firebase/auth";
-import {
-  doc,
-  setDoc,
-  getDocs,
-  collection,
-  serverTimestamp,
-} from "firebase/firestore";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -26,43 +17,27 @@ export default function LoginPage() {
     setErro("");
 
     try {
-      await signInWithEmailAndPassword(auth, email, senha);
-      router.push("/dashboard");
-    } catch (err: any) {
-      console.error(err);
-      setErro(err.message);
-    }
-  }
+      const cred = await signInWithEmailAndPassword(auth, email, senha);
 
-  async function handleRegister() {
-    setErro("");
+      const userDoc = await getDoc(doc(db, "usuarios", cred.user.uid));
 
-    try {
-      const cred = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        senha
-      );
-
-      const user = cred.user;
-
-      const usuariosSnap = await getDocs(collection(db, "usuarios"));
-
-      let role = "usuario";
-      if (usuariosSnap.empty) {
-        role = "admin";
+      if (!userDoc.exists()) {
+        setErro("Usuário sem permissão.");
+        return;
       }
 
-      await setDoc(doc(db, "usuarios", user.uid), {
-        email: user.email,
-        role: role,
-        criadoEm: serverTimestamp(),
-      });
+      const role = userDoc.data().role;
 
-      router.push("/dashboard");
+      if (role === "admin") {
+        router.push("/dashboard");
+      } else if (role === "almoxarifado") {
+        router.push("/controle");
+      } else {
+        router.push("/dashboard");
+      }
+
     } catch (err: any) {
-      console.error(err);
-      setErro(err.message);
+      setErro("Email ou senha inválidos.");
     }
   }
 
@@ -73,7 +48,7 @@ export default function LoginPage() {
         className="bg-white p-8 rounded-xl shadow-md w-96"
       >
         <h1 className="text-2xl font-bold mb-6 text-center">
-          Sistema de Estoque
+          Sistema Profissional de Estoque
         </h1>
 
         {erro && (
@@ -100,17 +75,9 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded mb-2 hover:bg-blue-700"
+          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
         >
           Entrar
-        </button>
-
-        <button
-          type="button"
-          onClick={handleRegister}
-          className="w-full bg-gray-200 p-2 rounded hover:bg-gray-300"
-        >
-          Criar Conta
         </button>
       </form>
     </div>
