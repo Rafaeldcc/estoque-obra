@@ -28,8 +28,9 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, senha);
       router.push("/dashboard");
-    } catch {
-      setErro("Email ou senha inválidos.");
+    } catch (err: any) {
+      console.error(err);
+      setErro(err.message);
     }
   }
 
@@ -45,11 +46,9 @@ export default function LoginPage() {
 
       const user = cred.user;
 
-      // Verifica se já existe usuário (para definir admin)
       const usuariosSnap = await getDocs(collection(db, "usuarios"));
 
       let role = "usuario";
-
       if (usuariosSnap.empty) {
         role = "admin";
       }
@@ -62,8 +61,8 @@ export default function LoginPage() {
 
       router.push("/dashboard");
     } catch (err: any) {
-      setErro("Erro ao criar usuário.");
       console.error(err);
+      setErro(err.message);
     }
   }
 
