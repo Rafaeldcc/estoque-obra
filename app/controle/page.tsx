@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db, auth } from "@/lib/firebase";
-import { registrarMovimentacao } from "@/lib/movimentacoes";
 import {
   collection,
   getDocs,
@@ -10,7 +8,12 @@ import {
   updateDoc,
   deleteDoc,
   increment,
+  getDoc,
+  serverTimestamp,
 } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { registrarMovimentacao } from "@/lib/movimentacoes";
+import { useAuth } from "@/lib/useAuth";
 
 type Material = {
   id: string;
@@ -20,20 +23,36 @@ type Material = {
 };
 
 export default function Controle() {
+  const { user, loading } = useAuth();
+
+  const [role, setRole] = useState<string | null>(null);
   const [obras, setObras] = useState<any[]>([]);
   const [obraSelecionada, setObraSelecionada] = useState("");
   const [materiais, setMateriais] = useState<Material[]>([]);
   const [quantidades, setQuantidades] = useState<{ [key: string]: number }>({});
+  const [mensagem, setMensagem] = useState("");
 
   useEffect(() => {
+    if (!user) return;
+
+    carregarRole();
     carregarObras();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (obraSelecionada) {
       carregarMateriais(obraSelecionada);
     }
   }, [obraSelecionada]);
+
+  async function carregarRole() {
+    if (!user) return;
+
+    const snap = await getDoc(doc(db, "usuarios", user.uid));
+    if (snap.exists()) {
+      setRole(snap.data().role);
+    }
+  }
 
   async function carregarObras() {
     const snap = await getDocs(collection(db, "obras"));
@@ -87,15 +106,21 @@ export default function Controle() {
     setMateriais(Object.values(agrupado));
   }
 
+  function mostrarMensagem(texto: string) {
+    setMensagem(texto);
+    setTimeout(() => setMensagem(""), 3000);
+  }
+
   async function entrada(material: Material) {
+    if (role !== "admin" && role !== "almoxarifado") {
+      alert("Você não tem permissão.");
+      return;
+    }
+
     const qtd = quantidades[material.id];
     if (!qtd || qtd <= 0) return;
 
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Usuário não autenticado.");
-      return;
-    }
+    if (!user) return;
 
     try {
       const setoresSnap = await getDocs(
@@ -115,7 +140,7 @@ export default function Controle() {
 
         await updateDoc(materialRef, {
           saldo: increment(qtd),
-          atualizadoEm: new Date(),
+          atualizadoEm: serverTimestamp(),
         }).catch(() => {});
       }
 
@@ -131,17 +156,22 @@ export default function Controle() {
         usuarioNome: user.email || "",
       });
 
-      alert("Entrada registrada com sucesso!");
+      mostrarMensagem("Entrada registrada com sucesso!");
       setQuantidades((prev) => ({ ...prev, [material.id]: 0 }));
       carregarMateriais(obraSelecionada);
 
     } catch (error) {
-      console.error("Erro na entrada:", error);
-      alert("Erro ao registrar entrada.");
+      console.error(error);
+      alert("Erro na entrada.");
     }
   }
 
   async function saida(material: Material) {
+    if (role !== "admin" && role !== "almoxarifado") {
+      alert("Você não tem permissão.");
+      return;
+    }
+
     const qtd = quantidades[material.id];
     if (!qtd || qtd <= 0) return;
 
@@ -150,11 +180,7 @@ export default function Controle() {
       return;
     }
 
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Usuário não autenticado.");
-      return;
-    }
+    if (!user) return;
 
     try {
       const setoresSnap = await getDocs(
@@ -174,7 +200,7 @@ export default function Controle() {
 
         await updateDoc(materialRef, {
           saldo: increment(-qtd),
-          atualizadoEm: new Date(),
+          atualizadoEm: serverTimestamp(),
         }).catch(() => {});
       }
 
@@ -190,17 +216,22 @@ export default function Controle() {
         usuarioNome: user.email || "",
       });
 
-      alert("Saída registrada com sucesso!");
+      mostrarMensagem("Saída registrada com sucesso!");
       setQuantidades((prev) => ({ ...prev, [material.id]: 0 }));
       carregarMateriais(obraSelecionada);
 
     } catch (error) {
-      console.error("Erro na saída:", error);
-      alert("Erro ao registrar saída.");
+      console.error(error);
+      alert("Erro na saída.");
     }
   }
 
   async function excluir(material: Material) {
+    if (role !== "admin") {
+      alert("Apenas administrador pode excluir.");
+      return;
+    }
+
     if (!confirm("Deseja excluir este material?")) return;
 
     try {
@@ -222,21 +253,29 @@ export default function Controle() {
         await deleteDoc(materialRef).catch(() => {});
       }
 
-      alert("Material excluído com sucesso!");
+      mostrarMensagem("Material excluído com sucesso!");
       carregarMateriais(obraSelecionada);
 
     } catch (error) {
-      console.error("Erro ao excluir:", error);
-      alert("Erro ao excluir material.");
+      console.error(error);
+      alert("Erro ao excluir.");
     }
   }
 
+  if (loading) return null;
+
   return (
-    <div style={{ maxWidth: 900, margin: "40px auto" }}>
-      <h2>Controle de Estoque</h2>
+    <div className="max-w-4xl mx-auto p-8">
+      <h2 className="text-2xl font-bold mb-6">Controle de Estoque</h2>
+
+      {mensagem && (
+        <div className="mb-4 bg-green-600 text-white p-3 rounded">
+          {mensagem}
+        </div>
+      )}
 
       <select
-        style={{ width: "100%", padding: 10 }}
+        className="w-full p-3 border rounded mb-6"
         onChange={(e) => setObraSelecionada(e.target.value)}
       >
         <option value="">Selecionar obra</option>
@@ -250,20 +289,16 @@ export default function Controle() {
       {materiais.map((material) => (
         <div
           key={material.id}
-          style={{
-            border: "1px solid #ccc",
-            padding: 15,
-            marginTop: 20,
-            borderRadius: 8,
-          }}
+          className="bg-white p-5 rounded-xl shadow mb-4"
         >
-          <b>{material.nome}</b>
+          <div className="flex justify-between mb-3">
+            <b>{material.nome}</b>
+            <span>
+              Saldo: {material.saldo} {material.unidade}
+            </span>
+          </div>
 
-          <span style={{ float: "right" }}>
-            Saldo Total: {material.saldo} {material.unidade}
-          </span>
-
-          <div style={{ marginTop: 10 }}>
+          <div className="flex gap-3">
             <input
               type="number"
               placeholder="Qtd"
@@ -274,29 +309,31 @@ export default function Controle() {
                   [material.id]: Number(e.target.value),
                 }))
               }
-              style={{ width: 80 }}
+              className="border p-2 w-24 rounded"
             />
 
             <button
-              style={{ marginLeft: 10, background: "green", color: "white" }}
               onClick={() => entrada(material)}
+              className="bg-green-600 text-white px-4 rounded"
             >
               Entrada
             </button>
 
             <button
-              style={{ marginLeft: 10, background: "orange", color: "white" }}
               onClick={() => saida(material)}
+              className="bg-orange-500 text-white px-4 rounded"
             >
               Saída
             </button>
 
-            <button
-              style={{ marginLeft: 10, background: "red", color: "white" }}
-              onClick={() => excluir(material)}
-            >
-              Excluir
-            </button>
+            {role === "admin" && (
+              <button
+                onClick={() => excluir(material)}
+                className="bg-red-600 text-white px-4 rounded"
+              >
+                Excluir
+              </button>
+            )}
           </div>
         </div>
       ))}

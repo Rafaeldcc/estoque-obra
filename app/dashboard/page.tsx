@@ -8,7 +8,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getAuth } from "firebase/auth";
+import { useAuth } from "@/lib/useAuth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -22,6 +22,9 @@ import {
 } from "recharts";
 
 export default function Dashboard() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
   const [totalObras, setTotalObras] = useState(0);
   const [totalSetores, setTotalSetores] = useState(0);
   const [totalMateriais, setTotalMateriais] = useState(0);
@@ -35,24 +38,18 @@ export default function Dashboard() {
   const [graficoData, setGraficoData] = useState<any[]>([]);
   const [mostrarGrafico, setMostrarGrafico] = useState(false);
 
-  const router = useRouter();
-
   useEffect(() => {
+    if (!user) return;
+
     carregarIndicadores();
     carregarMateriais();
     carregarEmpresa();
-  }, []);
+  }, [user]);
 
   async function carregarEmpresa() {
+    if (!user) return;
+
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-
-      if (!user) {
-        setEmpresa("Sistema");
-        return;
-      }
-
       const usuarioRef = doc(db, "usuarios", user.uid);
       const usuarioSnap = await getDoc(usuarioRef);
 
@@ -61,8 +58,7 @@ export default function Dashboard() {
       } else {
         setEmpresa("Sistema");
       }
-    } catch (error) {
-      console.error("Erro ao carregar empresa:", error);
+    } catch {
       setEmpresa("Sistema");
     }
   }
@@ -73,7 +69,6 @@ export default function Dashboard() {
     let setoresCount = 0;
     let materiaisCount = 0;
     let estoqueTotal = 0;
-
     let dadosGrafico: any[] = [];
 
     for (const obraDoc of obrasSnap.docs) {
@@ -121,7 +116,6 @@ export default function Dashboard() {
 
   async function carregarMateriais() {
     const obrasSnap = await getDocs(collection(db, "obras"));
-
     let lista: string[] = [];
 
     for (const obraDoc of obrasSnap.docs) {
@@ -150,30 +144,18 @@ export default function Dashboard() {
 
     const unica = [...new Set(lista)];
     unica.sort((a, b) => a.localeCompare(b, "pt-BR"));
-
     setMateriais(unica);
   }
 
-  const materiaisFiltrados = materiais.filter((item) =>
-    item.toLowerCase().includes(filtro.toLowerCase())
-  );
-
-  function selecionar(material: string) {
-    router.push(
-      `/dashboard/busca?material=${encodeURIComponent(material)}`
-    );
-  }
+  if (loading) return null;
 
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-10">
-
       <div>
         <h1 className="text-3xl font-bold">
           Dashboard {empresa}
         </h1>
-        <p className="text-gray-500">
-          Visão geral do sistema
-        </p>
+        <p className="text-gray-500">Visão geral do sistema</p>
       </div>
 
       <Link
@@ -187,75 +169,15 @@ export default function Dashboard() {
         <Card titulo="Obras" valor={totalObras} />
         <Card titulo="Setores" valor={totalSetores} />
         <Card titulo="Materiais" valor={totalMateriais} />
-
-        <div
-          onClick={() => setMostrarGrafico(!mostrarGrafico)}
-          className="cursor-pointer"
-        >
-          <Card titulo="Total em Estoque" valor={totalEstoque} />
-        </div>
+        <Card titulo="Total em Estoque" valor={totalEstoque} />
       </div>
-
-      {mostrarGrafico && (
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="font-semibold text-lg mb-4">
-            Estoque por Obra
-          </h2>
-
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={graficoData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="obra" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="estoque" fill="#7c3aed" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      <div className="bg-white p-6 rounded-xl shadow relative">
-        <h2 className="font-semibold text-lg mb-4">
-          Buscar Material
-        </h2>
-
-        <input
-          type="text"
-          placeholder="Digite o nome do material..."
-          value={filtro}
-          onChange={(e) => setFiltro(e.target.value)}
-          onFocus={() => setMostrarLista(true)}
-          className="w-full p-3 border rounded-lg"
-        />
-
-        {mostrarLista && filtro && (
-          <div className="absolute z-50 w-full bg-white border rounded-lg mt-1 max-h-60 overflow-auto shadow-lg">
-            {materiaisFiltrados.length === 0 && (
-              <div className="p-3 text-gray-500">
-                Nenhum encontrado
-              </div>
-            )}
-
-            {materiaisFiltrados.map((item, index) => (
-              <div
-                key={index}
-                onClick={() => selecionar(item)}
-                className="p-3 hover:bg-gray-100 cursor-pointer"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
     </div>
   );
 }
 
 function Card({ titulo, valor }: any) {
   return (
-    <div className="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
+    <div className="bg-white p-6 rounded-xl shadow">
       <p className="text-gray-500">{titulo}</p>
       <h2 className="text-3xl font-bold mt-2">{valor}</h2>
     </div>

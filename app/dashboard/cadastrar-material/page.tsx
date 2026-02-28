@@ -9,10 +9,13 @@ import {
   doc,
   query,
   where,
+  serverTimestamp,
+  increment,
+  getDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/lib/useAuth";
 
 function normalizarTexto(texto: string) {
   return texto
@@ -24,6 +27,10 @@ function normalizarTexto(texto: string) {
 }
 
 export default function CadastrarMaterial() {
+  const { user, loading } = useAuth();
+
+  const [role, setRole] = useState<string | null>(null);
+
   const [obras, setObras] = useState<any[]>([]);
   const [setores, setSetores] = useState<any[]>([]);
   const [materiaisExistentes, setMateriaisExistentes] = useState<string[]>([]);
@@ -36,11 +43,14 @@ export default function CadastrarMaterial() {
   const [quantidade, setQuantidade] = useState(0);
   const [unidade, setUnidade] = useState("un");
 
-  const [mostrarLista, setMostrarLista] = useState(false);
+  const [mensagem, setMensagem] = useState("");
 
   useEffect(() => {
+    if (!user) return;
+
+    carregarRole();
     carregarObras();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (obraId) carregarSetores();
@@ -49,6 +59,15 @@ export default function CadastrarMaterial() {
   useEffect(() => {
     if (obraId && setorId) carregarMateriais();
   }, [obraId, setorId]);
+
+  async function carregarRole() {
+    if (!user) return;
+
+    const snap = await getDoc(doc(db, "usuarios", user.uid));
+    if (snap.exists()) {
+      setRole(snap.data().role);
+    }
+  }
 
   async function carregarObras() {
     const snap = await getDocs(collection(db, "obras"));
@@ -73,11 +92,16 @@ export default function CadastrarMaterial() {
   }
 
   async function criarSetor() {
+    if (role !== "admin") {
+      alert("Apenas administrador pode criar setor.");
+      return;
+    }
+
     if (!novoSetor.trim()) return;
 
     await addDoc(collection(db, "obras", obraId, "setores"), {
       nome: novoSetor.trim(),
-      criadoEm: new Date(),
+      criadoEm: serverTimestamp(),
     });
 
     setNovoSetor("");
@@ -88,67 +112,77 @@ export default function CadastrarMaterial() {
     if (!nomeMaterial.trim() || quantidade <= 0 || !obraId || !setorId)
       return;
 
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Usuário não autenticado.");
+    if (!user) return;
+
+    if (role !== "admin" && role !== "almoxarifado") {
+      alert("Você não tem permissão para cadastrar material.");
       return;
     }
 
-    const materiaisRef = collection(
-      db,
-      "obras",
-      obraId,
-      "setores",
-      setorId,
-      "materiais"
-    );
+    try {
+      const materiaisRef = collection(
+        db,
+        "obras",
+        obraId,
+        "setores",
+        setorId,
+        "materiais"
+      );
 
-    const q = query(
-      materiaisRef,
-      where("nome", "==", nomeMaterial.trim())
-    );
+      const q = query(
+        materiaisRef,
+        where("nome", "==", nomeMaterial.trim())
+      );
 
-    const snap = await getDocs(q);
+      const snap = await getDocs(q);
 
-    if (!snap.empty) {
-      const docRef = snap.docs[0].ref;
-      const saldoAtual = snap.docs[0].data().saldo || 0;
+      let materialId = "";
 
-      await updateDoc(docRef, {
-        saldo: saldoAtual + quantidade,
+      if (!snap.empty) {
+        const docRef = snap.docs[0].ref;
+        materialId = snap.docs[0].id;
+
+        await updateDoc(docRef, {
+          saldo: increment(quantidade),
+          atualizadoEm: serverTimestamp(),
+        });
+      } else {
+        const newDoc = await addDoc(materiaisRef, {
+          nome: nomeMaterial.trim(),
+          saldo: quantidade,
+          unidade,
+          criadoEm: serverTimestamp(),
+        });
+
+        materialId = newDoc.id;
+      }
+
+      await registrarMovimentacao({
+        materialId,
+        materialNome: nomeMaterial.trim(),
+        tipo: "entrada",
+        quantidade,
+        obraId,
+        obraNome:
+          obras.find((o) => o.id === obraId)?.nome || "",
+        usuarioId: user.uid,
+        usuarioNome: user.email || "",
       });
-    } else {
-      await addDoc(materiaisRef, {
-        nome: nomeMaterial.trim(),
-        saldo: quantidade,
-        unidade,
-        criadoEm: new Date(),
-      });
+
+      setMensagem("Material salvo com sucesso!");
+      setTimeout(() => setMensagem(""), 3000);
+
+      setNomeMaterial("");
+      setQuantidade(0);
+      carregarMateriais();
+
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao salvar material.");
     }
-
-    // 🔥 REGISTRO PADRONIZADO
-    await registrarMovimentacao({
-      materialId: nomeMaterial.trim(),
-      materialNome: nomeMaterial.trim(),
-      tipo: "entrada",
-      quantidade,
-      obraId,
-      obraNome:
-        obras.find((o) => o.id === obraId)?.nome || "",
-      usuarioId: user.uid,
-      usuarioNome: user.email || "",
-    });
-
-    setNomeMaterial("");
-    setQuantidade(0);
-    carregarMateriais();
   }
 
-  const materiaisFiltrados = materiaisExistentes.filter((m) => {
-    const busca = normalizarTexto(nomeMaterial);
-    const material = normalizarTexto(m);
-    return material.includes(busca);
-  });
+  if (loading) return null;
 
   return (
     <div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow space-y-4">
@@ -156,7 +190,16 @@ export default function CadastrarMaterial() {
         Cadastrar Material
       </h2>
 
-      <select onChange={(e) => setObraId(e.target.value)} className="w-full p-2 border rounded">
+      {mensagem && (
+        <div className="bg-green-600 text-white p-2 rounded text-center">
+          {mensagem}
+        </div>
+      )}
+
+      <select
+        onChange={(e) => setObraId(e.target.value)}
+        className="w-full p-2 border rounded"
+      >
         <option value="">Selecionar obra</option>
         {obras.map((obra) => (
           <option key={obra.id} value={obra.id}>
@@ -165,7 +208,10 @@ export default function CadastrarMaterial() {
         ))}
       </select>
 
-      <select onChange={(e) => setSetorId(e.target.value)} className="w-full p-2 border rounded">
+      <select
+        onChange={(e) => setSetorId(e.target.value)}
+        className="w-full p-2 border rounded"
+      >
         <option value="">Selecionar setor</option>
         {setores.map((setor) => (
           <option key={setor.id} value={setor.id}>
