@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
-import { auth } from "@/lib/firebase";
 import {
   collection,
   getDocs,
@@ -75,7 +74,6 @@ export default function Controle() {
       });
     }
 
-    // Agrupar materiais iguais
     const agrupado: { [key: string]: Material } = {};
 
     todos.forEach((item) => {
@@ -99,40 +97,48 @@ export default function Controle() {
       return;
     }
 
-    const setoresSnap = await getDocs(
-      collection(db, "obras", obraSelecionada, "setores")
-    );
-
-    for (const setorDoc of setoresSnap.docs) {
-      const materialRef = doc(
-        db,
-        "obras",
-        obraSelecionada,
-        "setores",
-        setorDoc.id,
-        "materiais",
-        material.id
+    try {
+      const setoresSnap = await getDocs(
+        collection(db, "obras", obraSelecionada, "setores")
       );
 
-      await updateDoc(materialRef, {
-        saldo: increment(qtd),
-        atualizadoEm: new Date(),
-      }).catch(() => {});
+      for (const setorDoc of setoresSnap.docs) {
+        const materialRef = doc(
+          db,
+          "obras",
+          obraSelecionada,
+          "setores",
+          setorDoc.id,
+          "materiais",
+          material.id
+        );
+
+        await updateDoc(materialRef, {
+          saldo: increment(qtd),
+          atualizadoEm: new Date(),
+        }).catch(() => {});
+      }
+
+      await registrarMovimentacao({
+        materialId: material.id,
+        materialNome: material.nome,
+        tipo: "entrada",
+        quantidade: qtd,
+        obraId: obraSelecionada,
+        obraNome:
+          obras.find((o) => o.id === obraSelecionada)?.nome || "",
+        usuarioId: user.uid,
+        usuarioNome: user.email || "",
+      });
+
+      alert("Entrada registrada com sucesso!");
+      setQuantidades((prev) => ({ ...prev, [material.id]: 0 }));
+      carregarMateriais(obraSelecionada);
+
+    } catch (error) {
+      console.error("Erro na entrada:", error);
+      alert("Erro ao registrar entrada.");
     }
-
-    await registrarMovimentacao({
-      materialId: material.id,
-      materialNome: material.nome || "",
-      tipo: "entrada",
-      quantidade: qtd,
-      obraId: obraSelecionada,
-      obraNome:
-        obras.find((o) => o.id === obraSelecionada)?.nome || "",
-      usuarioId: user.uid,
-      usuarioNome: user.email || "",
-    });
-
-    carregarMateriais(obraSelecionada);
   }
 
   async function saida(material: Material) {
@@ -150,62 +156,79 @@ export default function Controle() {
       return;
     }
 
-    const setoresSnap = await getDocs(
-      collection(db, "obras", obraSelecionada, "setores")
-    );
-
-    for (const setorDoc of setoresSnap.docs) {
-      const materialRef = doc(
-        db,
-        "obras",
-        obraSelecionada,
-        "setores",
-        setorDoc.id,
-        "materiais",
-        material.id
+    try {
+      const setoresSnap = await getDocs(
+        collection(db, "obras", obraSelecionada, "setores")
       );
 
-      await updateDoc(materialRef, {
-        saldo: increment(-qtd),
-        atualizadoEm: new Date(),
-      }).catch(() => {});
+      for (const setorDoc of setoresSnap.docs) {
+        const materialRef = doc(
+          db,
+          "obras",
+          obraSelecionada,
+          "setores",
+          setorDoc.id,
+          "materiais",
+          material.id
+        );
+
+        await updateDoc(materialRef, {
+          saldo: increment(-qtd),
+          atualizadoEm: new Date(),
+        }).catch(() => {});
+      }
+
+      await registrarMovimentacao({
+        materialId: material.id,
+        materialNome: material.nome,
+        tipo: "saida",
+        quantidade: qtd,
+        obraId: obraSelecionada,
+        obraNome:
+          obras.find((o) => o.id === obraSelecionada)?.nome || "",
+        usuarioId: user.uid,
+        usuarioNome: user.email || "",
+      });
+
+      alert("Saída registrada com sucesso!");
+      setQuantidades((prev) => ({ ...prev, [material.id]: 0 }));
+      carregarMateriais(obraSelecionada);
+
+    } catch (error) {
+      console.error("Erro na saída:", error);
+      alert("Erro ao registrar saída.");
     }
-
-    await registrarMovimentacao({
-      materialId: material.id,
-      materialNome: material.nome || "",
-      tipo: "saida",
-      quantidade: qtd,
-      obraId: obraSelecionada,
-      obraNome:
-        obras.find((o) => o.id === obraSelecionada)?.nome || "",
-      usuarioId: user.uid,
-      usuarioNome: user.email || "",
-    });
-
-    carregarMateriais(obraSelecionada);
   }
 
   async function excluir(material: Material) {
-    const setoresSnap = await getDocs(
-      collection(db, "obras", obraSelecionada, "setores")
-    );
+    if (!confirm("Deseja excluir este material?")) return;
 
-    for (const setorDoc of setoresSnap.docs) {
-      const materialRef = doc(
-        db,
-        "obras",
-        obraSelecionada,
-        "setores",
-        setorDoc.id,
-        "materiais",
-        material.id
+    try {
+      const setoresSnap = await getDocs(
+        collection(db, "obras", obraSelecionada, "setores")
       );
 
-      await deleteDoc(materialRef).catch(() => {});
-    }
+      for (const setorDoc of setoresSnap.docs) {
+        const materialRef = doc(
+          db,
+          "obras",
+          obraSelecionada,
+          "setores",
+          setorDoc.id,
+          "materiais",
+          material.id
+        );
 
-    carregarMateriais(obraSelecionada);
+        await deleteDoc(materialRef).catch(() => {});
+      }
+
+      alert("Material excluído com sucesso!");
+      carregarMateriais(obraSelecionada);
+
+    } catch (error) {
+      console.error("Erro ao excluir:", error);
+      alert("Erro ao excluir material.");
+    }
   }
 
   return (
@@ -244,6 +267,7 @@ export default function Controle() {
             <input
               type="number"
               placeholder="Qtd"
+              value={quantidades[material.id] || ""}
               onChange={(e) =>
                 setQuantidades((prev) => ({
                   ...prev,
