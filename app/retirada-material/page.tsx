@@ -1,17 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
-import { useAuth } from "@/lib/useAuth";
-
 import {
   collection,
   getDocs,
   doc,
   updateDoc,
   increment,
-  serverTimestamp,
+  addDoc,
 } from "firebase/firestore";
 
 type Material = {
@@ -23,17 +21,16 @@ type Material = {
 };
 
 export default function RetiradaMaterial() {
-  const { user, loading } = useAuth();
-
   const [obras, setObras] = useState<any[]>([]);
   const [obraSelecionada, setObraSelecionada] = useState("");
   const [materiais, setMateriais] = useState<Material[]>([]);
   const [quantidades, setQuantidades] = useState<{ [key: string]: number }>({});
+  const [destinos, setDestinos] = useState<{ [key: string]: string }>({});
+  const [obraDestino, setObraDestino] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
-    if (!user) return;
     carregarObras();
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (obraSelecionada) {
@@ -42,68 +39,53 @@ export default function RetiradaMaterial() {
   }, [obraSelecionada]);
 
   async function carregarObras() {
-    try {
-      const snap = await getDocs(collection(db, "obras"));
-
-      setObras(
-        snap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-      );
-    } catch (error) {
-      console.error("Erro ao carregar obras:", error);
-    }
+    const snap = await getDocs(collection(db, "obras"));
+    const lista = snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setObras(lista);
   }
 
   async function carregarMateriais(obraId: string) {
-    try {
-      const setoresSnap = await getDocs(
-        collection(db, "obras", obraId, "setores")
+    const setoresSnap = await getDocs(
+      collection(db, "obras", obraId, "setores")
+    );
+
+    let lista: Material[] = [];
+
+    for (const setorDoc of setoresSnap.docs) {
+      const materiaisSnap = await getDocs(
+        collection(
+          db,
+          "obras",
+          obraId,
+          "setores",
+          setorDoc.id,
+          "materiais"
+        )
       );
 
-      let lista: Material[] = [];
+      materiaisSnap.docs.forEach((docSnap) => {
+        const data = docSnap.data();
 
-      for (const setorDoc of setoresSnap.docs) {
-        const materiaisSnap = await getDocs(
-          collection(
-            db,
-            "obras",
-            obraId,
-            "setores",
-            setorDoc.id,
-            "materiais"
-          )
-        );
-
-        materiaisSnap.docs.forEach((docSnap) => {
-          const data = docSnap.data();
-
-          lista.push({
-            id: docSnap.id,
-            nome: data.nome,
-            saldo: data.saldo || 0,
-            unidade: data.unidade || "",
-            setorId: setorDoc.id,
-          });
+        lista.push({
+          id: docSnap.id,
+          nome: data.nome,
+          saldo: data.saldo || 0,
+          unidade: data.unidade || "",
+          setorId: setorDoc.id,
         });
-      }
-
-      setMateriais(lista);
-
-    } catch (error) {
-      console.error("Erro ao carregar materiais:", error);
+      });
     }
+
+    setMateriais(lista);
   }
 
   async function retirar(material: Material) {
-
     const qtd = quantidades[material.id];
-
-    if (!user) {
-      alert("Usuário não autenticado.");
-      return;
-    }
+    const destino = destinos[material.id] || "uso";
+    const destinoObra = obraDestino[material.id];
 
     if (!qtd || qtd <= 0) {
       alert("Informe uma quantidade válida.");
@@ -111,12 +93,18 @@ export default function RetiradaMaterial() {
     }
 
     if (qtd > material.saldo) {
-      alert("Quantidade maior que o saldo disponível.");
+      alert("Quantidade maior que o saldo.");
+      return;
+    }
+
+    const user = auth.currentUser;
+
+    if (!user) {
+      alert("Usuário não autenticado.");
       return;
     }
 
     try {
-
       const materialRef = doc(
         db,
         "obras",
@@ -129,22 +117,41 @@ export default function RetiradaMaterial() {
 
       await updateDoc(materialRef, {
         saldo: increment(-qtd),
-        atualizadoEm: serverTimestamp(),
       });
+
+      // 🔥 Se for transferência cria estoque na outra obra
+      if (destino === "transferencia" && destinoObra) {
+        await addDoc(
+          collection(
+            db,
+            "obras",
+            destinoObra,
+            "setores",
+            material.setorId,
+            "materiais"
+          ),
+          {
+            nome: material.nome,
+            saldo: qtd,
+            unidade: material.unidade || "",
+          }
+        );
+      }
 
       await registrarMovimentacao({
         materialId: material.id,
         materialNome: material.nome,
-        tipo: "saida",
+        tipo: destino === "transferencia" ? "transferencia" : "saida",
         quantidade: qtd,
         obraId: obraSelecionada,
         obraNome:
           obras.find((o) => o.id === obraSelecionada)?.nome || "",
+        obraDestino: destinoObra || null,
         usuarioId: user.uid,
         usuarioNome: user.email || "",
       });
 
-      alert("Material retirado com sucesso!");
+      alert("Movimentação registrada!");
 
       setQuantidades((prev) => ({
         ...prev,
@@ -154,12 +161,10 @@ export default function RetiradaMaterial() {
       carregarMateriais(obraSelecionada);
 
     } catch (error) {
-      console.error("Erro ao retirar material:", error);
+      console.error(error);
       alert("Erro ao retirar material.");
     }
   }
-
-  if (loading) return null;
 
   return (
     <div style={{ maxWidth: 900, margin: "40px auto" }}>
@@ -195,6 +200,7 @@ export default function RetiradaMaterial() {
           </span>
 
           <div style={{ marginTop: 10 }}>
+
             <input
               type="number"
               placeholder="Quantidade"
@@ -207,6 +213,46 @@ export default function RetiradaMaterial() {
               }
               style={{ width: 100 }}
             />
+
+            {/* DESTINO */}
+            <select
+              style={{ marginLeft: 10 }}
+              value={destinos[material.id] || "uso"}
+              onChange={(e) =>
+                setDestinos((prev) => ({
+                  ...prev,
+                  [material.id]: e.target.value,
+                }))
+              }
+            >
+              <option value="uso">Usado na obra</option>
+              <option value="transferencia">
+                Transferir para outra obra
+              </option>
+            </select>
+
+            {/* OBRA DESTINO */}
+            {destinos[material.id] === "transferencia" && (
+              <select
+                style={{ marginLeft: 10 }}
+                onChange={(e) =>
+                  setObraDestino((prev) => ({
+                    ...prev,
+                    [material.id]: e.target.value,
+                  }))
+                }
+              >
+                <option value="">Selecionar obra destino</option>
+
+                {obras
+                  .filter((o) => o.id !== obraSelecionada)
+                  .map((obra) => (
+                    <option key={obra.id} value={obra.id}>
+                      {obra.nome}
+                    </option>
+                  ))}
+              </select>
+            )}
 
             <button
               onClick={() => retirar(material)}
