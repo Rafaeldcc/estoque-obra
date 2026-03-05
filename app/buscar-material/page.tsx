@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-} from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 type Resultado = {
   nome: string;
@@ -72,6 +69,11 @@ export default function BuscarMaterial() {
 
     }
 
+    // ordenar todos os materiais alfabeticamente
+    lista.sort((a, b) =>
+      a.nome.localeCompare(b.nome, "pt-BR")
+    );
+
     setMateriais(lista);
   }
 
@@ -110,7 +112,7 @@ export default function BuscarMaterial() {
         className="w-full p-3 border rounded mb-6"
       />
 
-      {resultados.length === 0 && busca && (
+      {busca && resultados.length === 0 && (
         <p className="text-gray-500">
           Nenhum material encontrado.
         </p>
