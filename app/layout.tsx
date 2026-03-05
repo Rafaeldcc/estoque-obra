@@ -3,7 +3,7 @@
 import "./globals.css";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -14,6 +14,7 @@ export default function RootLayout({
 }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   async function handleLogout() {
     await signOut(auth);
@@ -22,10 +23,19 @@ export default function RootLayout({
 
   if (loading) return null;
 
-  // 🔒 Proteção de rota
-  if (!user && typeof window !== "undefined") {
+  // 🚨 Permitir acessar a página de login
+  if (!user && pathname !== "/login") {
     router.push("/login");
     return null;
+  }
+
+  // 🔹 Layout simples para login
+  if (pathname === "/login") {
+    return (
+      <html lang="pt-br">
+        <body>{children}</body>
+      </html>
+    );
   }
 
   return (
@@ -33,7 +43,6 @@ export default function RootLayout({
       <body style={{ margin: 0, fontFamily: "Arial, sans-serif" }}>
         <div style={layout}>
           
-          {/* MENU LATERAL */}
           <aside style={sidebar}>
             <h2 style={{ color: "white", marginBottom: 20 }}>
               Estoque Obra v2
@@ -41,30 +50,21 @@ export default function RootLayout({
 
             <nav style={{ marginTop: 10 }}>
               <MenuLink href="/dashboard">Dashboard</MenuLink>
-
-              <MenuLink href="/dashboard/obras">
-                Obras
-              </MenuLink>
-
+              <MenuLink href="/dashboard/obras">Obras</MenuLink>
               <MenuLink href="/dashboard/cadastrar-material">
                 Cadastrar Material
               </MenuLink>
-
               <MenuLink href="/dashboard/estoque-total">
                 Estoque Total
               </MenuLink>
-
               <MenuLink href="/movimentacoes">
                 Movimentações
               </MenuLink>
-
-              {/* 🆕 NOVA PÁGINA */}
               <MenuLink href="/retirada-material">
                 Retirada Material
               </MenuLink>
             </nav>
 
-            {/* BOTÃO SAIR */}
             <div style={{ marginTop: "auto", paddingTop: 30 }}>
               <button
                 onClick={handleLogout}
@@ -83,7 +83,6 @@ export default function RootLayout({
             </div>
           </aside>
 
-          {/* ÁREA PRINCIPAL */}
           <main style={main}>
             <header style={header}>
               <h3 style={{ margin: 0 }}>
@@ -113,7 +112,6 @@ function MenuLink({ href, children }: any) {
         borderRadius: 6,
         marginBottom: 8,
         background: "rgba(255,255,255,0.08)",
-        transition: "0.2s",
       }}
     >
       {children}
