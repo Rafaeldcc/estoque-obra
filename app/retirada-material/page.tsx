@@ -105,6 +105,7 @@ export default function RetiradaMaterial() {
     }
 
     try {
+      // remove da obra origem
       const materialRef = doc(
         db,
         "obras",
@@ -119,23 +120,61 @@ export default function RetiradaMaterial() {
         saldo: increment(-qtd),
       });
 
-      // 🔥 Se for transferência cria estoque na outra obra
+      // TRANSFERÊNCIA ENTRE OBRAS
       if (destino === "transferencia" && destinoObra) {
-        await addDoc(
-          collection(
-            db,
-            "obras",
-            destinoObra,
-            "setores",
-            material.setorId,
-            "materiais"
-          ),
-          {
+        const setoresDestinoSnap = await getDocs(
+          collection(db, "obras", destinoObra, "setores")
+        );
+
+        let setorDestinoId: string | null = null;
+
+        setoresDestinoSnap.forEach((setor) => {
+          if (setor.data().nome === material.setorId) {
+            setorDestinoId = setor.id;
+          }
+        });
+
+        if (!setorDestinoId) {
+          const novoSetor = await addDoc(
+            collection(db, "obras", destinoObra, "setores"),
+            {
+              nome: material.setorId,
+            }
+          );
+
+          setorDestinoId = novoSetor.id;
+        }
+
+        const materiaisDestinoRef = collection(
+          db,
+          "obras",
+          destinoObra,
+          "setores",
+          setorDestinoId,
+          "materiais"
+        );
+
+        const materiaisDestinoSnap = await getDocs(materiaisDestinoRef);
+
+        let materialExiste = false;
+
+        for (const docSnap of materiaisDestinoSnap.docs) {
+          if (docSnap.data().nome === material.nome) {
+            await updateDoc(docSnap.ref, {
+              saldo: increment(qtd),
+            });
+
+            materialExiste = true;
+          }
+        }
+
+        if (!materialExiste) {
+          await addDoc(materiaisDestinoRef, {
             nome: material.nome,
             saldo: qtd,
             unidade: material.unidade || "",
-          }
-        );
+          });
+        }
       }
 
       await registrarMovimentacao({
@@ -200,7 +239,6 @@ export default function RetiradaMaterial() {
           </span>
 
           <div style={{ marginTop: 10 }}>
-
             <input
               type="number"
               placeholder="Quantidade"
@@ -214,7 +252,6 @@ export default function RetiradaMaterial() {
               style={{ width: 100 }}
             />
 
-            {/* DESTINO */}
             <select
               style={{ marginLeft: 10 }}
               value={destinos[material.id] || "uso"}
@@ -231,7 +268,6 @@ export default function RetiradaMaterial() {
               </option>
             </select>
 
-            {/* OBRA DESTINO */}
             {destinos[material.id] === "transferencia" && (
               <select
                 style={{ marginLeft: 10 }}
