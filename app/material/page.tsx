@@ -2,6 +2,14 @@
 
 import { useSearchParams } from "next/navigation";
 
+type Material = {
+  nome: string;
+  setor: string;
+  obra: string;
+  saldo: number;
+  unidade: string;
+};
+
 export default function MaterialDetalhe() {
 
   const params = useSearchParams();
@@ -9,16 +17,17 @@ export default function MaterialDetalhe() {
 
   if (!data) return <p>Material não encontrado</p>;
 
-  const materiais = JSON.parse(decodeURIComponent(data));
+  const materiais: Material[] = JSON.parse(decodeURIComponent(data));
 
   return (
+
     <div className="max-w-xl mx-auto p-8 bg-white rounded shadow">
 
       <h1 className="text-2xl font-bold mb-6">
         {materiais[0]?.nome}
       </h1>
 
-      {materiais.map((material, index) => (
+      {materiais.map((material: Material, index: number) => (
 
         <div
           key={index}
@@ -38,5 +47,6 @@ export default function MaterialDetalhe() {
       ))}
 
     </div>
+
   );
 }
