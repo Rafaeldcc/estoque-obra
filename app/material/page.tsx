@@ -17,7 +17,19 @@ export default function MaterialDetalhe() {
 
   if (!data) return <p>Material não encontrado</p>;
 
-  const materiais: Material[] = JSON.parse(decodeURIComponent(data));
+  let materiais: Material[] = [];
+
+  try {
+
+    const parsed = JSON.parse(decodeURIComponent(data));
+
+    materiais = Array.isArray(parsed) ? parsed : [parsed];
+
+  } catch {
+
+    return <p>Erro ao carregar material</p>;
+
+  }
 
   return (
 
@@ -27,12 +39,9 @@ export default function MaterialDetalhe() {
         {materiais[0]?.nome}
       </h1>
 
-      {materiais.map((material: Material, index: number) => (
+      {materiais.map((material, index) => (
 
-        <div
-          key={index}
-          className="mb-4 p-4 border rounded"
-        >
+        <div key={index} className="mb-4 p-4 border rounded">
 
           <p><b>Obra:</b> {material.obra}</p>
 
