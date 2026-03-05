@@ -5,12 +5,8 @@ import {
   collection,
   getDocs,
   addDoc,
-  updateDoc,
   doc,
-  query,
-  where,
   serverTimestamp,
-  increment,
   getDoc,
 } from "firebase/firestore";
 
@@ -36,6 +32,9 @@ export default function CadastrarMaterial() {
   const [nomeMaterial, setNomeMaterial] = useState("");
   const [quantidade, setQuantidade] = useState(0);
   const [unidade, setUnidade] = useState("un");
+
+  const [sugestoes, setSugestoes] = useState<string[]>([]);
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
 
   const [mensagem, setMensagem] = useState("");
 
@@ -108,6 +107,26 @@ export default function CadastrarMaterial() {
     setMateriaisExistentes(nomes);
   }
 
+  function filtrarSugestoes(valor: string) {
+
+    setNomeMaterial(valor);
+
+    if (!valor.trim()) {
+      setSugestoes([]);
+      setMostrarSugestoes(false);
+      return;
+    }
+
+    const filtradas = materiaisExistentes
+      .filter((m) =>
+        m.toLowerCase().includes(valor.toLowerCase())
+      )
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    setSugestoes(filtradas);
+    setMostrarSugestoes(true);
+  }
+
   async function criarSetor() {
 
     if (!obraId) {
@@ -157,7 +176,6 @@ export default function CadastrarMaterial() {
       return;
     }
 
-    // 🔒 BLOQUEAR DUPLICIDADE
     const nomeLimpo = nomeMaterial.trim().toLowerCase();
 
     if (
@@ -236,8 +254,6 @@ export default function CadastrarMaterial() {
         </div>
       )}
 
-      {/* OBRA */}
-
       <select
         value={obraId}
         onChange={(e) => setObraId(e.target.value)}
@@ -252,8 +268,6 @@ export default function CadastrarMaterial() {
         ))}
       </select>
 
-      {/* SETOR */}
-
       <select
         value={setorId}
         onChange={(e) => setSetorId(e.target.value)}
@@ -267,8 +281,6 @@ export default function CadastrarMaterial() {
           </option>
         ))}
       </select>
-
-      {/* CRIAR SETOR */}
 
       {obraId && (
 
@@ -292,8 +304,6 @@ export default function CadastrarMaterial() {
 
       )}
 
-      {/* 📦 MATERIAIS JÁ CADASTRADOS */}
-
       {materiaisExistentes.length > 0 && (
 
         <div className="bg-gray-50 border rounded p-3 text-sm">
@@ -316,14 +326,41 @@ export default function CadastrarMaterial() {
 
       )}
 
-      {/* MATERIAL */}
+      {/* AUTOCOMPLETE MATERIAL */}
 
-      <input
-        placeholder="Nome do material"
-        value={nomeMaterial}
-        onChange={(e) => setNomeMaterial(e.target.value)}
-        className="w-full p-2 border rounded"
-      />
+      <div className="relative">
+
+        <input
+          placeholder="Nome do material"
+          value={nomeMaterial}
+          onChange={(e) => filtrarSugestoes(e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+
+        {mostrarSugestoes && sugestoes.length > 0 && (
+
+          <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto z-10">
+
+            {sugestoes.map((item, index) => (
+
+              <div
+                key={index}
+                onClick={() => {
+                  setNomeMaterial(item);
+                  setMostrarSugestoes(false);
+                }}
+                className="p-2 cursor-pointer hover:bg-gray-100"
+              >
+                {item}
+              </div>
+
+            ))}
+
+          </div>
+
+        )}
+
+      </div>
 
       <input
         type="number"
