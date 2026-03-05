@@ -60,11 +60,7 @@ export default function RootLayout({
                 Cadastrar Material
               </MenuLink>
 
-              <MenuLink href="/dashboard/estoque-total">
-                Estoque Total
-              </MenuLink>
-
-              {/* NOVA TELA */}
+              {/* ESTOQUE GERAL */}
               <MenuLink href="/estoque-geral">
                 Estoque Geral
               </MenuLink>
