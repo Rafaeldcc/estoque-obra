@@ -15,9 +15,17 @@ import { useAuth } from "@/lib/useAuth";
 type Movimentacao = {
   id: string;
   materialNome: string;
-  tipo: "entrada" | "saida";
+
+  // agora aceita transferência
+  tipo: "entrada" | "saida" | "transferencia";
+
   quantidade: number;
+
   obraNome: string;
+  obraDestino?: string | null;
+
+  destino?: "uso" | "transferencia";
+
   usuarioNome: string;
   createdAt: any;
 };
@@ -31,7 +39,6 @@ export default function MovimentacoesPage() {
 
   useEffect(() => {
     if (!user) return;
-
     carregarRole();
   }, [user]);
 
@@ -45,6 +52,7 @@ export default function MovimentacoesPage() {
     if (!user) return;
 
     const snap = await getDoc(doc(db, "usuarios", user.uid));
+
     if (snap.exists()) {
       setRole(snap.data().role);
     }
@@ -71,6 +79,7 @@ export default function MovimentacoesPage() {
 
   function formatarData(timestamp: any) {
     if (!timestamp) return "";
+
     try {
       return timestamp.toDate().toLocaleString("pt-BR");
     } catch {
@@ -119,25 +128,35 @@ export default function MovimentacoesPage() {
                 className={`font-semibold ${
                   mov.tipo === "entrada"
                     ? "text-green-600"
+                    : mov.tipo === "transferencia"
+                    ? "text-blue-600"
                     : "text-red-600"
                 }`}
               >
-                {mov.tipo === "entrada"
-                  ? "🟢 Entrada"
-                  : "🔴 Saída"}
+                {mov.tipo === "entrada" && "🟢 Entrada"}
+                {mov.tipo === "saida" && "🔴 Saída"}
+                {mov.tipo === "transferencia" && "🔵 Transferência"}
               </span>
             </div>
 
             <div className="mt-2">
-              Quantidade:{" "}
-              <b>
-                {mov.quantidade}
-              </b>
+              Quantidade: <b>{mov.quantidade}</b>
             </div>
 
             <div>
-              Obra: <b>{mov.obraNome}</b>
+              Obra origem: <b>{mov.obraNome}</b>
             </div>
+
+            {mov.destino === "transferencia" && (
+              <div>
+                Transferido para obra:{" "}
+                <b>{mov.obraDestino}</b>
+              </div>
+            )}
+
+            {mov.destino === "uso" && (
+              <div>Usado na obra</div>
+            )}
 
             <div>
               Usuário: <b>{mov.usuarioNome}</b>

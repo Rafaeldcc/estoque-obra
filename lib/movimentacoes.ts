@@ -5,7 +5,7 @@ type MovimentacaoProps = {
   materialId: string;
   materialNome: string;
 
-  // 🔥 Agora aceita transferência também
+  // agora aceita transferência
   tipo: "entrada" | "saida" | "transferencia";
 
   quantidade: number;
@@ -13,7 +13,10 @@ type MovimentacaoProps = {
   obraId: string;
   obraNome: string;
 
-  // 🔥 usado quando for transferência
+  // destino da movimentação
+  destino?: "uso" | "transferencia";
+
+  // obra destino (quando for transferência)
   obraDestino?: string | null;
 
   usuarioId: string;
@@ -27,6 +30,7 @@ export async function registrarMovimentacao({
   quantidade,
   obraId,
   obraNome,
+  destino = "uso",
   obraDestino = null,
   usuarioId,
   usuarioNome,
@@ -37,13 +41,19 @@ export async function registrarMovimentacao({
       materialNome,
       tipo,
       quantidade,
+
       obraId,
       obraNome,
+
+      destino,
       obraDestino,
+
       usuarioId,
       usuarioNome,
+
       createdAt: serverTimestamp(),
     });
+
   } catch (error) {
     console.error("Erro ao registrar movimentação:", error);
     throw error;
