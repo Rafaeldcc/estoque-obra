@@ -304,28 +304,6 @@ export default function CadastrarMaterial() {
 
       )}
 
-      {materiaisExistentes.length > 0 && (
-
-        <div className="bg-gray-50 border rounded p-3 text-sm">
-
-          <strong>Materiais já cadastrados neste setor:</strong>
-
-          <ul className="mt-2 space-y-1">
-
-            {materiaisExistentes.map((mat, index) => (
-
-              <li key={index} className="text-gray-700">
-                • {mat}
-              </li>
-
-            ))}
-
-          </ul>
-
-        </div>
-
-      )}
-
       {/* AUTOCOMPLETE MATERIAL */}
 
       <div className="relative">
