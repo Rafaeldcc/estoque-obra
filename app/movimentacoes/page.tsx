@@ -154,15 +154,14 @@ export default function MovimentacoesPage() {
             )}
 
             {/* TRANSFERÊNCIA */}
-            {mov.destino === "transferencia" && (
+            {mov.tipo === "transferencia" && mov.obraDestino && (
               <div>
-                Transferido para obra:{" "}
-                <b>{mov.obraDestino}</b>
+                Transferido para obra: <b>{mov.obraDestino}</b>
               </div>
             )}
 
-            {/* USO */}
-            {mov.destino === "uso" && (
+            {/* SAÍDA PARA USO */}
+            {mov.tipo === "saida" && mov.destino === "uso" && (
               <div>Usado na obra</div>
             )}
 
