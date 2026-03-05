@@ -4,10 +4,17 @@ import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+type LinhaEstoque = {
+  material: string;
+  setor: string;
+  total: number;
+  obras: { [key: string]: number };
+};
+
 export default function EstoqueGeral() {
 
-  const [tabela, setTabela] = useState<any[]>([]);
   const [obras, setObras] = useState<any[]>([]);
+  const [tabela, setTabela] = useState<LinhaEstoque[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,22 +25,24 @@ export default function EstoqueGeral() {
 
     const obrasSnap = await getDocs(collection(db, "obras"));
 
-    const obrasLista = obrasSnap.docs.map(doc => ({
+    const listaObras = obrasSnap.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
 
-    setObras(obrasLista);
+    setObras(listaObras);
 
-    const mapaMateriais: any = {};
+    const mapa: any = {};
 
-    for (const obra of obrasLista) {
+    for (const obra of listaObras) {
 
       const setoresSnap = await getDocs(
         collection(db, "obras", obra.id, "setores")
       );
 
       for (const setor of setoresSnap.docs) {
+
+        const setorNome = setor.data().nome;
 
         const materiaisSnap = await getDocs(
           collection(
@@ -49,19 +58,24 @@ export default function EstoqueGeral() {
         materiaisSnap.forEach(mat => {
 
           const data = mat.data();
-
-          if (!mapaMateriais[data.nome]) {
-            mapaMateriais[data.nome] = {
-              material: data.nome,
-              total: 0
-            };
-          }
-
+          const materialNome = data.nome;
           const saldo = data.saldo ?? 0;
 
-          mapaMateriais[data.nome][obra.nome] = saldo;
+          const chave = materialNome + "_" + setorNome;
 
-          mapaMateriais[data.nome].total += saldo;
+          if (!mapa[chave]) {
+
+            mapa[chave] = {
+              material: materialNome,
+              setor: setorNome,
+              total: 0,
+              obras: {}
+            };
+
+          }
+
+          mapa[chave].obras[obra.nome] = saldo;
+          mapa[chave].total += saldo;
 
         });
 
@@ -69,9 +83,7 @@ export default function EstoqueGeral() {
 
     }
 
-    const tabelaFinal = Object.values(mapaMateriais);
-
-    setTabela(tabelaFinal);
+    setTabela(Object.values(mapa));
     setLoading(false);
 
   }
@@ -79,7 +91,7 @@ export default function EstoqueGeral() {
   if (loading) {
     return (
       <div className="p-10 text-center">
-        Carregando estoque...
+        Carregando estoque geral...
       </div>
     );
   }
@@ -100,8 +112,12 @@ export default function EstoqueGeral() {
 
             <tr>
 
-              <th className="p-3 text-left border">
+              <th className="p-3 border text-left">
                 Material
+              </th>
+
+              <th className="p-3 border text-left">
+                Setor
               </th>
 
               {obras.map((obra) => (
@@ -120,7 +136,7 @@ export default function EstoqueGeral() {
 
           <tbody>
 
-            {tabela.map((linha: any, index) => (
+            {tabela.map((linha, index) => (
 
               <tr key={index} className="border">
 
@@ -128,11 +144,15 @@ export default function EstoqueGeral() {
                   {linha.material}
                 </td>
 
+                <td className="p-3 border">
+                  {linha.setor}
+                </td>
+
                 {obras.map((obra) => (
 
                   <td key={obra.id} className="p-3 border text-center">
 
-                    {linha[obra.nome] ?? 0}
+                    {linha.obras[obra.nome] ?? 0}
 
                   </td>
 
