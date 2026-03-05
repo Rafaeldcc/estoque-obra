@@ -88,7 +88,7 @@ export default function RetiradaMaterial() {
   async function retirar(material: Material) {
     const qtd = quantidades[material.id];
     const destino = destinos[material.id] || "uso";
-    const destinoObra = obraDestino[material.id];
+    const destinoObraId = obraDestino[material.id];
 
     if (!qtd || qtd <= 0) {
       alert("Informe uma quantidade válida.");
@@ -109,7 +109,7 @@ export default function RetiradaMaterial() {
 
     try {
 
-      // 🔻 Remove da obra origem
+      // 🔻 remove da obra origem
       const materialRef = doc(
         db,
         "obras",
@@ -124,10 +124,15 @@ export default function RetiradaMaterial() {
         saldo: increment(-qtd),
       });
 
-      // 🔁 TRANSFERÊNCIA ENTRE OBRAS
-      if (destino === "transferencia" && destinoObra) {
+      let nomeObraDestino: string | null = null;
 
-        // pegar nome do setor da obra origem
+      // 🔁 transferência entre obras
+      if (destino === "transferencia" && destinoObraId) {
+
+        nomeObraDestino =
+          obras.find((o) => o.id === destinoObraId)?.nome || "";
+
+        // pegar nome do setor origem
         const setorOrigemRef = doc(
           db,
           "obras",
@@ -141,7 +146,7 @@ export default function RetiradaMaterial() {
 
         // procurar setor na obra destino
         const setoresDestinoSnap = await getDocs(
-          collection(db, "obras", destinoObra, "setores")
+          collection(db, "obras", destinoObraId, "setores")
         );
 
         let setorDestinoId: string | null = null;
@@ -155,10 +160,8 @@ export default function RetiradaMaterial() {
         // se não existir cria setor
         if (!setorDestinoId) {
           const novoSetor = await addDoc(
-            collection(db, "obras", destinoObra, "setores"),
-            {
-              nome: nomeSetor,
-            }
+            collection(db, "obras", destinoObraId, "setores"),
+            { nome: nomeSetor }
           );
 
           setorDestinoId = novoSetor.id;
@@ -167,7 +170,7 @@ export default function RetiradaMaterial() {
         const materiaisDestinoRef = collection(
           db,
           "obras",
-          destinoObra,
+          destinoObraId,
           "setores",
           setorDestinoId,
           "materiais"
@@ -197,15 +200,23 @@ export default function RetiradaMaterial() {
         }
       }
 
+      // 📜 registrar movimentação
       await registrarMovimentacao({
         materialId: material.id,
         materialNome: material.nome,
+
         tipo: destino === "transferencia" ? "transferencia" : "saida",
+
         quantidade: qtd,
+
         obraId: obraSelecionada,
         obraNome:
           obras.find((o) => o.id === obraSelecionada)?.nome || "",
-        obraDestino: destinoObra || null,
+
+        destino: destino === "transferencia" ? "transferencia" : "uso",
+
+        obraDestino: nomeObraDestino,
+
         usuarioId: user.uid,
         usuarioNome: user.email || "",
       });
