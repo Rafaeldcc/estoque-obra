@@ -60,8 +60,8 @@ export default function BuscarMaterial() {
 
           lista.push({
             nome: data.nome,
-            saldo: data.saldo,
-            unidade: data.unidade,
+            saldo: data.saldo ?? 0,
+            unidade: data.unidade ?? "un",
             obra: obraNome,
             setor: setorNome,
           });
@@ -89,7 +89,7 @@ export default function BuscarMaterial() {
     }
 
     const filtrados = materiais.filter((m) =>
-      m.nome.toLowerCase().includes(valor.toLowerCase())
+      m.nome.toLowerCase().includes(valor.toLowerCase()) && m.saldo > 0
     );
 
     // remover duplicados pelo nome
@@ -108,7 +108,11 @@ export default function BuscarMaterial() {
 
   function abrirMaterial(material: Material) {
 
-    const data = encodeURIComponent(JSON.stringify(material));
+    const listaMateriais = materiais
+      .filter((m) => m.nome.toLowerCase() === material.nome.toLowerCase())
+      .filter((m) => m.saldo > 0);
+
+    const data = encodeURIComponent(JSON.stringify(listaMateriais));
 
     router.push(`/material?data=${data}`);
   }
