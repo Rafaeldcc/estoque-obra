@@ -9,25 +9,34 @@ export default function MaterialDetalhe() {
 
   if (!data) return <p>Material não encontrado</p>;
 
-  const material = JSON.parse(decodeURIComponent(data));
+  const materiais = JSON.parse(decodeURIComponent(data));
 
   return (
-
     <div className="max-w-xl mx-auto p-8 bg-white rounded shadow">
 
       <h1 className="text-2xl font-bold mb-6">
-        {material.nome}
+        {materiais[0]?.nome}
       </h1>
 
-      <p><b>Obra:</b> {material.obra}</p>
+      {materiais.map((material, index) => (
 
-      <p><b>Setor:</b> {material.setor}</p>
+        <div
+          key={index}
+          className="mb-4 p-4 border rounded"
+        >
 
-      <p>
-        <b>Saldo:</b> {material.saldo} {material.unidade}
-      </p>
+          <p><b>Obra:</b> {material.obra}</p>
+
+          <p><b>Setor:</b> {material.setor}</p>
+
+          <p>
+            <b>Saldo:</b> {material.saldo} {material.unidade}
+          </p>
+
+        </div>
+
+      ))}
 
     </div>
-
   );
 }
