@@ -23,13 +23,11 @@ export default function RootLayout({
 
   if (loading) return null;
 
-  // 🚨 Permitir acessar a página de login
   if (!user && pathname !== "/login") {
     router.push("/login");
     return null;
   }
 
-  // 🔹 Layout simples para login
   if (pathname === "/login") {
     return (
       <html lang="pt-br">
@@ -49,20 +47,36 @@ export default function RootLayout({
             </h2>
 
             <nav style={{ marginTop: 10 }}>
-              <MenuLink href="/dashboard">Dashboard</MenuLink>
-              <MenuLink href="/dashboard/obras">Obras</MenuLink>
+
+              <MenuLink href="/dashboard">
+                Dashboard
+              </MenuLink>
+
+              <MenuLink href="/dashboard/obras">
+                Obras
+              </MenuLink>
+
               <MenuLink href="/dashboard/cadastrar-material">
                 Cadastrar Material
               </MenuLink>
+
               <MenuLink href="/dashboard/estoque-total">
                 Estoque Total
               </MenuLink>
+
+              {/* NOVA TELA */}
+              <MenuLink href="/estoque-geral">
+                Estoque Geral
+              </MenuLink>
+
               <MenuLink href="/movimentacoes">
                 Movimentações
               </MenuLink>
+
               <MenuLink href="/retirada-material">
                 Retirada Material
               </MenuLink>
+
             </nav>
 
             <div style={{ marginTop: "auto", paddingTop: 30 }}>
@@ -81,6 +95,7 @@ export default function RootLayout({
                 Sair
               </button>
             </div>
+
           </aside>
 
           <main style={main}>
@@ -94,6 +109,7 @@ export default function RootLayout({
               {children}
             </div>
           </main>
+
         </div>
       </body>
     </html>
