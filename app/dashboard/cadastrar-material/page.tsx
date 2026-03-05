@@ -19,6 +19,7 @@ import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useAuth } from "@/lib/useAuth";
 
 export default function CadastrarMaterial() {
+
   const { user, loading } = useAuth();
 
   const [role, setRole] = useState<string | null>(null);
@@ -29,6 +30,8 @@ export default function CadastrarMaterial() {
 
   const [obraId, setObraId] = useState("");
   const [setorId, setSetorId] = useState("");
+
+  const [novoSetor, setNovoSetor] = useState("");
 
   const [nomeMaterial, setNomeMaterial] = useState("");
   const [quantidade, setQuantidade] = useState(0);
@@ -52,6 +55,7 @@ export default function CadastrarMaterial() {
   }, [obraId, setorId]);
 
   async function carregarRole() {
+
     if (!user) return;
 
     const snap = await getDoc(doc(db, "usuarios", user.uid));
@@ -62,6 +66,7 @@ export default function CadastrarMaterial() {
   }
 
   async function carregarObras() {
+
     const snap = await getDocs(collection(db, "obras"));
 
     setObras(
@@ -73,6 +78,7 @@ export default function CadastrarMaterial() {
   }
 
   async function carregarSetores() {
+
     if (!obraId) return;
 
     const snap = await getDocs(
@@ -88,6 +94,7 @@ export default function CadastrarMaterial() {
   }
 
   async function carregarMateriais() {
+
     if (!obraId || !setorId) return;
 
     const snap = await getDocs(
@@ -101,7 +108,40 @@ export default function CadastrarMaterial() {
     setMateriaisExistentes(nomes);
   }
 
+  async function criarSetor() {
+
+    if (!obraId) {
+      alert("Selecione uma obra primeiro.");
+      return;
+    }
+
+    if (!novoSetor.trim()) {
+      alert("Digite o nome do setor.");
+      return;
+    }
+
+    const ref = await addDoc(
+      collection(db, "obras", obraId, "setores"),
+      {
+        nome: novoSetor.trim(),
+        criadoEm: serverTimestamp(),
+      }
+    );
+
+    const novo = {
+      id: ref.id,
+      nome: novoSetor.trim(),
+    };
+
+    setSetores((prev) => [...prev, novo]);
+
+    setSetorId(ref.id);
+
+    setNovoSetor("");
+  }
+
   async function salvarMaterial() {
+
     if (!user) {
       alert("Sessão expirou. Faça login novamente.");
       return;
@@ -118,6 +158,7 @@ export default function CadastrarMaterial() {
     }
 
     try {
+
       const materiaisRef = collection(
         db,
         "obras",
@@ -137,6 +178,7 @@ export default function CadastrarMaterial() {
       let materialId = "";
 
       if (!snap.empty) {
+
         const docRef = snap.docs[0].ref;
         materialId = snap.docs[0].id;
 
@@ -144,7 +186,9 @@ export default function CadastrarMaterial() {
           saldo: increment(quantidade),
           atualizadoEm: serverTimestamp(),
         });
+
       } else {
+
         const newDoc = await addDoc(materiaisRef, {
           nome: nomeMaterial.trim(),
           saldo: quantidade,
@@ -156,6 +200,7 @@ export default function CadastrarMaterial() {
       }
 
       await registrarMovimentacao({
+
         materialId,
         materialNome: nomeMaterial.trim(),
         tipo: "entrada",
@@ -179,8 +224,10 @@ export default function CadastrarMaterial() {
       carregarMateriais();
 
     } catch (error) {
+
       console.error(error);
       alert("Erro ao salvar material.");
+
     }
   }
 
@@ -199,7 +246,10 @@ export default function CadastrarMaterial() {
         </div>
       )}
 
+      {/* OBRA */}
+
       <select
+        value={obraId}
         onChange={(e) => setObraId(e.target.value)}
         className="w-full p-2 border rounded"
       >
@@ -212,7 +262,10 @@ export default function CadastrarMaterial() {
         ))}
       </select>
 
+      {/* SETOR */}
+
       <select
+        value={setorId}
         onChange={(e) => setSetorId(e.target.value)}
         className="w-full p-2 border rounded"
       >
@@ -224,6 +277,32 @@ export default function CadastrarMaterial() {
           </option>
         ))}
       </select>
+
+      {/* CRIAR SETOR */}
+
+      {obraId && (
+
+        <div className="flex gap-2">
+
+          <input
+            placeholder="Novo setor"
+            value={novoSetor}
+            onChange={(e) => setNovoSetor(e.target.value)}
+            className="flex-1 p-2 border rounded"
+          />
+
+          <button
+            onClick={criarSetor}
+            className="bg-gray-800 text-white px-4 rounded"
+          >
+            Criar
+          </button>
+
+        </div>
+
+      )}
+
+      {/* MATERIAL */}
 
       <input
         placeholder="Nome do material"
