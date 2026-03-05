@@ -9,8 +9,6 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/useAuth";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   BarChart,
   Bar,
@@ -23,26 +21,18 @@ import {
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
-  const router = useRouter();
 
   const [totalObras, setTotalObras] = useState(0);
   const [totalSetores, setTotalSetores] = useState(0);
   const [totalMateriais, setTotalMateriais] = useState(0);
   const [totalEstoque, setTotalEstoque] = useState(0);
 
-  const [materiais, setMateriais] = useState<string[]>([]);
-  const [filtro, setFiltro] = useState("");
-  const [mostrarLista, setMostrarLista] = useState(false);
-
   const [empresa, setEmpresa] = useState("...");
-  const [graficoData, setGraficoData] = useState<any[]>([]);
-  const [mostrarGrafico, setMostrarGrafico] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
     carregarIndicadores();
-    carregarMateriais();
     carregarEmpresa();
   }, [user]);
 
@@ -69,11 +59,8 @@ export default function Dashboard() {
     let setoresCount = 0;
     let materiaisCount = 0;
     let estoqueTotal = 0;
-    let dadosGrafico: any[] = [];
 
     for (const obraDoc of obrasSnap.docs) {
-      let estoquePorObra = 0;
-
       const setoresSnap = await getDocs(
         collection(db, "obras", obraDoc.id, "setores")
       );
@@ -97,54 +84,14 @@ export default function Dashboard() {
         materiaisSnap.forEach((doc) => {
           const saldo = doc.data().saldo ?? 0;
           estoqueTotal += saldo;
-          estoquePorObra += saldo;
         });
       }
-
-      dadosGrafico.push({
-        obra: obraDoc.data().nome,
-        estoque: estoquePorObra,
-      });
     }
 
-    setGraficoData(dadosGrafico);
     setTotalObras(obrasSnap.size);
     setTotalSetores(setoresCount);
     setTotalMateriais(materiaisCount);
     setTotalEstoque(estoqueTotal);
-  }
-
-  async function carregarMateriais() {
-    const obrasSnap = await getDocs(collection(db, "obras"));
-    let lista: string[] = [];
-
-    for (const obraDoc of obrasSnap.docs) {
-      const setoresSnap = await getDocs(
-        collection(db, "obras", obraDoc.id, "setores")
-      );
-
-      for (const setorDoc of setoresSnap.docs) {
-        const materiaisSnap = await getDocs(
-          collection(
-            db,
-            "obras",
-            obraDoc.id,
-            "setores",
-            setorDoc.id,
-            "materiais"
-          )
-        );
-
-        materiaisSnap.forEach((doc) => {
-          const nome = doc.data().nome;
-          if (nome) lista.push(nome);
-        });
-      }
-    }
-
-    const unica = [...new Set(lista)];
-    unica.sort((a, b) => a.localeCompare(b, "pt-BR"));
-    setMateriais(unica);
   }
 
   if (loading) return null;
@@ -155,15 +102,11 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold">
           Dashboard {empresa}
         </h1>
-        <p className="text-gray-500">Visão geral do sistema</p>
-      </div>
 
-      <Link
-        href="/dashboard/cadastrar-material"
-        className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-medium"
-      >
-        + Cadastrar Material
-      </Link>
+        <p className="text-gray-500">
+          Visão geral do sistema
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card titulo="Obras" valor={totalObras} />
