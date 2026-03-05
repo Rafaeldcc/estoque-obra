@@ -13,18 +13,10 @@ import {
   increment,
   getDoc,
 } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+
+import { db } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useAuth } from "@/lib/useAuth";
-
-function normalizarTexto(texto: string) {
-  return texto
-    .toLowerCase()
-    .replace(/\s/g, "")
-    .replace(",", ".")
-    .replace("mm", "")
-    .replace(/\./g, "");
-}
 
 export default function CadastrarMaterial() {
   const { user, loading } = useAuth();
@@ -37,7 +29,6 @@ export default function CadastrarMaterial() {
 
   const [obraId, setObraId] = useState("");
   const [setorId, setSetorId] = useState("");
-  const [novoSetor, setNovoSetor] = useState("");
 
   const [nomeMaterial, setNomeMaterial] = useState("");
   const [quantidade, setQuantidade] = useState(0);
@@ -64,6 +55,7 @@ export default function CadastrarMaterial() {
     if (!user) return;
 
     const snap = await getDoc(doc(db, "usuarios", user.uid));
+
     if (snap.exists()) {
       setRole(snap.data().role);
     }
@@ -71,48 +63,54 @@ export default function CadastrarMaterial() {
 
   async function carregarObras() {
     const snap = await getDocs(collection(db, "obras"));
-    setObras(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+
+    setObras(
+      snap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+    );
   }
 
   async function carregarSetores() {
+    if (!obraId) return;
+
     const snap = await getDocs(
       collection(db, "obras", obraId, "setores")
     );
-    setSetores(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+
+    setSetores(
+      snap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+    );
   }
 
   async function carregarMateriais() {
+    if (!obraId || !setorId) return;
+
     const snap = await getDocs(
       collection(db, "obras", obraId, "setores", setorId, "materiais")
     );
 
     const nomes = snap.docs.map((doc) => doc.data().nome);
+
     nomes.sort((a, b) => a.localeCompare(b, "pt-BR"));
+
     setMateriaisExistentes(nomes);
   }
 
-  async function criarSetor() {
-    if (role !== "admin") {
-      alert("Apenas administrador pode criar setor.");
+  async function salvarMaterial() {
+    if (!user) {
+      alert("Sessão expirou. Faça login novamente.");
       return;
     }
 
-    if (!novoSetor.trim()) return;
-
-    await addDoc(collection(db, "obras", obraId, "setores"), {
-      nome: novoSetor.trim(),
-      criadoEm: serverTimestamp(),
-    });
-
-    setNovoSetor("");
-    carregarSetores();
-  }
-
-  async function salvarMaterial() {
-    if (!nomeMaterial.trim() || quantidade <= 0 || !obraId || !setorId)
+    if (!nomeMaterial.trim() || quantidade <= 0 || !obraId || !setorId) {
+      alert("Preencha todos os campos.");
       return;
-
-    if (!user) return;
+    }
 
     if (role !== "admin" && role !== "almoxarifado") {
       alert("Você não tem permissão para cadastrar material.");
@@ -170,10 +168,14 @@ export default function CadastrarMaterial() {
       });
 
       setMensagem("Material salvo com sucesso!");
-      setTimeout(() => setMensagem(""), 3000);
+
+      setTimeout(() => {
+        setMensagem("");
+      }, 3000);
 
       setNomeMaterial("");
       setQuantidade(0);
+
       carregarMateriais();
 
     } catch (error) {
@@ -186,6 +188,7 @@ export default function CadastrarMaterial() {
 
   return (
     <div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow space-y-4">
+
       <h2 className="text-center text-lg font-semibold">
         Cadastrar Material
       </h2>
@@ -201,6 +204,7 @@ export default function CadastrarMaterial() {
         className="w-full p-2 border rounded"
       >
         <option value="">Selecionar obra</option>
+
         {obras.map((obra) => (
           <option key={obra.id} value={obra.id}>
             {obra.nome}
@@ -213,6 +217,7 @@ export default function CadastrarMaterial() {
         className="w-full p-2 border rounded"
       >
         <option value="">Selecionar setor</option>
+
         {setores.map((setor) => (
           <option key={setor.id} value={setor.id}>
             {setor.nome}
@@ -251,6 +256,7 @@ export default function CadastrarMaterial() {
       >
         Salvar Material
       </button>
+
     </div>
   );
 }
