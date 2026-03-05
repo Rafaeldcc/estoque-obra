@@ -48,7 +48,7 @@ export default function LoginPage() {
         className="bg-white p-8 rounded-xl shadow-md w-96"
       >
         <h1 className="text-2xl font-bold mb-6 text-center">
-          Sistema Profissional de Estoque
+          Estoque F.Vieira
         </h1>
 
         {erro && (
