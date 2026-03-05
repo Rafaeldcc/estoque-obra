@@ -4,10 +4,18 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 type MovimentacaoProps = {
   materialId: string;
   materialNome: string;
-  tipo: "entrada" | "saida";
+
+  // 🔥 Agora aceita transferência também
+  tipo: "entrada" | "saida" | "transferencia";
+
   quantidade: number;
+
   obraId: string;
   obraNome: string;
+
+  // 🔥 usado quando for transferência
+  obraDestino?: string | null;
+
   usuarioId: string;
   usuarioNome: string;
 };
@@ -19,6 +27,7 @@ export async function registrarMovimentacao({
   quantidade,
   obraId,
   obraNome,
+  obraDestino = null,
   usuarioId,
   usuarioNome,
 }: MovimentacaoProps) {
@@ -30,6 +39,7 @@ export async function registrarMovimentacao({
       quantidade,
       obraId,
       obraNome,
+      obraDestino,
       usuarioId,
       usuarioNome,
       createdAt: serverTimestamp(),
