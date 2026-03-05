@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db, auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
+import { useAuth } from "@/lib/useAuth";
+
 import {
   collection,
   getDocs,
   doc,
   updateDoc,
   increment,
+  serverTimestamp,
 } from "firebase/firestore";
 
 type Material = {
@@ -20,14 +23,17 @@ type Material = {
 };
 
 export default function RetiradaMaterial() {
+  const { user, loading } = useAuth();
+
   const [obras, setObras] = useState<any[]>([]);
   const [obraSelecionada, setObraSelecionada] = useState("");
   const [materiais, setMateriais] = useState<Material[]>([]);
   const [quantidades, setQuantidades] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
+    if (!user) return;
     carregarObras();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (obraSelecionada) {
@@ -36,51 +42,68 @@ export default function RetiradaMaterial() {
   }, [obraSelecionada]);
 
   async function carregarObras() {
-    const snap = await getDocs(collection(db, "obras"));
-    const lista = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setObras(lista);
+    try {
+      const snap = await getDocs(collection(db, "obras"));
+
+      setObras(
+        snap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+      );
+    } catch (error) {
+      console.error("Erro ao carregar obras:", error);
+    }
   }
 
   async function carregarMateriais(obraId: string) {
-    const setoresSnap = await getDocs(
-      collection(db, "obras", obraId, "setores")
-    );
-
-    let lista: Material[] = [];
-
-    for (const setorDoc of setoresSnap.docs) {
-      const materiaisSnap = await getDocs(
-        collection(
-          db,
-          "obras",
-          obraId,
-          "setores",
-          setorDoc.id,
-          "materiais"
-        )
+    try {
+      const setoresSnap = await getDocs(
+        collection(db, "obras", obraId, "setores")
       );
 
-      materiaisSnap.docs.forEach((docSnap) => {
-        const data = docSnap.data();
+      let lista: Material[] = [];
 
-        lista.push({
-          id: docSnap.id,
-          nome: data.nome,
-          saldo: data.saldo || 0,
-          unidade: data.unidade || "",
-          setorId: setorDoc.id,
+      for (const setorDoc of setoresSnap.docs) {
+        const materiaisSnap = await getDocs(
+          collection(
+            db,
+            "obras",
+            obraId,
+            "setores",
+            setorDoc.id,
+            "materiais"
+          )
+        );
+
+        materiaisSnap.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+
+          lista.push({
+            id: docSnap.id,
+            nome: data.nome,
+            saldo: data.saldo || 0,
+            unidade: data.unidade || "",
+            setorId: setorDoc.id,
+          });
         });
-      });
-    }
+      }
 
-    setMateriais(lista);
+      setMateriais(lista);
+
+    } catch (error) {
+      console.error("Erro ao carregar materiais:", error);
+    }
   }
 
   async function retirar(material: Material) {
+
     const qtd = quantidades[material.id];
+
+    if (!user) {
+      alert("Usuário não autenticado.");
+      return;
+    }
 
     if (!qtd || qtd <= 0) {
       alert("Informe uma quantidade válida.");
@@ -88,18 +111,12 @@ export default function RetiradaMaterial() {
     }
 
     if (qtd > material.saldo) {
-      alert("Quantidade maior que o saldo.");
-      return;
-    }
-
-    const user = auth.currentUser;
-
-    if (!user) {
-      alert("Usuário não autenticado.");
+      alert("Quantidade maior que o saldo disponível.");
       return;
     }
 
     try {
+
       const materialRef = doc(
         db,
         "obras",
@@ -112,6 +129,7 @@ export default function RetiradaMaterial() {
 
       await updateDoc(materialRef, {
         saldo: increment(-qtd),
+        atualizadoEm: serverTimestamp(),
       });
 
       await registrarMovimentacao({
@@ -136,10 +154,12 @@ export default function RetiradaMaterial() {
       carregarMateriais(obraSelecionada);
 
     } catch (error) {
-      console.error(error);
+      console.error("Erro ao retirar material:", error);
       alert("Erro ao retirar material.");
     }
   }
+
+  if (loading) return null;
 
   return (
     <div style={{ maxWidth: 900, margin: "40px auto" }}>
