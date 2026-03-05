@@ -157,6 +157,18 @@ export default function CadastrarMaterial() {
       return;
     }
 
+    // 🔒 BLOQUEAR DUPLICIDADE
+    const nomeLimpo = nomeMaterial.trim().toLowerCase();
+
+    if (
+      materiaisExistentes.some(
+        (m) => m.toLowerCase() === nomeLimpo
+      )
+    ) {
+      alert("Este material já está cadastrado neste setor.");
+      return;
+    }
+
     try {
 
       const materiaisRef = collection(
@@ -168,36 +180,14 @@ export default function CadastrarMaterial() {
         "materiais"
       );
 
-      const q = query(
-        materiaisRef,
-        where("nome", "==", nomeMaterial.trim())
-      );
+      const newDoc = await addDoc(materiaisRef, {
+        nome: nomeMaterial.trim(),
+        saldo: quantidade,
+        unidade,
+        criadoEm: serverTimestamp(),
+      });
 
-      const snap = await getDocs(q);
-
-      let materialId = "";
-
-      if (!snap.empty) {
-
-        const docRef = snap.docs[0].ref;
-        materialId = snap.docs[0].id;
-
-        await updateDoc(docRef, {
-          saldo: increment(quantidade),
-          atualizadoEm: serverTimestamp(),
-        });
-
-      } else {
-
-        const newDoc = await addDoc(materiaisRef, {
-          nome: nomeMaterial.trim(),
-          saldo: quantidade,
-          unidade,
-          criadoEm: serverTimestamp(),
-        });
-
-        materialId = newDoc.id;
-      }
+      const materialId = newDoc.id;
 
       await registrarMovimentacao({
 
@@ -297,6 +287,30 @@ export default function CadastrarMaterial() {
           >
             Criar
           </button>
+
+        </div>
+
+      )}
+
+      {/* 📦 MATERIAIS JÁ CADASTRADOS */}
+
+      {materiaisExistentes.length > 0 && (
+
+        <div className="bg-gray-50 border rounded p-3 text-sm">
+
+          <strong>Materiais já cadastrados neste setor:</strong>
+
+          <ul className="mt-2 space-y-1">
+
+            {materiaisExistentes.map((mat, index) => (
+
+              <li key={index} className="text-gray-700">
+                • {mat}
+              </li>
+
+            ))}
+
+          </ul>
 
         </div>
 
