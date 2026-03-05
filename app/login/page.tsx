@@ -58,15 +58,21 @@ export default function LoginPage() {
 
       <div className="bg-white p-10 rounded-2xl shadow-lg w-96">
 
-        {/* TÍTULO */}
+        {/* LOGO + TITULO */}
 
-        <div className="text-center mb-8">
+        <div className="flex flex-col items-center mb-8">
+
+          <img
+            src="/logo.png"
+            alt="Logo F.Vieira"
+            className="w-24 mb-4"
+          />
 
           <h1 className="text-3xl font-bold text-gray-800">
             Estoque F.Vieira
           </h1>
 
-          <p className="text-gray-500 mt-2 text-sm">
+          <p className="text-gray-500 mt-2 text-sm text-center">
             Sistema Profissional de Controle de Materiais
           </p>
 
