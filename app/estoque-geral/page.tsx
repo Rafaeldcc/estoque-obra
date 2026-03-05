@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+type Obra = {
+  id: string;
+  nome: string;
+};
+
 type LinhaEstoque = {
   material: string;
   setor: string;
@@ -13,7 +18,7 @@ type LinhaEstoque = {
 
 export default function EstoqueGeral() {
 
-  const [obras, setObras] = useState<any[]>([]);
+  const [obras, setObras] = useState<Obra[]>([]);
   const [tabela, setTabela] = useState<LinhaEstoque[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,9 +30,9 @@ export default function EstoqueGeral() {
 
     const obrasSnap = await getDocs(collection(db, "obras"));
 
-    const listaObras = obrasSnap.docs.map(doc => ({
+    const listaObras: Obra[] = obrasSnap.docs.map((doc) => ({
       id: doc.id,
-      ...doc.data()
+      nome: doc.data().nome
     }));
 
     setObras(listaObras);
