@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useRouter } from "next/navigation";
 
 type Obra = {
   id: string;
@@ -18,8 +17,6 @@ type LinhaEstoque = {
 };
 
 export default function EstoqueGeral() {
-
-  const router = useRouter();
 
   const [obras, setObras] = useState<Obra[]>([]);
   const [tabela, setTabela] = useState<LinhaEstoque[]>([]);
@@ -96,24 +93,6 @@ export default function EstoqueGeral() {
 
   }
 
-  function abrirMaterial(linha: LinhaEstoque) {
-
-    const listaMateriais = obras
-      .map((obra) => ({
-        nome: linha.material,
-        setor: linha.setor,
-        obra: obra.nome,
-        saldo: linha.obras[obra.nome] ?? 0,
-        unidade: "un"
-      }))
-      .filter((item) => item.saldo > 0);
-
-    router.push(
-      `/material?data=${encodeURIComponent(JSON.stringify(listaMateriais))}`
-    );
-
-  }
-
   if (loading) {
     return (
       <div className="p-10 text-center">
@@ -166,10 +145,7 @@ export default function EstoqueGeral() {
 
               <tr key={index} className="border">
 
-                <td
-                  className="p-3 border font-semibold text-blue-600 cursor-pointer hover:underline"
-                  onClick={() => abrirMaterial(linha)}
-                >
+                <td className="p-3 border font-semibold">
                   {linha.material}
                 </td>
 
