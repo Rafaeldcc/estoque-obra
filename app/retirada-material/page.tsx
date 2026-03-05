@@ -10,6 +10,7 @@ import {
   updateDoc,
   increment,
   addDoc,
+  getDoc,
 } from "firebase/firestore";
 
 type Material = {
@@ -40,10 +41,12 @@ export default function RetiradaMaterial() {
 
   async function carregarObras() {
     const snap = await getDocs(collection(db, "obras"));
+
     const lista = snap.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
+
     setObras(lista);
   }
 
@@ -105,7 +108,8 @@ export default function RetiradaMaterial() {
     }
 
     try {
-      // remove da obra origem
+
+      // 🔻 Remove da obra origem
       const materialRef = doc(
         db,
         "obras",
@@ -120,8 +124,22 @@ export default function RetiradaMaterial() {
         saldo: increment(-qtd),
       });
 
-      // TRANSFERÊNCIA ENTRE OBRAS
+      // 🔁 TRANSFERÊNCIA ENTRE OBRAS
       if (destino === "transferencia" && destinoObra) {
+
+        // pegar nome do setor da obra origem
+        const setorOrigemRef = doc(
+          db,
+          "obras",
+          obraSelecionada,
+          "setores",
+          material.setorId
+        );
+
+        const setorOrigemSnap = await getDoc(setorOrigemRef);
+        const nomeSetor = setorOrigemSnap.data()?.nome || "Sem nome";
+
+        // procurar setor na obra destino
         const setoresDestinoSnap = await getDocs(
           collection(db, "obras", destinoObra, "setores")
         );
@@ -129,16 +147,17 @@ export default function RetiradaMaterial() {
         let setorDestinoId: string | null = null;
 
         setoresDestinoSnap.forEach((setor) => {
-          if (setor.data().nome === material.setorId) {
+          if (setor.data().nome === nomeSetor) {
             setorDestinoId = setor.id;
           }
         });
 
+        // se não existir cria setor
         if (!setorDestinoId) {
           const novoSetor = await addDoc(
             collection(db, "obras", destinoObra, "setores"),
             {
-              nome: material.setorId,
+              nome: nomeSetor,
             }
           );
 
@@ -160,6 +179,7 @@ export default function RetiradaMaterial() {
 
         for (const docSnap of materiaisDestinoSnap.docs) {
           if (docSnap.data().nome === material.nome) {
+
             await updateDoc(docSnap.ref, {
               saldo: increment(qtd),
             });
