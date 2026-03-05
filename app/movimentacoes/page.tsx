@@ -16,7 +16,6 @@ type Movimentacao = {
   id: string;
   materialNome: string;
 
-  // agora aceita transferência
   tipo: "entrada" | "saida" | "transferencia";
 
   quantidade: number;
@@ -118,6 +117,8 @@ export default function MovimentacoesPage() {
             className={`p-5 rounded-xl shadow ${
               mov.tipo === "entrada"
                 ? "bg-green-50"
+                : mov.tipo === "transferencia"
+                ? "bg-blue-50"
                 : "bg-red-50"
             }`}
           >
@@ -147,6 +148,12 @@ export default function MovimentacoesPage() {
               Obra origem: <b>{mov.obraNome}</b>
             </div>
 
+            {/* ENTRADA */}
+            {mov.tipo === "entrada" && (
+              <div>Em estoque</div>
+            )}
+
+            {/* TRANSFERÊNCIA */}
             {mov.destino === "transferencia" && (
               <div>
                 Transferido para obra:{" "}
@@ -154,6 +161,7 @@ export default function MovimentacoesPage() {
               </div>
             )}
 
+            {/* USO */}
             {mov.destino === "uso" && (
               <div>Usado na obra</div>
             )}
