@@ -88,13 +88,22 @@ export default function BuscarMaterial() {
       return;
     }
 
-    const filtrados = materiais
-      .filter((m) =>
-        m.nome.toLowerCase().includes(valor.toLowerCase())
-      )
-      .slice(0, 10);
+    const filtrados = materiais.filter((m) =>
+      m.nome.toLowerCase().includes(valor.toLowerCase())
+    );
 
-    setSugestoes(filtrados);
+    // remover duplicados pelo nome
+    const unicos = Array.from(
+      new Map(
+        filtrados.map((item) => [item.nome.toLowerCase(), item])
+      ).values()
+    );
+
+    unicos.sort((a, b) =>
+      a.nome.localeCompare(b.nome, "pt-BR")
+    );
+
+    setSugestoes(unicos.slice(0, 10));
   }
 
   function abrirMaterial(material: Material) {
