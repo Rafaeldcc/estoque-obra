@@ -60,9 +60,13 @@ export default function RootLayout({
                 Cadastrar Material
               </MenuLink>
 
-              {/* ESTOQUE GERAL */}
               <MenuLink href="/estoque-geral">
                 Estoque Geral
+              </MenuLink>
+
+              {/* 🔎 NOVA BUSCA GLOBAL */}
+              <MenuLink href="/buscar-material">
+                Buscar Material
               </MenuLink>
 
               <MenuLink href="/movimentacoes">
