@@ -3,20 +3,23 @@
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
-type Resultado = {
+type Material = {
   nome: string;
-  saldo: number;
-  unidade: string;
   obra: string;
   setor: string;
+  saldo: number;
+  unidade: string;
 };
 
 export default function BuscarMaterial() {
 
+  const router = useRouter();
+
   const [busca, setBusca] = useState("");
-  const [materiais, setMateriais] = useState<Resultado[]>([]);
-  const [resultados, setResultados] = useState<Resultado[]>([]);
+  const [materiais, setMateriais] = useState<Material[]>([]);
+  const [sugestoes, setSugestoes] = useState<Material[]>([]);
 
   useEffect(() => {
     carregarMateriais();
@@ -24,7 +27,7 @@ export default function BuscarMaterial() {
 
   async function carregarMateriais() {
 
-    const lista: Resultado[] = [];
+    const lista: Material[] = [];
 
     const obrasSnap = await getDocs(collection(db, "obras"));
 
@@ -57,8 +60,8 @@ export default function BuscarMaterial() {
 
           lista.push({
             nome: data.nome,
-            saldo: data.saldo || 0,
-            unidade: data.unidade || "",
+            saldo: data.saldo,
+            unidade: data.unidade,
             obra: obraNome,
             setor: setorNome,
           });
@@ -69,7 +72,6 @@ export default function BuscarMaterial() {
 
     }
 
-    // ordenar todos os materiais alfabeticamente
     lista.sort((a, b) =>
       a.nome.localeCompare(b.nome, "pt-BR")
     );
@@ -82,69 +84,51 @@ export default function BuscarMaterial() {
     setBusca(valor);
 
     if (!valor.trim()) {
-      setResultados([]);
+      setSugestoes([]);
       return;
     }
 
-    const filtrados = materiais.filter((m) =>
-      m.nome.toLowerCase().includes(valor.toLowerCase())
-    );
+    const filtrados = materiais
+      .filter((m) =>
+        m.nome.toLowerCase().includes(valor.toLowerCase())
+      )
+      .slice(0, 10);
 
-    filtrados.sort((a, b) =>
-      a.nome.localeCompare(b.nome, "pt-BR")
-    );
+    setSugestoes(filtrados);
+  }
 
-    setResultados(filtrados);
+  function abrirMaterial(material: Material) {
+
+    const data = encodeURIComponent(JSON.stringify(material));
+
+    router.push(`/material?data=${data}`);
   }
 
   return (
 
-    <div className="max-w-4xl mx-auto p-8">
+    <div className="max-w-xl mx-auto p-8">
 
       <h1 className="text-2xl font-bold mb-6">
-        🔎 Busca Global de Materiais
+        🔎 Buscar Material
       </h1>
 
       <input
         placeholder="Digite o nome do material..."
         value={busca}
         onChange={(e) => pesquisar(e.target.value)}
-        className="w-full p-3 border rounded mb-6"
+        className="w-full p-3 border rounded"
       />
 
-      {busca && resultados.length === 0 && (
-        <p className="text-gray-500">
-          Nenhum material encontrado.
-        </p>
-      )}
+      <div className="mt-2 border rounded bg-white shadow">
 
-      <div className="space-y-4">
-
-        {resultados.map((mat, index) => (
+        {sugestoes.map((mat, index) => (
 
           <div
             key={index}
-            className="border p-4 rounded shadow-sm bg-white"
+            onClick={() => abrirMaterial(mat)}
+            className="p-2 cursor-pointer hover:bg-gray-100 border-b text-sm"
           >
-
-            <div className="flex justify-between">
-
-              <strong>{mat.nome}</strong>
-
-              <span className="font-semibold">
-                {mat.saldo} {mat.unidade}
-              </span>
-
-            </div>
-
-            <div className="text-sm text-gray-600 mt-1">
-              Obra: <b>{mat.obra}</b>
-            </div>
-
-            <div className="text-sm text-gray-600">
-              Setor: <b>{mat.setor}</b>
-            </div>
-
+            {mat.nome}
           </div>
 
         ))}
@@ -154,5 +138,4 @@ export default function BuscarMaterial() {
     </div>
 
   );
-
 }
