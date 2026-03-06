@@ -32,7 +32,7 @@ export default function RelatorioObra() {
 
   function gerarPDF(setorId:string){
 
-    window.open(`/obra/${obraId}/setor/${setorId}`);
+    window.open(`/relatorios/setor/${obraId}/${setorId}`)
 
   }
 
