@@ -29,6 +29,8 @@ export default function Dashboard() {
 
   const [empresa, setEmpresa] = useState("...");
 
+  const [graficoObras, setGraficoObras] = useState<any[]>([]);
+
   useEffect(() => {
     if (!user) return;
 
@@ -60,12 +62,18 @@ export default function Dashboard() {
     let materiaisCount = 0;
     let estoqueTotal = 0;
 
+    const dadosGrafico: any[] = [];
+
     for (const obraDoc of obrasSnap.docs) {
+      const obraNome = obraDoc.data().nome;
+
       const setoresSnap = await getDocs(
         collection(db, "obras", obraDoc.id, "setores")
       );
 
       setoresCount += setoresSnap.size;
+
+      let estoqueObra = 0;
 
       for (const setorDoc of setoresSnap.docs) {
         const materiaisSnap = await getDocs(
@@ -83,10 +91,19 @@ export default function Dashboard() {
 
         materiaisSnap.forEach((doc) => {
           const saldo = doc.data().saldo ?? 0;
+
           estoqueTotal += saldo;
+          estoqueObra += saldo;
         });
       }
+
+      dadosGrafico.push({
+        obra: obraNome,
+        estoque: estoqueObra,
+      });
     }
+
+    setGraficoObras(dadosGrafico);
 
     setTotalObras(obrasSnap.size);
     setTotalSetores(setoresCount);
@@ -98,6 +115,7 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-10">
+
       <div>
         <h1 className="text-3xl font-bold">
           Dashboard {empresa}
@@ -108,12 +126,45 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {/* CARDS */}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+
         <Card titulo="Obras" valor={totalObras} />
         <Card titulo="Setores" valor={totalSetores} />
         <Card titulo="Materiais" valor={totalMateriais} />
         <Card titulo="Total em Estoque" valor={totalEstoque} />
+
       </div>
+
+      {/* GRÁFICO */}
+
+      <div className="bg-white p-6 rounded-xl shadow">
+
+        <h2 className="text-xl font-bold mb-4">
+          Estoque por Obra
+        </h2>
+
+        <ResponsiveContainer width="100%" height={350}>
+
+          <BarChart data={graficoObras}>
+
+            <CartesianGrid strokeDasharray="3 3" />
+
+            <XAxis dataKey="obra" />
+
+            <YAxis />
+
+            <Tooltip />
+
+            <Bar dataKey="estoque" fill="#2563eb" />
+
+          </BarChart>
+
+        </ResponsiveContainer>
+
+      </div>
+
     </div>
   );
 }
