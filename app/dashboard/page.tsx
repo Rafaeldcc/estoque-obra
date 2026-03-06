@@ -24,12 +24,9 @@ export default function Dashboard() {
 
   const { user, loading } = useAuth();
 
-  const [totalObras, setTotalObras] = useState(0);
-  const [totalSetores, setTotalSetores] = useState(0);
-  const [totalMateriais, setTotalMateriais] = useState(0);
-  const [totalEstoque, setTotalEstoque] = useState(0);
-
   const [empresa, setEmpresa] = useState("...");
+
+  const [visao, setVisao] = useState("menu");
 
   const [graficoObras, setGraficoObras] = useState<any[]>([]);
   const [graficoSetores, setGraficoSetores] = useState<any[]>([]);
@@ -51,26 +48,17 @@ export default function Dashboard() {
 
     if (!user) return;
 
-    try {
+    const snap = await getDoc(doc(db, "usuarios", user.uid));
 
-      const usuarioRef = doc(db, "usuarios", user.uid);
-      const usuarioSnap = await getDoc(usuarioRef);
-
-      if (usuarioSnap.exists()) {
-        setEmpresa(usuarioSnap.data().empresa || "Sistema");
-      }
-
-    } catch {}
+    if (snap.exists()) {
+      setEmpresa(snap.data().empresa || "Sistema");
+    }
 
   }
 
   async function carregarIndicadores() {
 
     const obrasSnap = await getDocs(collection(db, "obras"));
-
-    let setoresCount = 0;
-    let materiaisCount = 0;
-    let estoqueTotal = 0;
 
     const dadosGraficoObras: any[] = [];
     const mapaSetores: any = {};
@@ -83,8 +71,6 @@ export default function Dashboard() {
       const setoresSnap = await getDocs(
         collection(db, "obras", obraDoc.id, "setores")
       );
-
-      setoresCount += setoresSnap.size;
 
       let estoqueObra = 0;
 
@@ -103,14 +89,11 @@ export default function Dashboard() {
           )
         );
 
-        materiaisCount += materiaisSnap.size;
-
         materiaisSnap.forEach((doc) => {
 
           const data = doc.data();
           const saldo = data.saldo ?? 0;
 
-          estoqueTotal += saldo;
           estoqueObra += saldo;
 
           if (!mapaSetores[setorNome]) {
@@ -148,14 +131,7 @@ export default function Dashboard() {
     setGraficoSetores(dadosSetores);
     setEstoqueBaixo(materiaisBaixos);
 
-    setTotalObras(obrasSnap.size);
-    setTotalSetores(setoresCount);
-    setTotalMateriais(materiaisCount);
-    setTotalEstoque(estoqueTotal);
-
-    /* =====================
-       MOVIMENTAÇÕES
-    ====================== */
+    /* ===================== MOVIMENTAÇÕES ===================== */
 
     const movSnap = await getDocs(collection(db, "movimentacoes"));
 
@@ -172,16 +148,10 @@ export default function Dashboard() {
         const quantidade = data.quantidade ?? 0;
         const obra = data.obraNome;
 
-        if (!consumoMateriais[material]) {
-          consumoMateriais[material] = 0;
-        }
-
+        if (!consumoMateriais[material]) consumoMateriais[material] = 0;
         consumoMateriais[material] += quantidade;
 
-        if (!consumoObras[obra]) {
-          consumoObras[obra] = 0;
-        }
-
+        if (!consumoObras[obra]) consumoObras[obra] = 0;
         consumoObras[obra] += quantidade;
 
       }
@@ -211,41 +181,84 @@ export default function Dashboard() {
 
   if (loading) return null;
 
-  return (
+  /* ================= MENU ================= */
 
-    <div className="max-w-7xl mx-auto p-8 space-y-10">
+  if (visao === "menu") {
 
-      <div>
+    return (
 
-        <h1 className="text-3xl font-bold">
+      <div className="max-w-6xl mx-auto p-10">
+
+        <h1 className="text-3xl font-bold mb-10">
           Dashboard {empresa}
         </h1>
 
-        <p className="text-gray-500">
-          Visão geral do sistema
-        </p>
+        <div className="grid md:grid-cols-2 gap-6">
+
+          <MenuCard titulo="📊 Estoque por Obra" click={() => setVisao("obra")} />
+          <MenuCard titulo="📦 Estoque por Setor" click={() => setVisao("setor")} />
+          <MenuCard titulo="📈 Consumo por Obra" click={() => setVisao("consumo")} />
+          <MenuCard titulo="⚠ Estoque Baixo" click={() => setVisao("baixo")} />
+          <MenuCard titulo="🔥 Materiais Mais Usados" click={() => setVisao("usados")} />
+
+        </div>
 
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+    );
 
-        <Card titulo="Obras" valor={totalObras} />
-        <Card titulo="Setores" valor={totalSetores} />
-        <Card titulo="Materiais" valor={totalMateriais} />
-        <Card titulo="Total em Estoque" valor={totalEstoque} />
+  }
 
-      </div>
+  /* ================= TELAS ================= */
 
-      <Grafico titulo="Estoque por Obra" dados={graficoObras} chaveX="obra" chaveY="estoque" cor="#2563eb" />
+  return (
 
-      <Grafico titulo="Estoque por Setor" dados={graficoSetores} chaveX="setor" chaveY="estoque" cor="#16a34a" />
+    <div className="max-w-7xl mx-auto p-8">
 
-      <Grafico titulo="Consumo de Material por Obra" dados={graficoConsumoObras} chaveX="obra" chaveY="consumo" cor="#f97316" />
+      <button
+        onClick={() => setVisao("menu")}
+        className="mb-6 bg-gray-200 px-4 py-2 rounded"
+      >
+        ← Voltar
+      </button>
 
-      <Lista titulo="⚠ Materiais com estoque baixo" dados={estoqueBaixo} campoNome="material" campoValor="saldo" cor="text-red-600" />
+      {visao === "obra" && (
+        <Grafico titulo="Estoque por Obra" dados={graficoObras} chaveX="obra" chaveY="estoque" cor="#2563eb" />
+      )}
 
-      <Lista titulo="📦 Materiais mais usados" dados={materiaisUsados} campoNome="material" campoValor="quantidade" cor="text-blue-600" />
+      {visao === "setor" && (
+        <Grafico titulo="Estoque por Setor" dados={graficoSetores} chaveX="setor" chaveY="estoque" cor="#16a34a" />
+      )}
 
+      {visao === "consumo" && (
+        <Grafico titulo="Consumo de Material por Obra" dados={graficoConsumoObras} chaveX="obra" chaveY="consumo" cor="#f97316" />
+      )}
+
+      {visao === "baixo" && (
+        <Lista titulo="⚠ Materiais com estoque baixo" dados={estoqueBaixo} campoNome="material" campoValor="saldo" cor="text-red-600" />
+      )}
+
+      {visao === "usados" && (
+        <Lista titulo="🔥 Materiais mais usados" dados={materiaisUsados} campoNome="material" campoValor="quantidade" cor="text-blue-600" />
+      )}
+
+    </div>
+
+  );
+
+}
+
+/* ================= COMPONENTES ================= */
+
+function MenuCard({ titulo, click }: any) {
+
+  return (
+
+    <div
+      onClick={click}
+      className="bg-white p-8 rounded-xl shadow cursor-pointer hover:shadow-xl text-center text-lg font-semibold"
+    >
+      {titulo}
     </div>
 
   );
@@ -301,22 +314,6 @@ function Lista({ titulo, dados, campoNome, campoValor, cor }: any) {
         </div>
 
       ))}
-
-    </div>
-
-  );
-
-}
-
-function Card({ titulo, valor }: any) {
-
-  return (
-
-    <div className="bg-white p-6 rounded-xl shadow">
-
-      <p className="text-gray-500">{titulo}</p>
-
-      <h2 className="text-3xl font-bold mt-2">{valor}</h2>
 
     </div>
 
