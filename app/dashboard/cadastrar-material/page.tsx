@@ -61,11 +61,8 @@ export default function CadastrarMaterial() {
   }
 
   useEffect(() => {
-
     if (!user) return;
-
     carregarUsuario();
-
   }, [user]);
 
   useEffect(() => {
@@ -87,17 +84,12 @@ export default function CadastrarMaterial() {
     const snap = await getDoc(doc(db, "usuarios", user.uid));
 
     if (snap.exists()) {
-
       const data = snap.data();
-
       setRole(data.role);
       setEmpresaId(data.empresaId);
-
     }
 
   }
-
-  /* 🔵 CORREÇÃO AQUI — BUSCAR TODAS AS OBRAS */
 
   async function carregarObras() {
 
@@ -220,9 +212,7 @@ export default function CadastrarMaterial() {
     };
 
     setSetores((prev) => [...prev, novo]);
-
     setSetorId(ref.id);
-
     setNovoSetor("");
 
   }
@@ -380,12 +370,39 @@ export default function CadastrarMaterial() {
 
       )}
 
-      <input
-        placeholder="Nome do material"
-        value={nomeMaterial}
-        onChange={(e) => filtrarSugestoes(e.target.value)}
-        className="w-full p-2 border rounded"
-      />
+      <div className="relative">
+
+        <input
+          placeholder="Nome do material"
+          value={nomeMaterial}
+          onChange={(e) => filtrarSugestoes(e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+
+        {mostrarSugestoes && sugestoes.length > 0 && (
+
+          <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto z-10">
+
+            {sugestoes.map((item, index) => (
+
+              <div
+                key={index}
+                onClick={() => {
+                  setNomeMaterial(item)
+                  setMostrarSugestoes(false)
+                }}
+                className="p-2 cursor-pointer hover:bg-gray-100"
+              >
+                {item}
+              </div>
+
+            ))}
+
+          </div>
+
+        )}
+
+      </div>
 
       <input
         type="number"
