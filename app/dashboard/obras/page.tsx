@@ -8,10 +8,7 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  query,
-  orderBy,
-  getDoc,
-  where
+  getDoc
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
@@ -67,24 +64,26 @@ export default function ObrasPage() {
 
     try {
 
-      const q = query(
-        collection(db, "obras"),
-        where("empresaId", "==", empresaIdParam),
-        orderBy("criadoEm", "desc")
-      );
-
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(collection(db, "obras"));
 
       const lista: Obra[] = [];
 
       snapshot.forEach((docSnap) => {
 
-        lista.push({
-          id: docSnap.id,
-          nome: docSnap.data().nome,
-        });
+        const data = docSnap.data();
+
+        if (data.empresaId === empresaIdParam) {
+
+          lista.push({
+            id: docSnap.id,
+            nome: data.nome
+          });
+
+        }
 
       });
+
+      lista.sort((a, b) => a.nome.localeCompare(b.nome));
 
       setObras(lista);
 
@@ -176,7 +175,6 @@ export default function ObrasPage() {
       </h1>
 
 
-      {/* Criar Obra */}
 
       {role === "admin" && (
 
@@ -210,8 +208,6 @@ export default function ObrasPage() {
       )}
 
 
-
-      {/* Lista */}
 
       <div className="space-y-4">
 
