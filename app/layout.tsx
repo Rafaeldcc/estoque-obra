@@ -64,7 +64,6 @@ export default function RootLayout({
                 Estoque Geral
               </MenuLink>
 
-              {/* 🔎 NOVA BUSCA GLOBAL */}
               <MenuLink href="/buscar-material">
                 Buscar Material
               </MenuLink>
@@ -75,6 +74,11 @@ export default function RootLayout({
 
               <MenuLink href="/retirada-material">
                 Retirada Material
+              </MenuLink>
+
+              {/* NOVA ABA */}
+              <MenuLink href="/relatorios">
+                Relatórios PDF
               </MenuLink>
 
             </nav>
