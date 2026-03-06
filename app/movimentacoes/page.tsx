@@ -8,6 +8,7 @@ import {
   orderBy,
   getDoc,
   doc,
+  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/useAuth";
@@ -22,41 +23,69 @@ type Movimentacao = {
   destino?: "uso" | "transferencia";
   usuarioNome: string;
   createdAt: any;
+  empresaId?: string;
 };
 
 export default function MovimentacoesPage() {
+
   const { user, loading } = useAuth();
 
   const [role, setRole] = useState<string | null>(null);
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
+
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
+
     if (!user) return;
-    carregarRole();
+
+    carregarUsuario();
+
   }, [user]);
 
   useEffect(() => {
+
     if (role === "admin" || role === "almoxarifado") {
       carregarMovimentacoes();
     }
-  }, [role]);
 
-  async function carregarRole() {
+  }, [role, empresaId]);
+
+
+
+  /* CARREGAR USUARIO */
+
+  async function carregarUsuario() {
+
     if (!user) return;
 
     const snap = await getDoc(doc(db, "usuarios", user.uid));
 
     if (snap.exists()) {
-      setRole(snap.data().role);
+
+      const data = snap.data();
+
+      setRole(data.role);
+      setEmpresaId(data.empresaId);
+
     }
+
   }
 
+
+
+  /* CARREGAR MOVIMENTAÇÕES DA EMPRESA */
+
   async function carregarMovimentacoes() {
+
+    if (!empresaId) return;
+
     setCarregando(true);
 
     const q = query(
       collection(db, "movimentacoes"),
+      where("empresaId", "==", empresaId),
       orderBy("createdAt", "desc")
     );
 
@@ -68,10 +97,15 @@ export default function MovimentacoesPage() {
     })) as Movimentacao[];
 
     setMovimentacoes(lista);
+
     setCarregando(false);
+
   }
 
+
+
   function formatarData(timestamp: any) {
+
     if (!timestamp) return "";
 
     try {
@@ -79,19 +113,31 @@ export default function MovimentacoesPage() {
     } catch {
       return "";
     }
+
   }
+
+
 
   if (loading) return null;
 
+
+
   if (role !== "admin" && role !== "almoxarifado") {
+
     return (
+
       <div className="p-10 text-center text-red-600 font-semibold">
         Você não tem permissão para acessar esta página.
       </div>
+
     );
+
   }
 
+
+
   return (
+
     <div className="max-w-6xl mx-auto p-8">
 
       <h1 className="text-3xl font-bold mb-8">
@@ -101,12 +147,12 @@ export default function MovimentacoesPage() {
       {carregando && <p>Carregando...</p>}
 
       {!carregando && movimentacoes.length === 0 && (
+
         <p className="text-gray-500">
           Nenhuma movimentação encontrada.
         </p>
-      )}
 
-      {/* LISTA COM BARRA DE ROLAGEM */}
+      )}
 
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
 
@@ -138,9 +184,11 @@ export default function MovimentacoesPage() {
                     : "text-red-600"
                 }`}
               >
+
                 {mov.tipo === "entrada" && "🟢 Entrada"}
                 {mov.tipo === "saida" && "🔴 Saída"}
                 {mov.tipo === "transferencia" && "🔵 Transferência"}
+
               </span>
 
             </div>
@@ -182,5 +230,7 @@ export default function MovimentacoesPage() {
       </div>
 
     </div>
+
   );
+
 }

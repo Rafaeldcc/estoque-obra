@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  getDoc,
+  doc,
+  query,
+  where
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useAuth } from "@/lib/useAuth";
 
 type Obra = {
   id: string;
@@ -18,19 +26,70 @@ type LinhaEstoque = {
 
 export default function EstoqueGeral() {
 
+  const { user } = useAuth();
+
+  const [empresaId, setEmpresaId] = useState<string | null>(null);
+
   const [obras, setObras] = useState<Obra[]>([]);
   const [tabela, setTabela] = useState<LinhaEstoque[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [setorSelecionado, setSetorSelecionado] = useState<string | null>(null);
 
+
+
   useEffect(() => {
-    carregarEstoque();
-  }, []);
+
+    if (!user) return;
+
+    carregarUsuario();
+
+  }, [user]);
+
+
+
+  useEffect(() => {
+
+    if (empresaId) {
+      carregarEstoque();
+    }
+
+  }, [empresaId]);
+
+
+
+  /* PEGAR EMPRESA DO USUÁRIO */
+
+  async function carregarUsuario() {
+
+    if (!user) return;
+
+    const snap = await getDoc(doc(db, "usuarios", user.uid));
+
+    if (snap.exists()) {
+
+      const data = snap.data();
+
+      setEmpresaId(data.empresaId);
+
+    }
+
+  }
+
+
+
+  /* CARREGAR ESTOQUE DA EMPRESA */
 
   async function carregarEstoque() {
 
-    const obrasSnap = await getDocs(collection(db, "obras"));
+    if (!empresaId) return;
+
+    const q = query(
+      collection(db, "obras"),
+      where("empresaId", "==", empresaId)
+    );
+
+    const obrasSnap = await getDocs(q);
 
     const listaObras: Obra[] = obrasSnap.docs.map((doc) => ({
       id: doc.id,
@@ -95,6 +154,8 @@ export default function EstoqueGeral() {
 
   }
 
+
+
   if (loading) {
     return (
       <div className="p-10 text-center">
@@ -103,7 +164,11 @@ export default function EstoqueGeral() {
     );
   }
 
+
+
   const setores = Array.from(new Set(tabela.map(l => l.setor)));
+
+
 
   if (!setorSelecionado) {
 
@@ -159,7 +224,11 @@ export default function EstoqueGeral() {
 
   }
 
+
+
   const materiais = tabela.filter(l => l.setor === setorSelecionado);
+
+
 
   return (
 
