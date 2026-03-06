@@ -28,7 +28,6 @@ export default function EstoqueGeral() {
 
   const { user } = useAuth();
 
-  const [empresaId, setEmpresaId] = useState<string | null>(null);
   const [obras, setObras] = useState<Obra[]>([]);
   const [tabela, setTabela] = useState<LinhaEstoque[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,8 +43,6 @@ export default function EstoqueGeral() {
 
 
 
-  /* PEGAR EMPRESA DO USUÁRIO */
-
   async function carregarUsuario() {
 
     try {
@@ -55,24 +52,18 @@ export default function EstoqueGeral() {
       const snap = await getDoc(doc(db, "usuarios", user.uid));
 
       if (!snap.exists()) {
-
         console.error("Usuário não encontrado");
         setLoading(false);
         return;
-
       }
 
       const data = snap.data();
 
       if (!data.empresaId) {
-
-        console.error("empresaId não encontrado no usuário");
+        console.error("empresaId não encontrado");
         setLoading(false);
         return;
-
       }
-
-      setEmpresaId(data.empresaId);
 
       await carregarEstoque(data.empresaId);
 
@@ -87,15 +78,13 @@ export default function EstoqueGeral() {
 
 
 
-  /* CARREGAR ESTOQUE */
-
-  async function carregarEstoque(empresaIdParam: string) {
+  async function carregarEstoque(empresaId: string) {
 
     try {
 
       const q = query(
         collection(db, "obras"),
-        where("empresaId", "==", empresaIdParam)
+        where("empresaId", "==", empresaId)
       );
 
       const obrasSnap = await getDocs(q);
@@ -118,7 +107,9 @@ export default function EstoqueGeral() {
         for (const setor of setoresSnap.docs) {
 
           const setorData = setor.data();
-          const setorNome = setorData.nome ?? "Sem setor";
+
+          // 🔧 CORREÇÃO PRINCIPAL
+          const setorNome = setorData.nome || setor.id;
 
           const materiaisSnap = await getDocs(
             collection(
@@ -135,8 +126,10 @@ export default function EstoqueGeral() {
 
             const data = mat.data();
 
-            const materialNome = data.nome ?? "Material";
-            const saldo = Number(data.saldo ?? 0);
+            const materialNome = data.nome || "Material";
+            const saldo = Number(data.saldo || 0);
+
+            if (saldo === 0) continue;
 
             const chave = materialNome + "_" + setorNome;
 
@@ -189,8 +182,6 @@ export default function EstoqueGeral() {
   const setores = Array.from(new Set(tabela.map(l => l.setor)));
 
 
-
-  /* VISÃO POR SETOR */
 
   if (!setorSelecionado) {
 
@@ -247,8 +238,6 @@ export default function EstoqueGeral() {
   }
 
 
-
-  /* VISÃO DOS MATERIAIS */
 
   const materiais = tabela.filter(l => l.setor === setorSelecionado);
 
