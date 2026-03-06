@@ -173,8 +173,6 @@ export default function RetiradaMaterial() {
       material.id
     );
 
-
-
     await updateDoc(materialRef,{
       saldo: increment(-qtd)
     });
@@ -190,12 +188,49 @@ export default function RetiradaMaterial() {
         return;
       }
 
+      // pegar setor origem
+      const setorOrigemRef = doc(
+        db,
+        "obras",
+        obraSelecionada,
+        "setores",
+        material.setorId
+      );
+
+      const setorOrigemSnap = await getDoc(setorOrigemRef);
+      const nomeSetor = setorOrigemSnap.data()?.nome || "Sem nome";
+
+      // procurar setor destino
+      const setoresDestinoSnap = await getDocs(
+        collection(db,"obras",destinoId,"setores")
+      );
+
+      let setorDestinoId:string | null = null;
+
+      setoresDestinoSnap.forEach((setor)=>{
+        if(setor.data().nome === nomeSetor){
+          setorDestinoId = setor.id;
+        }
+      });
+
+      // criar setor se não existir
+      if(!setorDestinoId){
+
+        const novoSetor = await addDoc(
+          collection(db,"obras",destinoId,"setores"),
+          {nome:nomeSetor}
+        );
+
+        setorDestinoId = novoSetor.id;
+
+      }
+
       const materiaisDestinoRef = collection(
         db,
         "obras",
         destinoId,
         "setores",
-        material.setorId,
+        setorDestinoId,
         "materiais"
       );
 
@@ -266,8 +301,6 @@ export default function RetiradaMaterial() {
 
     });
 
-
-
     carregarMateriais(obraSelecionada);
 
   }
@@ -279,8 +312,6 @@ export default function RetiradaMaterial() {
     <div style={{maxWidth:900,margin:"40px auto"}}>
 
       <h2>Retirada de Material</h2>
-
-
 
       <select
         style={{width:"100%",padding:10}}
@@ -321,8 +352,6 @@ export default function RetiradaMaterial() {
             Saldo: {material.saldo} {material.unidade}
           </span>
 
-
-
           <div style={{marginTop:10}}>
 
             <input
@@ -337,8 +366,6 @@ export default function RetiradaMaterial() {
               }
               style={{width:100}}
             />
-
-
 
             <select
               value={tipo}
@@ -357,8 +384,6 @@ export default function RetiradaMaterial() {
 
             </select>
 
-
-
             {tipo === "transferencia" && (
 
               <select
@@ -373,7 +398,9 @@ export default function RetiradaMaterial() {
 
                 <option value="">Obra destino</option>
 
-                {obras.map(o=>(
+                {obras
+                  .filter(o => o.id !== obraSelecionada)
+                  .map(o=>(
                   <option key={o.id} value={o.id}>
                     {o.nome}
                   </option>
@@ -382,8 +409,6 @@ export default function RetiradaMaterial() {
               </select>
 
             )}
-
-
 
             <button
               onClick={()=>retirar(material)}
