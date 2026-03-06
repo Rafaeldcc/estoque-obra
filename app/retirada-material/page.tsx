@@ -231,6 +231,14 @@ export default function RetiradaMaterial() {
 
 
 
+    const obraNome =
+      obras.find((o) => o.id === obraSelecionada)?.nome || "";
+
+    const obraDestinoNome =
+      obras.find((o) => o.id === obraDestino[material.id])?.nome || "";
+
+
+
     await registrarMovimentacao({
 
       materialId: material.id,
@@ -241,12 +249,18 @@ export default function RetiradaMaterial() {
       quantidade: qtd,
 
       obraId: obraSelecionada,
+      obraNome: obraNome,
 
-      obraDestino: tipo === "transferencia"
-        ? obraDestino[material.id] || ""
-        : "",
+      destino:
+        tipo === "transferencia" ? "transferencia" : "uso",
+
+      obraDestino:
+        tipo === "transferencia"
+          ? obraDestinoNome
+          : "",
 
       usuarioId: auth.currentUser?.uid || "",
+      usuarioNome: auth.currentUser?.email || "",
 
       empresaId: empresaId || ""
 
