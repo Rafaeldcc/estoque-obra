@@ -237,7 +237,8 @@ export default function RetiradaMaterial() {
       materialId: material.id,
       materialNome: material.nome,
 
-      tipo: tipo,
+      // 🔧 CORREÇÃO DO ERRO TYPESCRIPT
+      tipo: tipo === "transferencia" ? "transferencia" : "saida",
 
       quantidade: qtd,
 
