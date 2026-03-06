@@ -51,9 +51,39 @@ export default function Setores() {
 
   }, [obraId]);
 
+
+  /* NORMALIZAR TEXTO (remove acento e caixa) */
+
+  function normalizarTexto(texto: string) {
+
+    return texto
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+  }
+
+
+  /* CRIAR SETOR */
+
   async function criarSetor() {
 
     if (!novoSetor.trim()) return;
+
+    const nomeNormalizado = normalizarTexto(novoSetor);
+
+    const existe = setores.some(
+      (s) => normalizarTexto(s.nome) === nomeNormalizado
+    );
+
+    if (existe) {
+
+      alert("Este setor já existe.");
+
+      return;
+
+    }
 
     await addDoc(
       collection(
@@ -64,6 +94,7 @@ export default function Setores() {
       ),
       {
         nome: novoSetor.trim(),
+        nomeNormalizado: nomeNormalizado,
         criadoEm: new Date(),
       }
     );
@@ -71,6 +102,9 @@ export default function Setores() {
     setNovoSetor("");
 
   }
+
+
+  /* EXCLUIR SETOR */
 
   async function excluirSetor(id: string) {
 
@@ -85,6 +119,7 @@ export default function Setores() {
     );
 
   }
+
 
   return (
 
