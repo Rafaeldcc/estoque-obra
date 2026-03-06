@@ -29,14 +29,10 @@ export default function EstoqueGeral() {
   const { user } = useAuth();
 
   const [empresaId, setEmpresaId] = useState<string | null>(null);
-
   const [obras, setObras] = useState<Obra[]>([]);
   const [tabela, setTabela] = useState<LinhaEstoque[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [setorSelecionado, setSetorSelecionado] = useState<string | null>(null);
-
-
 
   useEffect(() => {
 
@@ -48,29 +44,42 @@ export default function EstoqueGeral() {
 
 
 
-  useEffect(() => {
-
-    if (empresaId) {
-      carregarEstoque();
-    }
-
-  }, [empresaId]);
-
-
-
   /* PEGAR EMPRESA DO USUÁRIO */
 
   async function carregarUsuario() {
 
-    if (!user) return;
+    try {
 
-    const snap = await getDoc(doc(db, "usuarios", user.uid));
+      if (!user) return;
 
-    if (snap.exists()) {
+      const snap = await getDoc(doc(db, "usuarios", user.uid));
+
+      if (!snap.exists()) {
+
+        console.error("Usuário não encontrado");
+        setLoading(false);
+        return;
+
+      }
 
       const data = snap.data();
 
+      if (!data.empresaId) {
+
+        console.error("empresaId não encontrado no usuário");
+        setLoading(false);
+        return;
+
+      }
+
       setEmpresaId(data.empresaId);
+
+      await carregarEstoque(data.empresaId);
+
+    } catch (error) {
+
+      console.error(error);
+      setLoading(false);
 
     }
 
@@ -80,13 +89,11 @@ export default function EstoqueGeral() {
 
   /* CARREGAR ESTOQUE DA EMPRESA */
 
-  async function carregarEstoque() {
-
-    if (!empresaId) return;
+  async function carregarEstoque(empresaIdParam: string) {
 
     const q = query(
       collection(db, "obras"),
-      where("empresaId", "==", empresaId)
+      where("empresaId", "==", empresaIdParam)
     );
 
     const obrasSnap = await getDocs(q);
@@ -157,11 +164,13 @@ export default function EstoqueGeral() {
 
 
   if (loading) {
+
     return (
       <div className="p-10 text-center">
         Carregando estoque geral...
       </div>
     );
+
   }
 
 
