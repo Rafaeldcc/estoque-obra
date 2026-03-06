@@ -27,50 +27,41 @@ export default function Relatorios() {
 
   return (
 
-    <div>
+    <div className="max-w-5xl mx-auto">
 
       <h1 className="text-3xl font-bold mb-6">
         Relatórios do Sistema
       </h1>
 
-      <p style={{ marginBottom: 20 }}>
-        Gerar relatório PDF das obras.
+      <p className="mb-6 text-gray-600">
+        Selecione uma obra para gerar relatórios PDF dos setores.
       </p>
 
-      {obras.map((obra) => (
+      <div className="space-y-4">
 
-        <div
-          key={obra.id}
-          style={{
-            background: "white",
-            padding: 20,
-            borderRadius: 8,
-            marginBottom: 15,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            border: "1px solid #e5e7eb",
-          }}
-        >
+        {obras.map((obra) => (
 
-          <strong>{obra.nome}</strong>
-
-          <Link
-            href={`/obra/${obra.id}`}
-            style={{
-              background: "#16a34a",
-              color: "white",
-              padding: "8px 14px",
-              borderRadius: 6,
-              textDecoration: "none",
-            }}
+          <div
+            key={obra.id}
+            className="bg-white p-5 rounded-lg shadow flex justify-between items-center border"
           >
-            Gerar PDF
-          </Link>
 
-        </div>
+            <strong className="text-lg">
+              {obra.nome}
+            </strong>
 
-      ))}
+            <Link
+              href={`/relatorios/${obra.id}`}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            >
+              Gerar PDF
+            </Link>
+
+          </div>
+
+        ))}
+
+      </div>
 
     </div>
 
