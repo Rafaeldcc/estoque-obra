@@ -28,7 +28,6 @@ export default function Dashboard() {
   const { user, loading } = useAuth();
 
   const [empresa, setEmpresa] = useState("...");
-
   const [visao, setVisao] = useState("menu");
 
   const [graficoObras, setGraficoObras] = useState<any[]>([]);
@@ -55,9 +54,11 @@ export default function Dashboard() {
 
     const snap = await getDoc(doc(db, "usuarios", user.uid));
 
-    if (snap.exists()) {
-      setEmpresa(snap.data().empresa || "Sistema");
-    }
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+
+    setEmpresa(data?.empresa || "Sistema");
 
   }
 
@@ -71,7 +72,13 @@ export default function Dashboard() {
 
     const userSnap = await getDoc(doc(db, "usuarios", user.uid));
 
-    const empresaId = userSnap.data().empresaId;
+    if (!userSnap.exists()) return;
+
+    const userData = userSnap.data();
+
+    const empresaId = userData?.empresaId;
+
+    if (!empresaId) return;
 
 
 
@@ -119,8 +126,6 @@ export default function Dashboard() {
           )
         );
 
-
-
         materiaisSnap.forEach((doc) => {
 
           const data = doc.data();
@@ -134,8 +139,6 @@ export default function Dashboard() {
 
           mapaSetores[setorNome] += saldo;
 
-
-
           if (saldo <= 5) {
 
             materiaisBaixos.push({
@@ -148,8 +151,6 @@ export default function Dashboard() {
         });
 
       }
-
-
 
       dadosGraficoObras.push({
         obra: obraNome,
@@ -175,8 +176,6 @@ export default function Dashboard() {
 
     /* ===================== MOVIMENTAÇÕES ===================== */
 
-
-
     const movQuery = query(
       collection(db, "movimentacoes"),
       where("empresaId", "==", empresaId)
@@ -201,12 +200,8 @@ export default function Dashboard() {
         const quantidade = data.quantidade ?? 0;
         const obra = data.obraNome;
 
-
-
         if (!consumoMateriais[material]) consumoMateriais[material] = 0;
         consumoMateriais[material] += quantidade;
-
-
 
         if (!consumoObras[obra]) consumoObras[obra] = 0;
         consumoObras[obra] += quantidade;
@@ -250,8 +245,6 @@ export default function Dashboard() {
 
 
 
-  /* ================= MENU ================= */
-
   if (visao === "menu") {
 
     return (
@@ -279,8 +272,6 @@ export default function Dashboard() {
   }
 
 
-
-  /* ================= TELAS ================= */
 
   return (
 
@@ -323,7 +314,7 @@ export default function Dashboard() {
 
 
 
-/* ================= COMPONENTES ================= */
+/* COMPONENTES */
 
 function MenuCard({ titulo, click }: any) {
 
