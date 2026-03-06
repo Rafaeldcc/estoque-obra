@@ -6,8 +6,10 @@ import {
   onSnapshot,
   addDoc,
   deleteDoc,
-  doc
+  doc,
+  getDocs
 } from "firebase/firestore";
+
 import { db } from "@/lib/firebase";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -19,6 +21,12 @@ export default function Setores() {
 
   const [setores, setSetores] = useState<any[]>([]);
   const [novoSetor, setNovoSetor] = useState("");
+
+  const [todosSetores, setTodosSetores] = useState<string[]>([]);
+  const [sugestoes, setSugestoes] = useState<string[]>([]);
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+
+  /* CARREGAR SETORES DA OBRA */
 
   useEffect(() => {
 
@@ -51,7 +59,49 @@ export default function Setores() {
 
 
 
-  /* NORMALIZAR TEXTO (remove acento + minúsculo) */
+  /* CARREGAR SETORES DE TODAS AS OBRAS */
+
+  useEffect(() => {
+
+    carregarTodosSetores();
+
+  }, []);
+
+
+
+  async function carregarTodosSetores() {
+
+    const obrasSnap = await getDocs(collection(db, "obras"));
+
+    let lista: string[] = [];
+
+    for (const obraDoc of obrasSnap.docs) {
+
+      const setoresSnap = await getDocs(
+        collection(db, "obras", obraDoc.id, "setores")
+      );
+
+      setoresSnap.forEach((doc) => {
+
+        const nome = doc.data().nome;
+
+        if (!lista.includes(nome)) {
+          lista.push(nome);
+        }
+
+      });
+
+    }
+
+    lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    setTodosSetores(lista);
+
+  }
+
+
+
+  /* NORMALIZAR TEXTO */
 
   function normalizarTexto(texto: string) {
 
@@ -60,6 +110,35 @@ export default function Setores() {
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .trim();
+
+  }
+
+
+
+  /* FILTRAR SUGESTÕES */
+
+  function filtrarSugestoes(valor: string) {
+
+    setNovoSetor(valor);
+
+    if (!valor.trim()) {
+
+      setSugestoes([]);
+      setMostrarSugestoes(false);
+
+      return;
+
+    }
+
+    const filtradas = todosSetores
+      .filter((s) =>
+        normalizarTexto(s).includes(normalizarTexto(valor))
+      )
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    setSugestoes(filtradas);
+
+    setMostrarSugestoes(true);
 
   }
 
@@ -99,12 +178,13 @@ export default function Setores() {
       ),
       {
         nome: novoSetor.trim(),
-        nomeNormalizado: nomeNormalizado,
+        nomeNormalizado,
         criadoEm: new Date(),
       }
     );
 
     setNovoSetor("");
+    setMostrarSugestoes(false);
 
   }
 
@@ -136,13 +216,13 @@ export default function Setores() {
         Setores
       </h1>
 
-      <div className="flex gap-2">
+      <div className="relative flex gap-2">
 
         <input
           placeholder="Nome do setor"
           value={novoSetor}
           onChange={(e) =>
-            setNovoSetor(e.target.value)
+            filtrarSugestoes(e.target.value)
           }
           className="flex-1 border p-2 rounded"
         />
@@ -153,6 +233,31 @@ export default function Setores() {
         >
           Criar
         </button>
+
+        {mostrarSugestoes && sugestoes.length > 0 && (
+
+          <div className="absolute top-12 left-0 right-0 bg-white border rounded shadow max-h-40 overflow-y-auto z-10">
+
+            {sugestoes.map((item, index) => (
+
+              <div
+                key={index}
+                onClick={() => {
+
+                  setNovoSetor(item);
+                  setMostrarSugestoes(false);
+
+                }}
+                className="p-2 cursor-pointer hover:bg-gray-100"
+              >
+                {item}
+              </div>
+
+            ))}
+
+          </div>
+
+        )}
 
       </div>
 
