@@ -12,6 +12,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
@@ -43,7 +44,7 @@ export default function LoginPage() {
         router.push("/dashboard");
       }
 
-    } catch (err: any) {
+    } catch {
 
       setErro("Email ou senha inválidos.");
       setCarregando(false);
@@ -54,25 +55,21 @@ export default function LoginPage() {
 
   return (
 
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-100 to-gray-200">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
 
-      <div className="bg-white p-10 rounded-2xl shadow-lg w-96">
+      <div className="bg-white p-10 rounded-2xl shadow-xl w-96">
 
-        {/* TITULO */}
-
-        <div className="flex flex-col items-center mb-8">
+        <div className="text-center mb-8">
 
           <h1 className="text-3xl font-bold text-gray-800">
             Estoque F.Vieira
           </h1>
 
-          <p className="text-gray-500 mt-2 text-sm text-center">
-            Sistema Profissional de Controle de Materiais
+          <p className="text-gray-500 mt-2 text-sm">
+            Controle Profissional de Materiais
           </p>
 
         </div>
-
-        {/* ERRO */}
 
         {erro && (
           <div className="bg-red-100 text-red-600 text-sm p-2 rounded mb-4 text-center">
@@ -80,32 +77,41 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* FORM */}
-
         <form onSubmit={handleLogin}>
 
           <input
             type="email"
             placeholder="Seu email"
-            className="w-full p-3 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
 
-          <input
-            type="password"
-            placeholder="Sua senha"
-            className="w-full p-3 border rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            required
-          />
+          <div className="relative mb-6">
+
+            <input
+              type={mostrarSenha ? "text" : "password"}
+              placeholder="Sua senha"
+              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+            />
+
+            <span
+              onClick={() => setMostrarSenha(!mostrarSenha)}
+              className="absolute right-3 top-3 cursor-pointer text-gray-500 text-sm"
+            >
+              {mostrarSenha ? "Ocultar" : "Mostrar"}
+            </span>
+
+          </div>
 
           <button
             type="submit"
             disabled={carregando}
-            className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+            className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition flex justify-center items-center"
           >
             {carregando ? "Entrando..." : "Entrar"}
           </button>
