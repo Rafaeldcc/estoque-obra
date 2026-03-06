@@ -4,15 +4,6 @@ import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer
-} from "recharts";
-
 type Obra = {
   id: string;
   nome: string;
@@ -110,19 +101,6 @@ export default function EstoqueGeral() {
     );
   }
 
-  const dadosGrafico = obras.map((obra) => {
-
-    const total = tabela.reduce((acc, linha) => {
-      return acc + (linha.obras[obra.nome] ?? 0);
-    }, 0);
-
-    return {
-      obra: obra.nome,
-      total
-    };
-
-  });
-
   return (
 
     <div className="max-w-7xl mx-auto p-8">
@@ -130,34 +108,6 @@ export default function EstoqueGeral() {
       <h1 className="text-3xl font-bold mb-8">
         Estoque Geral da Empresa
       </h1>
-
-      {/* GRÁFICO */}
-
-      <div className="bg-white p-6 rounded-xl shadow mb-8">
-
-        <h2 className="text-xl font-bold mb-4">
-          Estoque por Obra
-        </h2>
-
-        <ResponsiveContainer width="100%" height={300}>
-
-          <BarChart data={dadosGrafico}>
-
-            <XAxis dataKey="obra" />
-
-            <YAxis />
-
-            <Tooltip />
-
-            <Bar dataKey="total" fill="#2563eb" />
-
-          </BarChart>
-
-        </ResponsiveContainer>
-
-      </div>
-
-      {/* TABELA */}
 
       <div className="overflow-x-auto">
 
