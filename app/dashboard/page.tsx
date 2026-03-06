@@ -33,6 +33,7 @@ export default function Dashboard() {
 
   const [graficoObras, setGraficoObras] = useState<any[]>([]);
   const [graficoSetores, setGraficoSetores] = useState<any[]>([]);
+  const [estoqueBaixo, setEstoqueBaixo] = useState<any[]>([]);
 
   useEffect(() => {
 
@@ -76,6 +77,7 @@ export default function Dashboard() {
 
     const dadosGraficoObras: any[] = [];
     const mapaSetores: any = {};
+    const materiaisBaixos: any[] = [];
 
     for (const obraDoc of obrasSnap.docs) {
 
@@ -108,7 +110,8 @@ export default function Dashboard() {
 
         materiaisSnap.forEach((doc) => {
 
-          const saldo = doc.data().saldo ?? 0;
+          const data = doc.data();
+          const saldo = data.saldo ?? 0;
 
           estoqueTotal += saldo;
           estoqueObra += saldo;
@@ -118,6 +121,15 @@ export default function Dashboard() {
           }
 
           mapaSetores[setorNome] += saldo;
+
+          if (saldo <= 5) {
+
+            materiaisBaixos.push({
+              material: data.nome,
+              saldo
+            });
+
+          }
 
         });
 
@@ -137,6 +149,7 @@ export default function Dashboard() {
 
     setGraficoObras(dadosGraficoObras);
     setGraficoSetores(dadosSetores);
+    setEstoqueBaixo(materiaisBaixos);
 
     setTotalObras(obrasSnap.size);
     setTotalSetores(setoresCount);
@@ -163,8 +176,6 @@ export default function Dashboard() {
 
       </div>
 
-      {/* CARDS */}
-
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
         <Card titulo="Obras" valor={totalObras} />
@@ -173,8 +184,6 @@ export default function Dashboard() {
         <Card titulo="Total em Estoque" valor={totalEstoque} />
 
       </div>
-
-      {/* GRÁFICO ESTOQUE POR OBRA */}
 
       <div className="bg-white p-6 rounded-xl shadow">
 
@@ -187,13 +196,9 @@ export default function Dashboard() {
           <BarChart data={graficoObras}>
 
             <CartesianGrid strokeDasharray="3 3" />
-
             <XAxis dataKey="obra" />
-
             <YAxis />
-
             <Tooltip />
-
             <Bar dataKey="estoque" fill="#2563eb" />
 
           </BarChart>
@@ -201,8 +206,6 @@ export default function Dashboard() {
         </ResponsiveContainer>
 
       </div>
-
-      {/* GRÁFICO ESTOQUE POR SETOR */}
 
       <div className="bg-white p-6 rounded-xl shadow">
 
@@ -215,18 +218,42 @@ export default function Dashboard() {
           <BarChart data={graficoSetores}>
 
             <CartesianGrid strokeDasharray="3 3" />
-
             <XAxis dataKey="setor" />
-
             <YAxis />
-
             <Tooltip />
-
             <Bar dataKey="estoque" fill="#16a34a" />
 
           </BarChart>
 
         </ResponsiveContainer>
+
+      </div>
+
+      <div className="bg-white p-6 rounded-xl shadow">
+
+        <h2 className="text-xl font-bold mb-4">
+          ⚠ Materiais com estoque baixo
+        </h2>
+
+        {estoqueBaixo.length === 0 && (
+          <p className="text-gray-500">
+            Nenhum material com estoque baixo
+          </p>
+        )}
+
+        {estoqueBaixo.map((m, i) => (
+
+          <div key={i} className="flex justify-between border-b py-2">
+
+            <span>{m.material}</span>
+
+            <span className="text-red-600 font-bold">
+              {m.saldo}
+            </span>
+
+          </div>
+
+        ))}
 
       </div>
 
