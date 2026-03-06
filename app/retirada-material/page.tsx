@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { db, auth } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
+
 import {
   collection,
   getDocs,
@@ -25,90 +26,95 @@ type Material = {
 
 export default function RetiradaMaterial() {
 
-  const [empresaId, setEmpresaId] = useState<string | null>(null);
+  const [empresaId,setEmpresaId] = useState<string | null>(null);
 
-  const [obras, setObras] = useState<any[]>([]);
-  const [obraSelecionada, setObraSelecionada] = useState("");
+  const [obras,setObras] = useState<any[]>([]);
+  const [obraSelecionada,setObraSelecionada] = useState("");
 
-  const [materiais, setMateriais] = useState<Material[]>([]);
+  const [materiais,setMateriais] = useState<Material[]>([]);
 
-  const [quantidades, setQuantidades] = useState<{ [key: string]: number }>({});
-  const [destinos, setDestinos] = useState<{ [key: string]: string }>({});
-  const [obraDestino, setObraDestino] = useState<{ [key: string]: string }>({});
+  const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
+  const [tipoMov,setTipoMov] = useState<{[key:string]:string}>({});
+  const [obraDestino,setObraDestino] = useState<{[key:string]:string}>({});
+  const [motivo,setMotivo] = useState<{[key:string]:string}>({});
 
-  useEffect(() => {
+
+
+  useEffect(()=>{
 
     const user = auth.currentUser;
-
-    if (!user) return;
+    if(!user) return;
 
     carregarUsuario(user.uid);
 
-  }, []);
+  },[]);
 
-  useEffect(() => {
 
-    if (empresaId) {
 
+  useEffect(()=>{
+
+    if(empresaId){
       carregarObras();
-
     }
 
-  }, [empresaId]);
+  },[empresaId]);
 
-  useEffect(() => {
 
-    if (obraSelecionada) {
 
+  useEffect(()=>{
+
+    if(obraSelecionada){
       carregarMateriais(obraSelecionada);
-
     }
 
-  }, [obraSelecionada]);
+  },[obraSelecionada]);
 
-  async function carregarUsuario(uid: string) {
 
-    const snap = await getDoc(doc(db, "usuarios", uid));
 
-    if (snap.exists()) {
+  async function carregarUsuario(uid:string){
+
+    const snap = await getDoc(doc(db,"usuarios",uid));
+
+    if(snap.exists()){
 
       const data = snap.data();
-
       setEmpresaId(data.empresaId);
 
     }
 
   }
 
-  async function carregarObras() {
 
-    if (!empresaId) return;
+
+  async function carregarObras(){
 
     const q = query(
-      collection(db, "obras"),
-      where("empresaId", "==", empresaId)
+      collection(db,"obras"),
+      where("empresaId","==",empresaId)
     );
 
     const snap = await getDocs(q);
 
-    const lista = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    setObras(lista);
+    setObras(
+      snap.docs.map(doc=>({
+        id:doc.id,
+        ...doc.data()
+      }))
+    );
 
   }
 
-  async function carregarMateriais(obraId: string) {
+
+
+  async function carregarMateriais(obraId:string){
 
     const setoresSnap = await getDocs(
-      collection(db, "obras", obraId, "setores")
+      collection(db,"obras",obraId,"setores")
     );
 
-    let lista: Material[] = [];
+    let lista:Material[] = [];
 
-    for (const setorDoc of setoresSnap.docs) {
+    for(const setorDoc of setoresSnap.docs){
 
       const materiaisSnap = await getDocs(
         collection(
@@ -121,16 +127,16 @@ export default function RetiradaMaterial() {
         )
       );
 
-      materiaisSnap.docs.forEach((docSnap) => {
+      materiaisSnap.docs.forEach(docSnap=>{
 
         const data = docSnap.data();
 
         lista.push({
-          id: docSnap.id,
-          nome: data.nome,
-          saldo: data.saldo || 0,
-          unidade: data.unidade || "",
-          setorId: setorDoc.id,
+          id:docSnap.id,
+          nome:data.nome,
+          saldo:data.saldo || 0,
+          unidade:data.unidade || "",
+          setorId:setorDoc.id
         });
 
       });
@@ -141,253 +147,273 @@ export default function RetiradaMaterial() {
 
   }
 
-  async function retirar(material: Material) {
+
+
+  async function retirar(material:Material){
 
     const qtd = quantidades[material.id];
-    const destino = destinos[material.id] || "uso";
-    const destinoObraId = obraDestino[material.id];
+    const tipo = tipoMov[material.id] || "uso";
 
-    if (!qtd || qtd <= 0) {
-
-      alert("Informe uma quantidade válida.");
+    if(!qtd || qtd <= 0){
+      alert("Quantidade inválida");
       return;
-
     }
 
-    if (qtd > material.saldo) {
-
-      alert("Quantidade maior que o saldo.");
+    if(qtd > material.saldo){
+      alert("Saldo insuficiente");
       return;
-
     }
 
-    const user = auth.currentUser;
+    const materialRef = doc(
+      db,
+      "obras",
+      obraSelecionada,
+      "setores",
+      material.setorId,
+      "materiais",
+      material.id
+    );
 
-    if (!user) {
 
-      alert("Usuário não autenticado.");
-      return;
 
-    }
+    await updateDoc(materialRef,{
+      saldo: increment(-qtd)
+    });
 
-    try {
 
-      const materialRef = doc(
+
+    if(tipo === "transferencia"){
+
+      const destinoId = obraDestino[material.id];
+
+      if(!destinoId){
+        alert("Selecione obra destino");
+        return;
+      }
+
+      const materiaisDestinoRef = collection(
         db,
         "obras",
-        obraSelecionada,
+        destinoId,
         "setores",
         material.setorId,
-        "materiais",
-        material.id
+        "materiais"
       );
 
-      await updateDoc(materialRef, {
-        saldo: increment(-qtd),
-      });
+      const snap = await getDocs(materiaisDestinoRef);
 
-      let nomeObraDestino: string | null = null;
+      let existe = false;
 
-      if (destino === "transferencia" && destinoObraId) {
+      for(const docSnap of snap.docs){
 
-        nomeObraDestino =
-          obras.find((o) => o.id === destinoObraId)?.nome || "";
+        if(docSnap.data().nome === material.nome){
 
-        const setorOrigemRef = doc(
-          db,
-          "obras",
-          obraSelecionada,
-          "setores",
-          material.setorId
-        );
-
-        const setorOrigemSnap = await getDoc(setorOrigemRef);
-        const nomeSetor = setorOrigemSnap.data()?.nome || "Sem nome";
-
-        const setoresDestinoSnap = await getDocs(
-          collection(db, "obras", destinoObraId, "setores")
-        );
-
-        let setorDestinoId: string | null = null;
-
-        setoresDestinoSnap.forEach((setor) => {
-
-          if (setor.data().nome === nomeSetor) {
-
-            setorDestinoId = setor.id;
-
-          }
-
-        });
-
-        if (!setorDestinoId) {
-
-          const novoSetor = await addDoc(
-            collection(db, "obras", destinoObraId, "setores"),
-            { nome: nomeSetor }
-          );
-
-          setorDestinoId = novoSetor.id;
-
-        }
-
-        const materiaisDestinoRef = collection(
-          db,
-          "obras",
-          destinoObraId,
-          "setores",
-          setorDestinoId,
-          "materiais"
-        );
-
-        const materiaisDestinoSnap = await getDocs(materiaisDestinoRef);
-
-        let materialExiste = false;
-
-        for (const docSnap of materiaisDestinoSnap.docs) {
-
-          if (docSnap.data().nome === material.nome) {
-
-            await updateDoc(docSnap.ref, {
-              saldo: increment(qtd),
-            });
-
-            materialExiste = true;
-
-          }
-
-        }
-
-        if (!materialExiste) {
-
-          await addDoc(materiaisDestinoRef, {
-            nome: material.nome,
-            saldo: qtd,
-            unidade: material.unidade || "",
+          await updateDoc(docSnap.ref,{
+            saldo: increment(qtd)
           });
+
+          existe = true;
 
         }
 
       }
 
-      await registrarMovimentacao({
+      if(!existe){
 
-        materialId: material.id,
-        materialNome: material.nome,
+        await addDoc(materiaisDestinoRef,{
+          nome:material.nome,
+          saldo:qtd,
+          unidade:material.unidade
+        });
 
-        tipo: destino === "transferencia" ? "transferencia" : "saida",
-
-        quantidade: qtd,
-
-        obraId: obraSelecionada,
-        obraNome:
-          obras.find((o) => o.id === obraSelecionada)?.nome || "",
-
-        destino: destino === "transferencia" ? "transferencia" : "uso",
-
-        obraDestino: nomeObraDestino,
-
-        usuarioId: user.uid,
-        usuarioNome: user.email || "",
-
-        empresaId: empresaId ?? undefined
-
-      });
-
-      alert("Movimentação registrada!");
-
-      setQuantidades((prev) => ({
-        ...prev,
-        [material.id]: 0,
-      }));
-
-      carregarMateriais(obraSelecionada);
-
-    } catch (error) {
-
-      console.error(error);
-      alert("Erro ao retirar material.");
+      }
 
     }
 
+
+
+    await registrarMovimentacao({
+
+      materialId: material.id,
+      materialNome: material.nome,
+
+      tipo: tipo,
+
+      quantidade: qtd,
+
+      obraId: obraSelecionada,
+
+      obraDestino: tipo === "transferencia"
+        ? obraDestino[material.id]
+        : null,
+
+      motivo: tipo === "descarte"
+        ? motivo[material.id]
+        : null,
+
+      usuarioId: auth.currentUser?.uid,
+
+      empresaId: empresaId
+
+    });
+
+
+
+    carregarMateriais(obraSelecionada);
+
   }
 
-  return (
 
-    <div style={{ maxWidth: 900, margin: "40px auto" }}>
+
+  return(
+
+    <div style={{maxWidth:900,margin:"40px auto"}}>
 
       <h2>Retirada de Material</h2>
 
+
+
       <select
-        style={{ width: "100%", padding: 10 }}
-        onChange={(e) => setObraSelecionada(e.target.value)}
+        style={{width:"100%",padding:10}}
+        onChange={(e)=>setObraSelecionada(e.target.value)}
       >
 
         <option value="">Selecionar obra</option>
 
-        {obras.map((obra) => (
-
+        {obras.map(obra=>(
           <option key={obra.id} value={obra.id}>
             {obra.nome}
           </option>
-
         ))}
 
       </select>
 
-      {materiais.map((material) => (
+
+
+      {materiais.map(material=>{
+
+        const tipo = tipoMov[material.id] || "uso";
+
+        return(
 
         <div
           key={material.id}
           style={{
-            border: "1px solid #ccc",
-            padding: 15,
-            marginTop: 20,
-            borderRadius: 8,
+            border:"1px solid #ccc",
+            padding:15,
+            marginTop:20,
+            borderRadius:8
           }}
         >
 
           <b>{material.nome}</b>
 
-          <span style={{ float: "right" }}>
+          <span style={{float:"right"}}>
             Saldo: {material.saldo} {material.unidade}
           </span>
 
-          <div style={{ marginTop: 10 }}>
+
+
+          <div style={{marginTop:10}}>
 
             <input
               type="number"
               placeholder="Quantidade"
               value={quantidades[material.id] || ""}
-              onChange={(e) =>
-                setQuantidades((prev) => ({
+              onChange={(e)=>
+                setQuantidades(prev=>({
                   ...prev,
-                  [material.id]: Number(e.target.value),
+                  [material.id]: Number(e.target.value)
                 }))
               }
-              style={{ width: 100 }}
+              style={{width:100}}
             />
 
+
+
+            <select
+              value={tipo}
+              onChange={(e)=>
+                setTipoMov(prev=>({
+                  ...prev,
+                  [material.id]: e.target.value
+                }))
+              }
+              style={{marginLeft:10}}
+            >
+
+              <option value="uso">Uso na obra</option>
+              <option value="transferencia">Transferência</option>
+              <option value="descarte">Descarte</option>
+
+            </select>
+
+
+
+            {tipo === "transferencia" && (
+
+              <select
+                style={{marginLeft:10}}
+                onChange={(e)=>
+                  setObraDestino(prev=>({
+                    ...prev,
+                    [material.id]: e.target.value
+                  }))
+                }
+              >
+
+                <option value="">Obra destino</option>
+
+                {obras.map(o=>(
+                  <option key={o.id} value={o.id}>
+                    {o.nome}
+                  </option>
+                ))}
+
+              </select>
+
+            )}
+
+
+
+            {tipo === "descarte" && (
+
+              <input
+                placeholder="Motivo"
+                style={{marginLeft:10}}
+                onChange={(e)=>
+                  setMotivo(prev=>({
+                    ...prev,
+                    [material.id]: e.target.value
+                  }))
+                }
+              />
+
+            )}
+
+
+
             <button
-              onClick={() => retirar(material)}
+              onClick={()=>retirar(material)}
               style={{
-                marginLeft: 10,
-                background: "#dc2626",
-                color: "white",
-                padding: "6px 12px",
-                border: "none",
-                borderRadius: 4,
-                cursor: "pointer",
+                marginLeft:10,
+                background:"#dc2626",
+                color:"white",
+                padding:"6px 12px",
+                border:"none",
+                borderRadius:4
               }}
             >
-              Retirar
+              Confirmar
             </button>
 
           </div>
 
         </div>
 
-      ))}
+        )
+
+      })}
 
     </div>
 
