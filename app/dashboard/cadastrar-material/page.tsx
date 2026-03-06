@@ -334,6 +334,97 @@ export default function CadastrarMaterial() {
         </div>
       )}
 
+      <select
+        value={obraId}
+        onChange={(e) => setObraId(e.target.value)}
+        className="w-full p-2 border rounded"
+      >
+        <option value="">Selecionar obra</option>
+
+        {obras.map((obra) => (
+          <option key={obra.id} value={obra.id}>
+            {obra.nome}
+          </option>
+        ))}
+
+      </select>
+
+      <select
+        value={setorId}
+        onChange={(e) => setSetorId(e.target.value)}
+        className="w-full p-2 border rounded"
+      >
+
+        <option value="">Selecionar setor</option>
+
+        {setores.map((setor) => (
+          <option key={setor.id} value={setor.id}>
+            {setor.nome}
+          </option>
+        ))}
+
+      </select>
+
+      {obraId && (
+
+        <div className="flex gap-2">
+
+          <input
+            placeholder="Novo setor"
+            value={novoSetor}
+            onChange={(e) => setNovoSetor(e.target.value)}
+            className="flex-1 p-2 border rounded"
+          />
+
+          <button
+            onClick={criarSetor}
+            className="bg-gray-800 text-white px-4 rounded"
+          >
+            Criar
+          </button>
+
+        </div>
+
+      )}
+
+      <div className="relative">
+
+        <input
+          placeholder="Nome do material"
+          value={nomeMaterial}
+          onChange={(e) => filtrarSugestoes(e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+
+      </div>
+
+      <input
+        type="number"
+        placeholder="Quantidade"
+        value={quantidade}
+        onChange={(e) => setQuantidade(Number(e.target.value))}
+        className="w-full p-2 border rounded"
+      />
+
+      <select
+        value={unidade}
+        onChange={(e) => setUnidade(e.target.value)}
+        className="w-full p-2 border rounded"
+      >
+
+        <option value="un">Unidade</option>
+        <option value="m">Metro</option>
+        <option value="pc">Peça</option>
+
+      </select>
+
+      <button
+        onClick={salvarMaterial}
+        className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+      >
+        Salvar Material
+      </button>
+
     </div>
 
   );
