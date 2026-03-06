@@ -119,46 +119,39 @@ export default function EstoqueGeral() {
 
     return (
 
-      <div className="max-w-6xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto p-8">
 
         <h1 className="text-3xl font-bold mb-8">
           Estoque por Setor
         </h1>
 
-        <table className="w-full border">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3 border text-left">Setor</th>
-              <th className="p-3 border">Total</th>
-            </tr>
-          </thead>
+          {dadosSetores.map((s, i) => (
 
-          <tbody>
+            <div
+              key={i}
+              onClick={() => setSetorSelecionado(s.setor)}
+              className="bg-white p-6 rounded-xl shadow hover:shadow-lg cursor-pointer transition"
+            >
 
-            {dadosSetores.map((s, i) => (
+              <p className="text-gray-500">
+                Setor
+              </p>
 
-              <tr
-                key={i}
-                className="border cursor-pointer hover:bg-gray-100"
-                onClick={() => setSetorSelecionado(s.setor)}
-              >
+              <h2 className="text-xl font-bold mt-2">
+                {s.setor}
+              </h2>
 
-                <td className="p-3 border font-semibold text-blue-600">
-                  {s.setor}
-                </td>
+              <p className="text-3xl font-bold text-blue-600 mt-4">
+                {s.total}
+              </p>
 
-                <td className="p-3 border text-center font-bold">
-                  {s.total}
-                </td>
+            </div>
 
-              </tr>
+          ))}
 
-            ))}
-
-          </tbody>
-
-        </table>
+        </div>
 
       </div>
 
@@ -174,7 +167,7 @@ export default function EstoqueGeral() {
 
       <button
         onClick={() => setSetorSelecionado(null)}
-        className="mb-6 bg-gray-200 px-4 py-2 rounded"
+        className="mb-6 bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
       >
         ← Voltar
       </button>
@@ -183,59 +176,63 @@ export default function EstoqueGeral() {
         {setorSelecionado}
       </h1>
 
-      <table className="w-full border">
+      <div className="overflow-x-auto">
 
-        <thead className="bg-gray-100">
+        <table className="w-full border rounded-lg overflow-hidden">
 
-          <tr>
+          <thead className="bg-gray-100">
 
-            <th className="p-3 border text-left">
-              Material
-            </th>
+            <tr>
 
-            {obras.map((obra) => (
-              <th key={obra.id} className="p-3 border">
-                {obra.nome}
+              <th className="p-3 border text-left">
+                Material
               </th>
-            ))}
-
-            <th className="p-3 border">
-              Total
-            </th>
-
-          </tr>
-
-        </thead>
-
-        <tbody>
-
-          {materiais.map((linha, index) => (
-
-            <tr key={index} className="border">
-
-              <td className="p-3 border font-semibold">
-                {linha.material}
-              </td>
 
               {obras.map((obra) => (
-
-                <td key={obra.id} className="p-3 border text-center">
-                  {linha.obras[obra.nome] ?? 0}
-                </td>
-
+                <th key={obra.id} className="p-3 border">
+                  {obra.nome}
+                </th>
               ))}
 
-              <td className="p-3 border font-bold text-center">
-                {linha.total}
-              </td>
+              <th className="p-3 border">
+                Total
+              </th>
 
             </tr>
 
-          ))}
+          </thead>
 
-        </tbody>
+          <tbody>
 
-      </table>
+            {materiais.map((linha, index) => (
+
+              <tr key={index} className="border hover:bg-gray-50">
+
+                <td className="p-3 border font-semibold">
+                  {linha.material}
+                </td>
+
+                {obras.map((obra) => (
+
+                  <td key={obra.id} className="p-3 border text-center">
+                    {linha.obras[obra.nome] ?? 0}
+                  </td>
+
+                ))}
+
+                <td className="p-3 border font-bold text-center">
+                  {linha.total}
+                </td>
+
+              </tr>
+
+            ))}
+
+          </tbody>
+
+        </table>
+
+      </div>
 
     </div>
 
