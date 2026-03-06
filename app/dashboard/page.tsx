@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [graficoObras, setGraficoObras] = useState<any[]>([]);
   const [graficoSetores, setGraficoSetores] = useState<any[]>([]);
   const [estoqueBaixo, setEstoqueBaixo] = useState<any[]>([]);
+  const [materiaisUsados, setMateriaisUsados] = useState<any[]>([]);
 
   useEffect(() => {
 
@@ -156,6 +157,43 @@ export default function Dashboard() {
     setTotalMateriais(materiaisCount);
     setTotalEstoque(estoqueTotal);
 
+    /* =========================
+       MATERIAIS MAIS USADOS
+       ========================= */
+
+    const movSnap = await getDocs(collection(db, "movimentacoes"));
+
+    const consumoMateriais: any = {};
+
+    movSnap.forEach((doc) => {
+
+      const data = doc.data();
+
+      if (data.tipo === "saida") {
+
+        const material = data.materialNome;
+        const quantidade = data.quantidade ?? 0;
+
+        if (!consumoMateriais[material]) {
+          consumoMateriais[material] = 0;
+        }
+
+        consumoMateriais[material] += quantidade;
+
+      }
+
+    });
+
+    const ranking = Object.keys(consumoMateriais)
+      .map((material) => ({
+        material,
+        quantidade: consumoMateriais[material]
+      }))
+      .sort((a, b) => b.quantidade - a.quantidade)
+      .slice(0, 10);
+
+    setMateriaisUsados(ranking);
+
   }
 
   if (loading) return null;
@@ -185,6 +223,8 @@ export default function Dashboard() {
 
       </div>
 
+      {/* ESTOQUE POR OBRA */}
+
       <div className="bg-white p-6 rounded-xl shadow">
 
         <h2 className="text-xl font-bold mb-4">
@@ -206,6 +246,8 @@ export default function Dashboard() {
         </ResponsiveContainer>
 
       </div>
+
+      {/* ESTOQUE POR SETOR */}
 
       <div className="bg-white p-6 rounded-xl shadow">
 
@@ -229,6 +271,8 @@ export default function Dashboard() {
 
       </div>
 
+      {/* ESTOQUE BAIXO */}
+
       <div className="bg-white p-6 rounded-xl shadow">
 
         <h2 className="text-xl font-bold mb-4">
@@ -249,6 +293,30 @@ export default function Dashboard() {
 
             <span className="text-red-600 font-bold">
               {m.saldo}
+            </span>
+
+          </div>
+
+        ))}
+
+      </div>
+
+      {/* MATERIAIS MAIS USADOS */}
+
+      <div className="bg-white p-6 rounded-xl shadow">
+
+        <h2 className="text-xl font-bold mb-4">
+          📦 Materiais mais usados
+        </h2>
+
+        {materiaisUsados.map((m, i) => (
+
+          <div key={i} className="flex justify-between border-b py-2">
+
+            <span>{m.material}</span>
+
+            <span className="text-blue-600 font-bold">
+              {m.quantidade}
             </span>
 
           </div>
