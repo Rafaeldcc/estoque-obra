@@ -35,12 +35,10 @@ export default function Setores() {
       setoresRef,
       (snapshot) => {
 
-        const lista = snapshot.docs.map(
-          (doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          })
-        );
+        const lista = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
 
         setSetores(lista);
 
@@ -52,7 +50,8 @@ export default function Setores() {
   }, [obraId]);
 
 
-  /* NORMALIZAR TEXTO (remove acento e caixa) */
+
+  /* NORMALIZAR TEXTO (remove acento + minúsculo) */
 
   function normalizarTexto(texto: string) {
 
@@ -65,6 +64,7 @@ export default function Setores() {
   }
 
 
+
   /* CRIAR SETOR */
 
   async function criarSetor() {
@@ -73,9 +73,14 @@ export default function Setores() {
 
     const nomeNormalizado = normalizarTexto(novoSetor);
 
-    const existe = setores.some(
-      (s) => normalizarTexto(s.nome) === nomeNormalizado
-    );
+    const existe = setores.some((s) => {
+
+      const bancoNormalizado =
+        s.nomeNormalizado || normalizarTexto(s.nome);
+
+      return bancoNormalizado === nomeNormalizado;
+
+    });
 
     if (existe) {
 
@@ -104,6 +109,7 @@ export default function Setores() {
   }
 
 
+
   /* EXCLUIR SETOR */
 
   async function excluirSetor(id: string) {
@@ -119,6 +125,7 @@ export default function Setores() {
     );
 
   }
+
 
 
   return (
