@@ -36,7 +36,6 @@ export default function RetiradaMaterial() {
   const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
   const [tipoMov,setTipoMov] = useState<{[key:string]:string}>({});
   const [obraDestino,setObraDestino] = useState<{[key:string]:string}>({});
-  const [motivo,setMotivo] = useState<{[key:string]:string}>({});
 
 
 
@@ -247,10 +246,6 @@ export default function RetiradaMaterial() {
         ? obraDestino[material.id] || ""
         : "",
 
-      motivo: tipo === "descarte"
-        ? motivo[material.id] || ""
-        : "",
-
       usuarioId: auth.currentUser?.uid || "",
 
       empresaId: empresaId || ""
@@ -371,23 +366,6 @@ export default function RetiradaMaterial() {
                 ))}
 
               </select>
-
-            )}
-
-
-
-            {tipo === "descarte" && (
-
-              <input
-                placeholder="Motivo"
-                style={{marginLeft:10}}
-                onChange={(e)=>
-                  setMotivo(prev=>({
-                    ...prev,
-                    [material.id]: e.target.value
-                  }))
-                }
-              />
 
             )}
 
