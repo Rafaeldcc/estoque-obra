@@ -22,6 +22,8 @@ export default function EstoqueGeral() {
   const [tabela, setTabela] = useState<LinhaEstoque[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [setorSelecionado, setSetorSelecionado] = useState<string | null>(null);
+
   useEffect(() => {
     carregarEstoque();
   }, []);
@@ -101,68 +103,53 @@ export default function EstoqueGeral() {
     );
   }
 
-  return (
+  const setores = Array.from(new Set(tabela.map(l => l.setor)));
 
-    <div className="max-w-7xl mx-auto p-8">
+  if (!setorSelecionado) {
 
-      <h1 className="text-3xl font-bold mb-8">
-        Estoque Geral da Empresa
-      </h1>
+    const dadosSetores = setores.map(setor => {
 
-      <div className="overflow-x-auto">
+      const total = tabela
+        .filter(l => l.setor === setor)
+        .reduce((acc, l) => acc + l.total, 0);
+
+      return { setor, total };
+
+    });
+
+    return (
+
+      <div className="max-w-6xl mx-auto p-8">
+
+        <h1 className="text-3xl font-bold mb-8">
+          Estoque por Setor
+        </h1>
 
         <table className="w-full border">
 
           <thead className="bg-gray-100">
-
             <tr>
-
-              <th className="p-3 border text-left">
-                Material
-              </th>
-
-              <th className="p-3 border text-left">
-                Setor
-              </th>
-
-              {obras.map((obra) => (
-                <th key={obra.id} className="p-3 border">
-                  {obra.nome}
-                </th>
-              ))}
-
-              <th className="p-3 border">
-                Total
-              </th>
-
+              <th className="p-3 border text-left">Setor</th>
+              <th className="p-3 border">Total</th>
             </tr>
-
           </thead>
 
           <tbody>
 
-            {tabela.map((linha, index) => (
+            {dadosSetores.map((s, i) => (
 
-              <tr key={index} className="border">
+              <tr
+                key={i}
+                className="border cursor-pointer hover:bg-gray-100"
+                onClick={() => setSetorSelecionado(s.setor)}
+              >
 
-                <td className="p-3 border font-semibold">
-                  {linha.material}
+                <td className="p-3 border font-semibold text-blue-600">
+                  {s.setor}
                 </td>
 
-                <td className="p-3 border">
-                  {linha.setor}
-                </td>
-
-                {obras.map((obra) => (
-
-                  <td key={obra.id} className="p-3 border text-center">
-                    {linha.obras[obra.nome] ?? 0}
-                  </td>
-
-                ))}
-
-                <td className="p-3 border font-bold text-center">
-                  {linha.total}
+                <td className="p-3 border text-center font-bold">
+                  {s.total}
                 </td>
 
               </tr>
@@ -174,6 +161,81 @@ export default function EstoqueGeral() {
         </table>
 
       </div>
+
+    );
+
+  }
+
+  const materiais = tabela.filter(l => l.setor === setorSelecionado);
+
+  return (
+
+    <div className="max-w-7xl mx-auto p-8">
+
+      <button
+        onClick={() => setSetorSelecionado(null)}
+        className="mb-6 bg-gray-200 px-4 py-2 rounded"
+      >
+        ← Voltar
+      </button>
+
+      <h1 className="text-3xl font-bold mb-8">
+        {setorSelecionado}
+      </h1>
+
+      <table className="w-full border">
+
+        <thead className="bg-gray-100">
+
+          <tr>
+
+            <th className="p-3 border text-left">
+              Material
+            </th>
+
+            {obras.map((obra) => (
+              <th key={obra.id} className="p-3 border">
+                {obra.nome}
+              </th>
+            ))}
+
+            <th className="p-3 border">
+              Total
+            </th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          {materiais.map((linha, index) => (
+
+            <tr key={index} className="border">
+
+              <td className="p-3 border font-semibold">
+                {linha.material}
+              </td>
+
+              {obras.map((obra) => (
+
+                <td key={obra.id} className="p-3 border text-center">
+                  {linha.obras[obra.nome] ?? 0}
+                </td>
+
+              ))}
+
+              <td className="p-3 border font-bold text-center">
+                {linha.total}
+              </td>
+
+            </tr>
+
+          ))}
+
+        </tbody>
+
+      </table>
 
     </div>
 
