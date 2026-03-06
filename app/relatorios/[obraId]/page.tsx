@@ -20,25 +20,31 @@ export default function RelatorioObra() {
   const [setores, setSetores] = useState<any[]>([]);
   const [nomeObra, setNomeObra] = useState("");
   const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
 
   useEffect(() => {
+
+    if (!obraId) return;
+
     carregar();
-  }, []);
+
+  }, [obraId]);
 
   async function carregar() {
 
     try {
 
-      // 🔹 pegar nome da obra
-      const obraSnap = await getDoc(
-        doc(db, "obras", obraId)
-      );
+      setCarregando(true);
+
+      // 🔹 buscar obra
+      const obraRef = doc(db, "obras", obraId);
+      const obraSnap = await getDoc(obraRef);
 
       if (obraSnap.exists()) {
         setNomeObra(obraSnap.data().nome);
       }
 
-      // 🔹 pegar setores
+      // 🔹 buscar setores
       const q = query(
         collection(db, "obras", obraId, "setores"),
         orderBy("nome")
@@ -46,9 +52,9 @@ export default function RelatorioObra() {
 
       const snap = await getDocs(q);
 
-      const lista = snap.docs.map(doc => ({
+      const lista = snap.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
 
       setSetores(lista);
@@ -56,6 +62,7 @@ export default function RelatorioObra() {
     } catch (error) {
 
       console.error("Erro ao carregar setores:", error);
+      setErro("Erro ao carregar dados da obra.");
 
     }
 
@@ -82,67 +89,97 @@ export default function RelatorioObra() {
   }
 
   if (carregando) {
-    return <div className="p-10">Carregando...</div>;
+
+    return (
+      <div className="p-10 text-center">
+        Carregando relatório...
+      </div>
+    );
+
+  }
+
+  if (erro) {
+
+    return (
+      <div className="p-10 text-red-600">
+        {erro}
+      </div>
+    );
+
   }
 
   return (
 
-    <div className="max-w-4xl mx-auto p-10">
+    <div className="max-w-4xl mx-auto p-10 space-y-8">
 
-      <h1 className="text-3xl font-bold mb-2">
-        Relatórios da Obra
-      </h1>
+      <div>
 
-      <p className="text-gray-500 mb-8">
-        {nomeObra}
-      </p>
+        <h1 className="text-3xl font-bold">
+          Relatórios da Obra
+        </h1>
 
-      {/* BOTÃO RELATÓRIO COMPLETO */}
+        <p className="text-gray-500 mt-2">
+          {nomeObra}
+        </p>
 
-      <div className="mb-10">
+      </div>
+
+      {/* RELATÓRIO COMPLETO */}
+
+      <div className="bg-white border rounded-xl p-6 shadow-sm">
+
+        <h2 className="text-xl font-semibold mb-4">
+          📄 Relatório completo da obra
+        </h2>
 
         <button
           onClick={abrirPDFObra}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg"
         >
           Gerar PDF da Obra Completa
         </button>
 
       </div>
 
-      <h2 className="text-xl font-semibold mb-4">
-        Relatório por setor
-      </h2>
+      {/* RELATÓRIO POR SETOR */}
 
-      {setores.length === 0 && (
-        <p className="text-gray-500">
-          Nenhum setor cadastrado.
-        </p>
-      )}
+      <div>
 
-      <div className="space-y-4">
+        <h2 className="text-xl font-semibold mb-4">
+          📦 Relatório por setor
+        </h2>
 
-        {setores.map((setor) => (
+        {setores.length === 0 && (
+          <p className="text-gray-500">
+            Nenhum setor cadastrado.
+          </p>
+        )}
 
-          <div
-            key={setor.id}
-            className="flex justify-between items-center bg-white border p-4 rounded-lg shadow-sm"
-          >
+        <div className="space-y-4">
 
-            <span className="font-medium">
-              {setor.nome}
-            </span>
+          {setores.map((setor) => (
 
-            <button
-              onClick={() => abrirPDF(setor.id)}
-              className="bg-green-600 text-white px-4 py-2 rounded"
+            <div
+              key={setor.id}
+              className="flex justify-between items-center bg-white border p-4 rounded-lg shadow-sm"
             >
-              Gerar PDF
-            </button>
 
-          </div>
+              <span className="font-medium">
+                {setor.nome}
+              </span>
 
-        ))}
+              <button
+                onClick={() => abrirPDF(setor.id)}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              >
+                Gerar PDF
+              </button>
+
+            </div>
+
+          ))}
+
+        </div>
 
       </div>
 
