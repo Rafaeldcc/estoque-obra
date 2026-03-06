@@ -53,15 +53,23 @@ export default function EstoqueTotal() {
 
   async function carregarRole() {
 
-    if (!user) return;
+    try {
 
-    const snap = await getDoc(doc(db, "usuarios", user.uid));
+      if (!user) return;
 
-    if (snap.exists()) {
+      const snap = await getDoc(doc(db, "usuarios", user.uid));
 
-      const data = snap.data();
+      if (snap.exists()) {
 
-      setRole(data.role);
+        const data = snap.data();
+
+        setRole(data.role);
+
+      }
+
+    } catch (error) {
+
+      console.error("Erro ao carregar role:", error);
 
     }
 
@@ -83,23 +91,27 @@ export default function EstoqueTotal() {
           collection(db, "obras", obraDoc.id, "setores")
         );
 
-        setoresSnap.forEach((setorDoc) => {
+        for (const setorDoc of setoresSnap.docs) {
 
-          const nomeSetor = setorDoc.data().nome;
+          const data = setorDoc.data();
 
-          if (nomeSetor) {
-            setoresSet.add(nomeSetor);
+          if (data && data.nome) {
+
+            setoresSet.add(data.nome);
+
           }
 
-        });
+        }
 
       }
 
-      const listaOrdenada = Array.from(setoresSet).sort((a, b) =>
+      const lista = Array.from(setoresSet).sort((a, b) =>
         a.localeCompare(b, "pt-BR")
       );
 
-      setSetores(listaOrdenada);
+      console.log("Setores encontrados:", lista);
+
+      setSetores(lista);
 
     } catch (error) {
 
@@ -114,7 +126,6 @@ export default function EstoqueTotal() {
   async function carregarMateriaisPorSetor(nomeSetor: string) {
 
     setCarregando(true);
-
     setSetorSelecionado(nomeSetor);
 
     try {
@@ -131,11 +142,11 @@ export default function EstoqueTotal() {
 
         for (const setorDoc of setoresSnap.docs) {
 
-          const setorNome = setorDoc.data().nome;
+          const dataSetor = setorDoc.data();
 
-          if (!setorNome) continue;
+          if (!dataSetor || !dataSetor.nome) continue;
 
-          if (setorNome.toLowerCase() === nomeSetor.toLowerCase()) {
+          if (dataSetor.nome.toLowerCase() === nomeSetor.toLowerCase()) {
 
             const materiaisSnap = await getDocs(
               collection(
@@ -148,7 +159,7 @@ export default function EstoqueTotal() {
               )
             );
 
-            materiaisSnap.forEach((matDoc) => {
+            for (const matDoc of materiaisSnap.docs) {
 
               const data = matDoc.data();
 
@@ -156,7 +167,7 @@ export default function EstoqueTotal() {
               const saldo = data.saldo ?? 0;
               const unidade = data.unidade ?? "";
 
-              if (!nomeMaterial) return;
+              if (!nomeMaterial) continue;
 
               if (!mapaMateriais[nomeMaterial]) {
 
@@ -172,7 +183,7 @@ export default function EstoqueTotal() {
 
               }
 
-            });
+            }
 
           }
 
@@ -223,7 +234,9 @@ export default function EstoqueTotal() {
     <div className="max-w-6xl mx-auto p-8">
 
       <h1 className="text-3xl font-bold mb-8">
-        Estoque Total
+
+        Estoque por Setor
+
       </h1>
 
 
@@ -231,6 +244,16 @@ export default function EstoqueTotal() {
       {!setorSelecionado && (
 
         <div className="grid md:grid-cols-3 gap-4">
+
+          {setores.length === 0 && (
+
+            <p className="text-gray-500">
+
+              Nenhum setor encontrado.
+
+            </p>
+
+          )}
 
           {setores.map((setor) => (
 
@@ -260,7 +283,6 @@ export default function EstoqueTotal() {
             onClick={() => {
 
               setSetorSelecionado(null);
-
               setMateriais([]);
 
             }}
@@ -281,11 +303,7 @@ export default function EstoqueTotal() {
 
 
 
-          {carregando && (
-
-            <p>Carregando...</p>
-
-          )}
+          {carregando && <p>Carregando...</p>}
 
 
 
@@ -301,11 +319,15 @@ export default function EstoqueTotal() {
                 >
 
                   <span className="font-semibold text-lg">
+
                     {material.nome}
+
                   </span>
 
                   <span className="text-xl font-bold text-blue-600">
+
                     {material.total} {material.unidade}
+
                   </span>
 
                 </div>
