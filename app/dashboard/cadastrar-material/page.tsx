@@ -7,9 +7,7 @@ import {
   addDoc,
   doc,
   serverTimestamp,
-  getDoc,
-  query,
-  where
+  getDoc
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
@@ -71,8 +69,8 @@ export default function CadastrarMaterial() {
   }, [user]);
 
   useEffect(() => {
-    if (empresaId) carregarObras();
-  }, [empresaId]);
+    carregarObras();
+  }, []);
 
   useEffect(() => {
     if (obraId) carregarSetores();
@@ -99,16 +97,11 @@ export default function CadastrarMaterial() {
 
   }
 
+  /* 🔵 CORREÇÃO AQUI — BUSCAR TODAS AS OBRAS */
+
   async function carregarObras() {
 
-    if (!empresaId) return;
-
-    const q = query(
-      collection(db, "obras"),
-      where("empresaId", "==", empresaId)
-    );
-
-    const snap = await getDocs(q);
+    const snap = await getDocs(collection(db, "obras"));
 
     const lista: Obra[] = snap.docs.map((doc) => ({
       id: doc.id,
@@ -387,16 +380,12 @@ export default function CadastrarMaterial() {
 
       )}
 
-      <div className="relative">
-
-        <input
-          placeholder="Nome do material"
-          value={nomeMaterial}
-          onChange={(e) => filtrarSugestoes(e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-
-      </div>
+      <input
+        placeholder="Nome do material"
+        value={nomeMaterial}
+        onChange={(e) => filtrarSugestoes(e.target.value)}
+        className="w-full p-2 border rounded"
+      />
 
       <input
         type="number"
