@@ -22,7 +22,8 @@ type Movimentacao = {
   obraDestino?: string | null;
   destino?: "uso" | "transferencia";
   usuarioNome: string;
-  createdAt: any;
+  createdAt?: any;
+  criadoEm?: any;
   empresaId?: string;
 };
 
@@ -44,17 +45,17 @@ export default function MovimentacoesPage() {
 
   }, [user]);
 
+
+
   useEffect(() => {
 
-    if (role === "admin" || role === "almoxarifado") {
+    if ((role === "admin" || role === "almoxarifado") && empresaId) {
       carregarMovimentacoes();
     }
 
   }, [role, empresaId]);
 
 
-
-  /* CARREGAR USUARIO */
 
   async function carregarUsuario() {
 
@@ -75,28 +76,36 @@ export default function MovimentacoesPage() {
 
 
 
-  /* CARREGAR MOVIMENTAÇÕES DA EMPRESA */
-
   async function carregarMovimentacoes() {
 
     if (!empresaId) return;
 
     setCarregando(true);
 
-    const q = query(
-      collection(db, "movimentacoes"),
-      where("empresaId", "==", empresaId),
-      orderBy("createdAt", "desc")
-    );
+    try {
 
-    const snap = await getDocs(q);
+      const q = query(
+        collection(db, "movimentacoes"),
+        where("empresaId", "==", empresaId),
+        orderBy("createdAt", "desc")
+      );
 
-    const lista = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Movimentacao[];
+      const snap = await getDocs(q);
 
-    setMovimentacoes(lista);
+      const lista = snap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Movimentacao[];
+
+      setMovimentacoes(lista);
+
+    } catch (error) {
+
+      console.error("Erro ao carregar movimentações:", error);
+
+      setMovimentacoes([]);
+
+    }
 
     setCarregando(false);
 
@@ -104,12 +113,14 @@ export default function MovimentacoesPage() {
 
 
 
-  function formatarData(timestamp: any) {
+  function formatarData(mov: Movimentacao) {
 
-    if (!timestamp) return "";
+    const data = mov.createdAt || mov.criadoEm;
+
+    if (!data) return "";
 
     try {
-      return timestamp.toDate().toLocaleString("pt-BR");
+      return data.toDate().toLocaleString("pt-BR");
     } catch {
       return "";
     }
@@ -220,7 +231,7 @@ export default function MovimentacoesPage() {
             </div>
 
             <div className="text-sm text-gray-500 mt-2">
-              📅 {formatarData(mov.createdAt)}
+              📅 {formatarData(mov)}
             </div>
 
           </div>
