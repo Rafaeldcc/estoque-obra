@@ -14,14 +14,27 @@ import { db } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useAuth } from "@/lib/useAuth";
 
+/* TIPOS */
+
+type Obra = {
+  id: string
+  nome: string
+}
+
+type Setor = {
+  id: string
+  nome: string
+  nomeNormalizado?: string
+}
+
 export default function CadastrarMaterial() {
 
   const { user, loading } = useAuth();
 
   const [role, setRole] = useState<string | null>(null);
 
-  const [obras, setObras] = useState<any[]>([]);
-  const [setores, setSetores] = useState<any[]>([]);
+  const [obras, setObras] = useState<Obra[]>([]);
+  const [setores, setSetores] = useState<Setor[]>([]);
   const [materiaisExistentes, setMateriaisExistentes] = useState<string[]>([]);
 
   const [obraId, setObraId] = useState("");
@@ -81,12 +94,14 @@ export default function CadastrarMaterial() {
 
     const snap = await getDocs(collection(db, "obras"));
 
-    setObras(
-      snap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-    );
+    const lista: Obra[] = snap.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as any),
+    }));
+
+    lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+    setObras(lista);
 
   }
 
@@ -98,9 +113,9 @@ export default function CadastrarMaterial() {
       collection(db, "obras", obraId, "setores")
     );
 
-    const lista = snap.docs.map((doc) => ({
+    const lista: Setor[] = snap.docs.map((doc) => ({
       id: doc.id,
-      ...doc.data(),
+      ...(doc.data() as any),
     }));
 
     lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
@@ -146,7 +161,7 @@ export default function CadastrarMaterial() {
 
   }
 
-  /* CRIAR SETOR COM PROTEÇÃO TOTAL */
+  /* CRIAR SETOR */
 
   async function criarSetor() {
 
@@ -168,7 +183,7 @@ export default function CadastrarMaterial() {
 
     const existe = snap.docs.some((doc) => {
 
-      const data = doc.data();
+      const data = doc.data() as any;
 
       const bancoNormalizado =
         data.nomeNormalizado || normalizarTexto(data.nome);
@@ -191,10 +206,10 @@ export default function CadastrarMaterial() {
       }
     );
 
-    const novo = {
+    const novo: Setor = {
       id: ref.id,
       nome: novoSetor.trim(),
-      nomeNormalizado
+      nomeNormalizado,
     };
 
     setSetores((prev) => [...prev, novo]);
