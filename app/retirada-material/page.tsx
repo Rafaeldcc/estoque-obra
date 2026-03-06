@@ -237,7 +237,6 @@ export default function RetiradaMaterial() {
       materialId: material.id,
       materialNome: material.nome,
 
-      // 🔧 CORREÇÃO DO ERRO TYPESCRIPT
       tipo: tipo === "transferencia" ? "transferencia" : "saida",
 
       quantidade: qtd,
@@ -245,16 +244,16 @@ export default function RetiradaMaterial() {
       obraId: obraSelecionada,
 
       obraDestino: tipo === "transferencia"
-        ? obraDestino[material.id]
-        : null,
+        ? obraDestino[material.id] || ""
+        : "",
 
       motivo: tipo === "descarte"
-        ? motivo[material.id]
-        : null,
+        ? motivo[material.id] || ""
+        : "",
 
-      usuarioId: auth.currentUser?.uid,
+      usuarioId: auth.currentUser?.uid || "",
 
-      empresaId: empresaId
+      empresaId: empresaId || ""
 
     });
 
