@@ -36,8 +36,6 @@ export default function RetiradaMaterial() {
   const [destinos, setDestinos] = useState<{ [key: string]: string }>({});
   const [obraDestino, setObraDestino] = useState<{ [key: string]: string }>({});
 
-
-
   useEffect(() => {
 
     const user = auth.currentUser;
@@ -47,8 +45,6 @@ export default function RetiradaMaterial() {
     carregarUsuario(user.uid);
 
   }, []);
-
-
 
   useEffect(() => {
 
@@ -60,8 +56,6 @@ export default function RetiradaMaterial() {
 
   }, [empresaId]);
 
-
-
   useEffect(() => {
 
     if (obraSelecionada) {
@@ -71,10 +65,6 @@ export default function RetiradaMaterial() {
     }
 
   }, [obraSelecionada]);
-
-
-
-  /* PEGAR EMPRESA DO USUÁRIO */
 
   async function carregarUsuario(uid: string) {
 
@@ -89,10 +79,6 @@ export default function RetiradaMaterial() {
     }
 
   }
-
-
-
-  /* CARREGAR OBRAS DA EMPRESA */
 
   async function carregarObras() {
 
@@ -113,8 +99,6 @@ export default function RetiradaMaterial() {
     setObras(lista);
 
   }
-
-
 
   async function carregarMateriais(obraId: string) {
 
@@ -156,8 +140,6 @@ export default function RetiradaMaterial() {
     setMateriais(lista);
 
   }
-
-
 
   async function retirar(material: Material) {
 
@@ -308,7 +290,7 @@ export default function RetiradaMaterial() {
         usuarioId: user.uid,
         usuarioNome: user.email || "",
 
-        empresaId
+        empresaId: empresaId ?? undefined
 
       });
 
@@ -329,8 +311,6 @@ export default function RetiradaMaterial() {
     }
 
   }
-
-
 
   return (
 
