@@ -36,6 +36,8 @@ export default function CadastrarMaterial() {
 
   const [obras, setObras] = useState<Obra[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
+  const [todosSetores, setTodosSetores] = useState<string[]>([]);
+
   const [materiaisExistentes, setMateriaisExistentes] = useState<string[]>([]);
 
   const [obraId, setObraId] = useState("");
@@ -49,6 +51,9 @@ export default function CadastrarMaterial() {
 
   const [sugestoes, setSugestoes] = useState<string[]>([]);
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+
+  const [sugestoesSetor, setSugestoesSetor] = useState<string[]>([]);
+  const [mostrarSugestoesSetor, setMostrarSugestoesSetor] = useState(false);
 
   const [mensagem, setMensagem] = useState("");
 
@@ -67,6 +72,7 @@ export default function CadastrarMaterial() {
 
   useEffect(() => {
     carregarObras();
+    carregarTodosSetores();
   }, []);
 
   useEffect(() => {
@@ -103,6 +109,32 @@ export default function CadastrarMaterial() {
     lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
     setObras(lista);
+
+  }
+
+  async function carregarTodosSetores() {
+
+    const obrasSnap = await getDocs(collection(db, "obras"));
+
+    let lista: string[] = [];
+
+    for (const obra of obrasSnap.docs) {
+
+      const setoresSnap = await getDocs(
+        collection(db, "obras", obra.id, "setores")
+      );
+
+      setoresSnap.forEach((setor) => {
+        lista.push(setor.data().nome);
+      });
+
+    }
+
+    lista = [...new Set(lista)];
+
+    lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    setTodosSetores(lista);
 
   }
 
@@ -159,6 +191,27 @@ export default function CadastrarMaterial() {
 
     setSugestoes(filtradas);
     setMostrarSugestoes(true);
+
+  }
+
+  function filtrarSetores(valor: string) {
+
+    setNovoSetor(valor);
+
+    if (!valor.trim()) {
+      setSugestoesSetor([]);
+      setMostrarSugestoesSetor(false);
+      return;
+    }
+
+    const filtradas = todosSetores
+      .filter((s) =>
+        normalizarTexto(s).includes(normalizarTexto(valor))
+      )
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    setSugestoesSetor(filtradas);
+    setMostrarSugestoesSetor(true);
 
   }
 
@@ -350,14 +403,41 @@ export default function CadastrarMaterial() {
 
       {obraId && (
 
-        <div className="flex gap-2">
+        <div className="relative flex gap-2">
 
-          <input
-            placeholder="Novo setor"
-            value={novoSetor}
-            onChange={(e) => setNovoSetor(e.target.value)}
-            className="flex-1 p-2 border rounded"
-          />
+          <div className="flex-1 relative">
+
+            <input
+              placeholder="Novo setor"
+              value={novoSetor}
+              onChange={(e) => filtrarSetores(e.target.value)}
+              className="w-full p-2 border rounded"
+            />
+
+            {mostrarSugestoesSetor && sugestoesSetor.length > 0 && (
+
+              <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto z-10">
+
+                {sugestoesSetor.map((item, index) => (
+
+                  <div
+                    key={index}
+                    onClick={() => {
+                      setNovoSetor(item)
+                      setMostrarSugestoesSetor(false)
+                    }}
+                    className="p-2 cursor-pointer hover:bg-gray-100"
+                  >
+                    {item}
+                  </div>
+
+                ))}
+
+              </div>
+
+            )}
+
+          </div>
 
           <button
             onClick={criarSetor}
