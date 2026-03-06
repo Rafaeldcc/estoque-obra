@@ -15,16 +15,11 @@ import { useAuth } from "@/lib/useAuth";
 type Movimentacao = {
   id: string;
   materialNome: string;
-
   tipo: "entrada" | "saida" | "transferencia";
-
   quantidade: number;
-
   obraNome: string;
   obraDestino?: string | null;
-
   destino?: "uso" | "transferencia";
-
   usuarioNome: string;
   createdAt: any;
 };
@@ -98,6 +93,7 @@ export default function MovimentacoesPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-8">
+
       <h1 className="text-3xl font-bold mb-8">
         Histórico de Movimentações
       </h1>
@@ -110,20 +106,28 @@ export default function MovimentacoesPage() {
         </p>
       )}
 
-      <div className="space-y-4">
+      {/* LISTA COM BARRA DE ROLAGEM */}
+
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+
         {movimentacoes.map((mov) => (
+
           <div
             key={mov.id}
-            className={`p-5 rounded-xl shadow ${
+            className={`p-5 rounded-xl shadow border ${
               mov.tipo === "entrada"
-                ? "bg-green-50"
+                ? "bg-green-50 border-green-200"
                 : mov.tipo === "transferencia"
-                ? "bg-blue-50"
-                : "bg-red-50"
+                ? "bg-blue-50 border-blue-200"
+                : "bg-red-50 border-red-200"
             }`}
           >
-            <div className="flex justify-between">
-              <strong>{mov.materialNome}</strong>
+
+            <div className="flex justify-between items-center">
+
+              <strong className="text-lg">
+                📦 {mov.materialNome}
+              </strong>
 
               <span
                 className={`font-semibold ${
@@ -138,6 +142,7 @@ export default function MovimentacoesPage() {
                 {mov.tipo === "saida" && "🔴 Saída"}
                 {mov.tipo === "transferencia" && "🔵 Transferência"}
               </span>
+
             </div>
 
             <div className="mt-2">
@@ -148,19 +153,16 @@ export default function MovimentacoesPage() {
               Obra origem: <b>{mov.obraNome}</b>
             </div>
 
-            {/* ENTRADA */}
             {mov.tipo === "entrada" && (
               <div>Em estoque</div>
             )}
 
-            {/* TRANSFERÊNCIA */}
             {mov.tipo === "transferencia" && mov.obraDestino && (
               <div>
                 Transferido para obra: <b>{mov.obraDestino}</b>
               </div>
             )}
 
-            {/* SAÍDA PARA USO */}
             {mov.tipo === "saida" && mov.destino === "uso" && (
               <div>Usado na obra</div>
             )}
@@ -170,11 +172,15 @@ export default function MovimentacoesPage() {
             </div>
 
             <div className="text-sm text-gray-500 mt-2">
-              {formatarData(mov.createdAt)}
+              📅 {formatarData(mov.createdAt)}
             </div>
+
           </div>
+
         ))}
+
       </div>
+
     </div>
   );
 }
