@@ -33,6 +33,8 @@ export default function Dashboard() {
 
   const [graficoObras, setGraficoObras] = useState<any[]>([]);
   const [graficoSetores, setGraficoSetores] = useState<any[]>([]);
+  const [graficoConsumoObras, setGraficoConsumoObras] = useState<any[]>([]);
+
   const [estoqueBaixo, setEstoqueBaixo] = useState<any[]>([]);
   const [materiaisUsados, setMateriaisUsados] = useState<any[]>([]);
 
@@ -56,15 +58,9 @@ export default function Dashboard() {
 
       if (usuarioSnap.exists()) {
         setEmpresa(usuarioSnap.data().empresa || "Sistema");
-      } else {
-        setEmpresa("Sistema");
       }
 
-    } catch {
-
-      setEmpresa("Sistema");
-
-    }
+    } catch {}
 
   }
 
@@ -157,13 +153,14 @@ export default function Dashboard() {
     setTotalMateriais(materiaisCount);
     setTotalEstoque(estoqueTotal);
 
-    /* =========================
-       MATERIAIS MAIS USADOS
-       ========================= */
+    /* =====================
+       MOVIMENTAÇÕES
+    ====================== */
 
     const movSnap = await getDocs(collection(db, "movimentacoes"));
 
     const consumoMateriais: any = {};
+    const consumoObras: any = {};
 
     movSnap.forEach((doc) => {
 
@@ -173,6 +170,7 @@ export default function Dashboard() {
 
         const material = data.materialNome;
         const quantidade = data.quantidade ?? 0;
+        const obra = data.obraNome;
 
         if (!consumoMateriais[material]) {
           consumoMateriais[material] = 0;
@@ -180,11 +178,17 @@ export default function Dashboard() {
 
         consumoMateriais[material] += quantidade;
 
+        if (!consumoObras[obra]) {
+          consumoObras[obra] = 0;
+        }
+
+        consumoObras[obra] += quantidade;
+
       }
 
     });
 
-    const ranking = Object.keys(consumoMateriais)
+    const rankingMateriais = Object.keys(consumoMateriais)
       .map((material) => ({
         material,
         quantidade: consumoMateriais[material]
@@ -192,7 +196,16 @@ export default function Dashboard() {
       .sort((a, b) => b.quantidade - a.quantidade)
       .slice(0, 10);
 
-    setMateriaisUsados(ranking);
+    setMateriaisUsados(rankingMateriais);
+
+    const rankingObras = Object.keys(consumoObras)
+      .map((obra) => ({
+        obra,
+        consumo: consumoObras[obra]
+      }))
+      .sort((a, b) => b.consumo - a.consumo);
+
+    setGraficoConsumoObras(rankingObras);
 
   }
 
@@ -223,107 +236,71 @@ export default function Dashboard() {
 
       </div>
 
-      {/* ESTOQUE POR OBRA */}
+      <Grafico titulo="Estoque por Obra" dados={graficoObras} chaveX="obra" chaveY="estoque" cor="#2563eb" />
 
-      <div className="bg-white p-6 rounded-xl shadow">
+      <Grafico titulo="Estoque por Setor" dados={graficoSetores} chaveX="setor" chaveY="estoque" cor="#16a34a" />
 
-        <h2 className="text-xl font-bold mb-4">
-          Estoque por Obra
-        </h2>
+      <Grafico titulo="Consumo de Material por Obra" dados={graficoConsumoObras} chaveX="obra" chaveY="consumo" cor="#f97316" />
 
-        <ResponsiveContainer width="100%" height={350}>
+      <Lista titulo="⚠ Materiais com estoque baixo" dados={estoqueBaixo} campoNome="material" campoValor="saldo" cor="text-red-600" />
 
-          <BarChart data={graficoObras}>
+      <Lista titulo="📦 Materiais mais usados" dados={materiaisUsados} campoNome="material" campoValor="quantidade" cor="text-blue-600" />
 
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="obra" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="estoque" fill="#2563eb" />
+    </div>
 
-          </BarChart>
+  );
 
-        </ResponsiveContainer>
+}
 
-      </div>
+function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
 
-      {/* ESTOQUE POR SETOR */}
+  return (
 
-      <div className="bg-white p-6 rounded-xl shadow">
+    <div className="bg-white p-6 rounded-xl shadow">
 
-        <h2 className="text-xl font-bold mb-4">
-          Estoque por Setor
-        </h2>
+      <h2 className="text-xl font-bold mb-4">{titulo}</h2>
 
-        <ResponsiveContainer width="100%" height={350}>
+      <ResponsiveContainer width="100%" height={350}>
 
-          <BarChart data={graficoSetores}>
+        <BarChart data={dados}>
 
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="setor" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="estoque" fill="#16a34a" />
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey={chaveX} />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey={chaveY} fill={cor} />
 
-          </BarChart>
+        </BarChart>
 
-        </ResponsiveContainer>
+      </ResponsiveContainer>
 
-      </div>
+    </div>
 
-      {/* ESTOQUE BAIXO */}
+  );
 
-      <div className="bg-white p-6 rounded-xl shadow">
+}
 
-        <h2 className="text-xl font-bold mb-4">
-          ⚠ Materiais com estoque baixo
-        </h2>
+function Lista({ titulo, dados, campoNome, campoValor, cor }: any) {
 
-        {estoqueBaixo.length === 0 && (
-          <p className="text-gray-500">
-            Nenhum material com estoque baixo
-          </p>
-        )}
+  return (
 
-        {estoqueBaixo.map((m, i) => (
+    <div className="bg-white p-6 rounded-xl shadow">
 
-          <div key={i} className="flex justify-between border-b py-2">
+      <h2 className="text-xl font-bold mb-4">{titulo}</h2>
 
-            <span>{m.material}</span>
+      {dados.map((m: any, i: number) => (
 
-            <span className="text-red-600 font-bold">
-              {m.saldo}
-            </span>
+        <div key={i} className="flex justify-between border-b py-2">
 
-          </div>
+          <span>{m[campoNome]}</span>
 
-        ))}
+          <span className={`${cor} font-bold`}>
+            {m[campoValor]}
+          </span>
 
-      </div>
+        </div>
 
-      {/* MATERIAIS MAIS USADOS */}
-
-      <div className="bg-white p-6 rounded-xl shadow">
-
-        <h2 className="text-xl font-bold mb-4">
-          📦 Materiais mais usados
-        </h2>
-
-        {materiaisUsados.map((m, i) => (
-
-          <div key={i} className="flex justify-between border-b py-2">
-
-            <span>{m.material}</span>
-
-            <span className="text-blue-600 font-bold">
-              {m.quantidade}
-            </span>
-
-          </div>
-
-        ))}
-
-      </div>
+      ))}
 
     </div>
 
@@ -337,13 +314,9 @@ function Card({ titulo, valor }: any) {
 
     <div className="bg-white p-6 rounded-xl shadow">
 
-      <p className="text-gray-500">
-        {titulo}
-      </p>
+      <p className="text-gray-500">{titulo}</p>
 
-      <h2 className="text-3xl font-bold mt-2">
-        {valor}
-      </h2>
+      <h2 className="text-3xl font-bold mt-2">{valor}</h2>
 
     </div>
 
