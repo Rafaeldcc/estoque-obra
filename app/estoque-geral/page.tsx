@@ -78,7 +78,7 @@ export default function EstoqueGeral() {
 
     } catch (error) {
 
-      console.error(error);
+      console.error("Erro ao carregar usuário:", error);
       setLoading(false);
 
     }
@@ -87,77 +87,88 @@ export default function EstoqueGeral() {
 
 
 
-  /* CARREGAR ESTOQUE DA EMPRESA */
+  /* CARREGAR ESTOQUE */
 
   async function carregarEstoque(empresaIdParam: string) {
 
-    const q = query(
-      collection(db, "obras"),
-      where("empresaId", "==", empresaIdParam)
-    );
+    try {
 
-    const obrasSnap = await getDocs(q);
-
-    const listaObras: Obra[] = obrasSnap.docs.map((doc) => ({
-      id: doc.id,
-      nome: doc.data().nome
-    }));
-
-    setObras(listaObras);
-
-    const mapa: any = {};
-
-    for (const obra of listaObras) {
-
-      const setoresSnap = await getDocs(
-        collection(db, "obras", obra.id, "setores")
+      const q = query(
+        collection(db, "obras"),
+        where("empresaId", "==", empresaIdParam)
       );
 
-      for (const setor of setoresSnap.docs) {
+      const obrasSnap = await getDocs(q);
 
-        const setorNome = setor.data().nome;
+      const listaObras: Obra[] = obrasSnap.docs.map((doc) => ({
+        id: doc.id,
+        nome: doc.data().nome
+      }));
 
-        const materiaisSnap = await getDocs(
-          collection(
-            db,
-            "obras",
-            obra.id,
-            "setores",
-            setor.id,
-            "materiais"
-          )
+      setObras(listaObras);
+
+      const mapa: Record<string, LinhaEstoque> = {};
+
+      for (const obra of listaObras) {
+
+        const setoresSnap = await getDocs(
+          collection(db, "obras", obra.id, "setores")
         );
 
-        materiaisSnap.forEach(mat => {
+        for (const setor of setoresSnap.docs) {
 
-          const data = mat.data();
-          const materialNome = data.nome;
-          const saldo = data.saldo ?? 0;
+          const setorData = setor.data();
+          const setorNome = setorData.nome ?? "Sem setor";
 
-          const chave = materialNome + "_" + setorNome;
+          const materiaisSnap = await getDocs(
+            collection(
+              db,
+              "obras",
+              obra.id,
+              "setores",
+              setor.id,
+              "materiais"
+            )
+          );
 
-          if (!mapa[chave]) {
+          for (const mat of materiaisSnap.docs) {
 
-            mapa[chave] = {
-              material: materialNome,
-              setor: setorNome,
-              total: 0,
-              obras: {}
-            };
+            const data = mat.data();
+
+            const materialNome = data.nome ?? "Material";
+            const saldo = Number(data.saldo ?? 0);
+
+            const chave = materialNome + "_" + setorNome;
+
+            if (!mapa[chave]) {
+
+              mapa[chave] = {
+                material: materialNome,
+                setor: setorNome,
+                total: 0,
+                obras: {}
+              };
+
+            }
+
+            mapa[chave].obras[obra.nome] = saldo;
+            mapa[chave].total += saldo;
 
           }
 
-          mapa[chave].obras[obra.nome] = saldo;
-          mapa[chave].total += saldo;
-
-        });
+        }
 
       }
 
-    }
+      setTabela(Object.values(mapa));
+      setLoading(false);
 
-    setTabela(Object.values(mapa));
-    setLoading(false);
+    } catch (error) {
+
+      console.error("Erro ao carregar estoque:", error);
+      setLoading(false);
+
+    }
 
   }
 
@@ -178,6 +189,8 @@ export default function EstoqueGeral() {
   const setores = Array.from(new Set(tabela.map(l => l.setor)));
 
 
+
+  /* VISÃO POR SETOR */
 
   if (!setorSelecionado) {
 
@@ -234,6 +247,8 @@ export default function EstoqueGeral() {
   }
 
 
+
+  /* VISÃO DOS MATERIAIS */
 
   const materiais = tabela.filter(l => l.setor === setorSelecionado);
 
