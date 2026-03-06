@@ -5,7 +5,7 @@ type MovimentacaoProps = {
   materialId: string;
   materialNome: string;
 
-  // agora aceita transferência
+  // tipos de movimentação
   tipo: "entrada" | "saida" | "transferencia";
 
   quantidade: number;
@@ -21,6 +21,9 @@ type MovimentacaoProps = {
 
   usuarioId: string;
   usuarioNome: string;
+
+  // 🔹 empresa para sistema multiempresa
+  empresaId?: string;
 };
 
 export async function registrarMovimentacao({
@@ -34,6 +37,7 @@ export async function registrarMovimentacao({
   obraDestino = null,
   usuarioId,
   usuarioNome,
+  empresaId,
 }: MovimentacaoProps) {
   try {
     await addDoc(collection(db, "movimentacoes"), {
@@ -50,6 +54,9 @@ export async function registrarMovimentacao({
 
       usuarioId,
       usuarioNome,
+
+      // 🔹 agora salva empresa
+      empresaId: empresaId ?? null,
 
       createdAt: serverTimestamp(),
     });
