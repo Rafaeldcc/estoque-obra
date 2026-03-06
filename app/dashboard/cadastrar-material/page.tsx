@@ -54,8 +54,6 @@ export default function CadastrarMaterial() {
 
   const [mensagem, setMensagem] = useState("");
 
-  /* NORMALIZAR TEXTO */
-
   function normalizarTexto(texto: string) {
     return texto
       .normalize("NFD")
@@ -84,10 +82,6 @@ export default function CadastrarMaterial() {
     if (obraId && setorId) carregarMateriais();
   }, [obraId, setorId]);
 
-
-
-  /* CARREGAR USUARIO */
-
   async function carregarUsuario() {
 
     if (!user) return;
@@ -104,10 +98,6 @@ export default function CadastrarMaterial() {
     }
 
   }
-
-
-
-  /* CARREGAR OBRAS DA EMPRESA */
 
   async function carregarObras() {
 
@@ -131,8 +121,6 @@ export default function CadastrarMaterial() {
 
   }
 
-
-
   async function carregarSetores() {
 
     if (!obraId) return;
@@ -152,8 +140,6 @@ export default function CadastrarMaterial() {
 
   }
 
-
-
   async function carregarMateriais() {
 
     if (!obraId || !setorId) return;
@@ -169,8 +155,6 @@ export default function CadastrarMaterial() {
     setMateriaisExistentes(nomes);
 
   }
-
-
 
   function filtrarSugestoes(valor: string) {
 
@@ -192,10 +176,6 @@ export default function CadastrarMaterial() {
     setMostrarSugestoes(true);
 
   }
-
-
-
-  /* CRIAR SETOR */
 
   async function criarSetor() {
 
@@ -253,10 +233,6 @@ export default function CadastrarMaterial() {
     setNovoSetor("");
 
   }
-
-
-
-  /* SALVAR MATERIAL */
 
   async function salvarMaterial() {
 
@@ -318,7 +294,7 @@ export default function CadastrarMaterial() {
           obras.find((o) => o.id === obraId)?.nome || "",
         usuarioId: user.uid,
         usuarioNome: user.email || "",
-        empresaId
+        empresaId: empresaId ?? undefined
 
       });
 
@@ -345,6 +321,7 @@ export default function CadastrarMaterial() {
   if (loading) return null;
 
   return (
+
     <div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow space-y-4">
 
       <h2 className="text-center text-lg font-semibold">
@@ -357,9 +334,8 @@ export default function CadastrarMaterial() {
         </div>
       )}
 
-      {/* resto da tela permanece igual */}
-
     </div>
+
   );
 
 }
