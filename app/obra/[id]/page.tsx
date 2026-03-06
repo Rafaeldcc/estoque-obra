@@ -6,15 +6,11 @@ import {
   onSnapshot,
   addDoc,
   deleteDoc,
-  doc,
-  getDocs
+  doc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export default function Setores() {
 
@@ -90,63 +86,6 @@ export default function Setores() {
 
   }
 
-  /* =========================
-      GERAR RELATÓRIO PDF
-  ========================== */
-
-  async function gerarRelatorioPDF() {
-
-    const linhas: any[] = [];
-
-    for (const setor of setores) {
-
-      const materiaisSnap = await getDocs(
-        collection(
-          db,
-          "obras",
-          obraId,
-          "setores",
-          setor.id,
-          "materiais"
-        )
-      );
-
-      materiaisSnap.forEach((doc) => {
-
-        const data = doc.data();
-
-        linhas.push([
-          setor.nome,
-          data.nome,
-          data.saldo ?? 0
-        ]);
-
-      });
-
-    }
-
-    const pdf = new jsPDF();
-
-    pdf.setFontSize(18);
-    pdf.text("Relatório de Estoque da Obra", 14, 20);
-
-    pdf.setFontSize(12);
-    pdf.text(
-      `Data: ${new Date().toLocaleDateString("pt-BR")}`,
-      14,
-      30
-    );
-
-    autoTable(pdf, {
-      startY: 40,
-      head: [["Setor", "Material", "Quantidade"]],
-      body: linhas,
-    });
-
-    pdf.save(`relatorio-obra-${obraId}.pdf`);
-
-  }
-
   return (
 
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -154,15 +93,6 @@ export default function Setores() {
       <h1 className="text-2xl font-bold">
         Setores
       </h1>
-
-      {/* BOTÃO PDF */}
-
-      <button
-        onClick={gerarRelatorioPDF}
-        className="bg-green-600 text-white px-4 py-2 rounded"
-      >
-        Gerar Relatório PDF
-      </button>
 
       <div className="flex gap-2">
 
