@@ -6,7 +6,10 @@ import {
   getDocs,
   doc,
   getDoc,
+  query,
+  where,
 } from "firebase/firestore";
+
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/useAuth";
 
@@ -44,6 +47,8 @@ export default function Dashboard() {
 
   }, [user]);
 
+
+
   async function carregarEmpresa() {
 
     if (!user) return;
@@ -56,13 +61,36 @@ export default function Dashboard() {
 
   }
 
+
+
   async function carregarIndicadores() {
 
-    const obrasSnap = await getDocs(collection(db, "obras"));
+    if (!user) return;
+
+    /* PEGAR EMPRESA DO USUÁRIO */
+
+    const userSnap = await getDoc(doc(db, "usuarios", user.uid));
+
+    const empresaId = userSnap.data().empresaId;
+
+
+
+    /* OBRAS DA EMPRESA */
+
+    const obrasQuery = query(
+      collection(db, "obras"),
+      where("empresaId", "==", empresaId)
+    );
+
+    const obrasSnap = await getDocs(obrasQuery);
+
+
 
     const dadosGraficoObras: any[] = [];
     const mapaSetores: any = {};
     const materiaisBaixos: any[] = [];
+
+
 
     for (const obraDoc of obrasSnap.docs) {
 
@@ -73,6 +101,8 @@ export default function Dashboard() {
       );
 
       let estoqueObra = 0;
+
+
 
       for (const setorDoc of setoresSnap.docs) {
 
@@ -89,6 +119,8 @@ export default function Dashboard() {
           )
         );
 
+
+
         materiaisSnap.forEach((doc) => {
 
           const data = doc.data();
@@ -101,6 +133,8 @@ export default function Dashboard() {
           }
 
           mapaSetores[setorNome] += saldo;
+
+
 
           if (saldo <= 5) {
 
@@ -115,6 +149,8 @@ export default function Dashboard() {
 
       }
 
+
+
       dadosGraficoObras.push({
         obra: obraNome,
         estoque: estoqueObra,
@@ -122,21 +158,38 @@ export default function Dashboard() {
 
     }
 
+
+
     const dadosSetores = Object.keys(mapaSetores).map((setor) => ({
       setor,
       estoque: mapaSetores[setor]
     }));
 
+
+
     setGraficoObras(dadosGraficoObras);
     setGraficoSetores(dadosSetores);
     setEstoqueBaixo(materiaisBaixos);
 
+
+
     /* ===================== MOVIMENTAÇÕES ===================== */
 
-    const movSnap = await getDocs(collection(db, "movimentacoes"));
+
+
+    const movQuery = query(
+      collection(db, "movimentacoes"),
+      where("empresaId", "==", empresaId)
+    );
+
+    const movSnap = await getDocs(movQuery);
+
+
 
     const consumoMateriais: any = {};
     const consumoObras: any = {};
+
+
 
     movSnap.forEach((doc) => {
 
@@ -148,8 +201,12 @@ export default function Dashboard() {
         const quantidade = data.quantidade ?? 0;
         const obra = data.obraNome;
 
+
+
         if (!consumoMateriais[material]) consumoMateriais[material] = 0;
         consumoMateriais[material] += quantidade;
+
+
 
         if (!consumoObras[obra]) consumoObras[obra] = 0;
         consumoObras[obra] += quantidade;
@@ -157,6 +214,8 @@ export default function Dashboard() {
       }
 
     });
+
+
 
     const rankingMateriais = Object.keys(consumoMateriais)
       .map((material) => ({
@@ -166,7 +225,11 @@ export default function Dashboard() {
       .sort((a, b) => b.quantidade - a.quantidade)
       .slice(0, 10);
 
+
+
     setMateriaisUsados(rankingMateriais);
+
+
 
     const rankingObras = Object.keys(consumoObras)
       .map((obra) => ({
@@ -175,11 +238,17 @@ export default function Dashboard() {
       }))
       .sort((a, b) => b.consumo - a.consumo);
 
+
+
     setGraficoConsumoObras(rankingObras);
 
   }
 
+
+
   if (loading) return null;
+
+
 
   /* ================= MENU ================= */
 
@@ -209,6 +278,8 @@ export default function Dashboard() {
 
   }
 
+
+
   /* ================= TELAS ================= */
 
   return (
@@ -221,6 +292,8 @@ export default function Dashboard() {
       >
         ← Voltar
       </button>
+
+
 
       {visao === "obra" && (
         <Grafico titulo="Estoque por Obra" dados={graficoObras} chaveX="obra" chaveY="estoque" cor="#2563eb" />
@@ -248,6 +321,8 @@ export default function Dashboard() {
 
 }
 
+
+
 /* ================= COMPONENTES ================= */
 
 function MenuCard({ titulo, click }: any) {
@@ -264,6 +339,8 @@ function MenuCard({ titulo, click }: any) {
   );
 
 }
+
+
 
 function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
 
@@ -292,6 +369,8 @@ function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
   );
 
 }
+
+
 
 function Lista({ titulo, dados, campoNome, campoValor, cor }: any) {
 
