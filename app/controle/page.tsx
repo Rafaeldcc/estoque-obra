@@ -21,6 +21,7 @@ type Material = {
   nome: string;
   saldo: number;
   unidade?: string;
+  estoqueMinimo?: number;
 };
 
 export default function Controle() {
@@ -35,6 +36,7 @@ export default function Controle() {
 
   const [materiais,setMateriais] = useState<Material[]>([]);
   const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
+  const [minimos,setMinimos] = useState<{[key:string]:number}>({});
 
   const [mensagem,setMensagem] = useState("");
 
@@ -121,7 +123,8 @@ export default function Controle() {
           id:docSnap.id,
           nome:data.nome,
           saldo:data.saldo || 0,
-          unidade:data.unidade || ""
+          unidade:data.unidade || "",
+          estoqueMinimo:data.estoqueMinimo || 0
         });
 
       });
@@ -157,6 +160,42 @@ export default function Controle() {
     setTimeout(()=>{
       setMensagem("");
     },3000);
+
+  }
+
+
+
+  async function salvarMinimo(material:Material){
+
+    const minimo = minimos[material.id];
+
+    if(minimo === undefined) return;
+
+    const setoresSnap = await getDocs(
+      collection(db,"obras",obraSelecionada,"setores")
+    );
+
+    for(const setorDoc of setoresSnap.docs){
+
+      const materialRef = doc(
+        db,
+        "obras",
+        obraSelecionada,
+        "setores",
+        setorDoc.id,
+        "materiais",
+        material.id
+      );
+
+      await updateDoc(materialRef,{
+        estoqueMinimo:minimo
+      }).catch(()=>{});
+
+    }
+
+    mostrarMensagem("Estoque mínimo atualizado");
+
+    carregarMateriais(obraSelecionada);
 
   }
 
@@ -207,19 +246,13 @@ export default function Controle() {
 
         materialId: material.id,
         materialNome: material.nome,
-
         tipo: "entrada",
-
         quantidade: qtd,
-
         obraId: obraSelecionada,
         obraNome: obraNome,
-
         destino: "uso",
-
         usuarioId: user.uid,
         usuarioNome: user.email || "",
-
         empresaId: empresaId
 
       });
@@ -294,19 +327,13 @@ export default function Controle() {
 
         materialId: material.id,
         materialNome: material.nome,
-
         tipo: "saida",
-
         quantidade: qtd,
-
         obraId: obraSelecionada,
         obraNome: obraNome,
-
         destino: "uso",
-
         usuarioId: user.uid,
         usuarioNome: user.email || "",
-
         empresaId: empresaId
 
       });
@@ -324,52 +351,6 @@ export default function Controle() {
 
       console.error(error);
       alert("Erro na saída.");
-
-    }
-
-  }
-
-
-
-  async function excluir(material:Material){
-
-    if(role !== "admin"){
-      alert("Apenas administrador pode excluir.");
-      return;
-    }
-
-    if(!confirm("Deseja excluir este material?")) return;
-
-    try{
-
-      const setoresSnap = await getDocs(
-        collection(db,"obras",obraSelecionada,"setores")
-      );
-
-      for(const setorDoc of setoresSnap.docs){
-
-        const materialRef = doc(
-          db,
-          "obras",
-          obraSelecionada,
-          "setores",
-          setorDoc.id,
-          "materiais",
-          material.id
-        );
-
-        await deleteDoc(materialRef).catch(()=>{});
-
-      }
-
-      mostrarMensagem("Material excluído com sucesso!");
-
-      carregarMateriais(obraSelecionada);
-
-    }catch(error){
-
-      console.error(error);
-      alert("Erro ao excluir.");
 
     }
 
@@ -414,20 +395,30 @@ export default function Controle() {
 
         <div
           key={material.id}
-          className="bg-white p-5 rounded-xl shadow mb-4"
+          className={`p-5 rounded-xl shadow mb-4 border ${
+            material.estoqueMinimo && material.saldo <= material.estoqueMinimo
+              ? "bg-red-50 border-red-400"
+              : "bg-white"
+          }`}
         >
 
           <div className="flex justify-between mb-3">
 
             <b>{material.nome}</b>
 
-            <span>
+            <span className="font-semibold">
               Saldo: {material.saldo} {material.unidade}
             </span>
 
           </div>
 
-          <div className="flex gap-3">
+          {material.estoqueMinimo && material.saldo <= material.estoqueMinimo && (
+            <div className="text-red-600 font-semibold mb-2">
+              ⚠ Estoque baixo
+            </div>
+          )}
+
+          <div className="flex gap-3 mb-3">
 
             <input
               type="number"
@@ -456,16 +447,29 @@ export default function Controle() {
               Saída
             </button>
 
-            {role === "admin" && (
+          </div>
 
-              <button
-                onClick={()=>excluir(material)}
-                className="bg-red-600 text-white px-4 rounded"
-              >
-                Excluir
-              </button>
+          <div className="flex gap-2 items-center">
 
-            )}
+            <input
+              type="number"
+              placeholder="Estoque mínimo"
+              value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
+              onChange={(e)=>
+                setMinimos(prev=>({
+                  ...prev,
+                  [material.id]: Number(e.target.value)
+                }))
+              }
+              className="border p-2 w-32 rounded"
+            />
+
+            <button
+              onClick={()=>salvarMinimo(material)}
+              className="bg-blue-600 text-white px-3 py-1 rounded"
+            >
+              Salvar mínimo
+            </button>
 
           </div>
 
