@@ -68,8 +68,6 @@ export default function Dashboard() {
 
     if (!user) return;
 
-    /* PEGAR EMPRESA DO USUÁRIO */
-
     const userSnap = await getDoc(doc(db, "usuarios", user.uid));
 
     if (!userSnap.exists()) return;
@@ -82,8 +80,6 @@ export default function Dashboard() {
 
 
 
-    /* OBRAS DA EMPRESA */
-
     const obrasQuery = query(
       collection(db, "obras"),
       where("empresaId", "==", empresaId)
@@ -95,7 +91,7 @@ export default function Dashboard() {
 
     const dadosGraficoObras: any[] = [];
     const mapaSetores: any = {};
-    const materiaisBaixos: any[] = [];
+    const mapaMateriais: any = {};
 
 
 
@@ -126,10 +122,12 @@ export default function Dashboard() {
           )
         );
 
-        materiaisSnap.forEach((doc) => {
+        materiaisSnap.forEach((docMat) => {
 
-          const data = doc.data();
+          const data = docMat.data();
           const saldo = data.saldo ?? 0;
+          const minimo = data.estoqueMinimo ?? 0;
+          const materialNome = data.nome ?? "Material";
 
           estoqueObra += saldo;
 
@@ -139,14 +137,21 @@ export default function Dashboard() {
 
           mapaSetores[setorNome] += saldo;
 
-          if (saldo <= 5) {
 
-            materiaisBaixos.push({
-              material: data.nome,
-              saldo
-            });
+
+          /* AGRUPAR MATERIAIS */
+
+          if (!mapaMateriais[materialNome]) {
+
+            mapaMateriais[materialNome] = {
+              material: materialNome,
+              saldo: 0,
+              minimo: minimo
+            };
 
           }
+
+          mapaMateriais[materialNome].saldo += saldo;
 
         });
 
@@ -168,13 +173,21 @@ export default function Dashboard() {
 
 
 
+    const materiaisBaixos = Object.values(mapaMateriais).filter((m: any) => {
+
+      return m.minimo > 0 && m.saldo <= m.minimo;
+
+    });
+
+
+
     setGraficoObras(dadosGraficoObras);
     setGraficoSetores(dadosSetores);
     setEstoqueBaixo(materiaisBaixos);
 
 
 
-    /* ===================== MOVIMENTAÇÕES ===================== */
+    /* ================= MOVIMENTAÇÕES ================= */
 
     const movQuery = query(
       collection(db, "movimentacoes"),
@@ -190,9 +203,9 @@ export default function Dashboard() {
 
 
 
-    movSnap.forEach((doc) => {
+    movSnap.forEach((docMov) => {
 
-      const data = doc.data();
+      const data = docMov.data();
 
       if (data.tipo === "saida") {
 
