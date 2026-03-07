@@ -71,7 +71,6 @@ export default function Dashboard() {
     if (!userSnap.exists()) return;
 
     const userData = userSnap.data();
-
     const empresaId = userData?.empresaId;
 
     if (!empresaId) return;
@@ -128,8 +127,6 @@ export default function Dashboard() {
 
           mapaSetores[setorNome] += saldo;
 
-          /* AGRUPAR MATERIAIS */
-
           if (!mapaMateriais[materialNome]) {
 
             mapaMateriais[materialNome] = {
@@ -141,8 +138,6 @@ export default function Dashboard() {
           }
 
           mapaMateriais[materialNome].saldo += saldo;
-
-          /* garantir que minimo não seja perdido */
 
           if (minimo > mapaMateriais[materialNome].minimo) {
             mapaMateriais[materialNome].minimo = minimo;
@@ -164,13 +159,23 @@ export default function Dashboard() {
       estoque: mapaSetores[setor]
     }));
 
-    const materiaisBaixos = Object.values(mapaMateriais).filter((m: any) => {
-      return m.saldo <= m.minimo && m.minimo > 0;
-    });
+
+    /* ESTOQUE BAIXO COM INFO COMPLETA */
+
+    const materiaisBaixos = Object.values(mapaMateriais)
+      .filter((m: any) => m.minimo > 0 && m.saldo <= m.minimo)
+      .map((m: any) => ({
+        material: m.material,
+        saldo: m.saldo,
+        minimo: m.minimo,
+        comprar: m.minimo - m.saldo
+      }));
+
 
     setGraficoObras(dadosGraficoObras);
     setGraficoSetores(dadosSetores);
     setEstoqueBaixo(materiaisBaixos);
+
 
     /* ================= MOVIMENTAÇÕES ================= */
 
@@ -228,6 +233,7 @@ export default function Dashboard() {
 
   if (loading) return null;
 
+
   if (visao === "menu") {
 
     return (
@@ -254,6 +260,7 @@ export default function Dashboard() {
 
   }
 
+
   return (
 
     <div className="max-w-7xl mx-auto p-8">
@@ -278,11 +285,11 @@ export default function Dashboard() {
       )}
 
       {visao === "baixo" && (
-        <Lista titulo="⚠ Materiais com estoque baixo" dados={estoqueBaixo} campoNome="material" campoValor="saldo" cor="text-red-600" />
+        <Lista titulo="⚠ Materiais com estoque baixo" dados={estoqueBaixo} />
       )}
 
       {visao === "usados" && (
-        <Lista titulo="🔥 Materiais mais usados" dados={materiaisUsados} campoNome="material" campoValor="quantidade" cor="text-blue-600" />
+        <ListaSimples titulo="🔥 Materiais mais usados" dados={materiaisUsados} />
       )}
 
     </div>
@@ -308,6 +315,7 @@ function MenuCard({ titulo, click }: any) {
   );
 
 }
+
 
 function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
 
@@ -337,7 +345,10 @@ function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
 
 }
 
-function Lista({ titulo, dados, campoNome, campoValor, cor }: any) {
+
+/* LISTA ESTOQUE BAIXO */
+
+function Lista({ titulo, dados }: any) {
 
   return (
 
@@ -346,17 +357,65 @@ function Lista({ titulo, dados, campoNome, campoValor, cor }: any) {
       <h2 className="text-xl font-bold mb-4">{titulo}</h2>
 
       {dados.length === 0 && (
-        <p className="text-gray-500">Nenhum material com estoque baixo</p>
+        <p className="text-gray-500">
+          Nenhum material com estoque baixo
+        </p>
       )}
+
+      {dados.map((m: any, i: number) => (
+
+        <div key={i} className="border-b py-3">
+
+          <div className="flex justify-between font-semibold">
+
+            <span>{m.material}</span>
+
+            <span className="text-red-600">
+              Saldo: {m.saldo}
+            </span>
+
+          </div>
+
+          <div className="text-sm text-gray-600 mt-1">
+
+            Mínimo: {m.minimo}
+            {" | "}
+            Comprar:
+            <span className="text-red-600 font-bold ml-1">
+              {m.comprar}
+            </span>
+
+          </div>
+
+        </div>
+
+      ))}
+
+    </div>
+
+  );
+
+}
+
+
+/* LISTA SIMPLES */
+
+function ListaSimples({ titulo, dados }: any) {
+
+  return (
+
+    <div className="bg-white p-6 rounded-xl shadow">
+
+      <h2 className="text-xl font-bold mb-4">{titulo}</h2>
 
       {dados.map((m: any, i: number) => (
 
         <div key={i} className="flex justify-between border-b py-2">
 
-          <span>{m[campoNome]}</span>
+          <span>{m.material}</span>
 
-          <span className={`${cor} font-bold`}>
-            {m[campoValor]}
+          <span className="text-blue-600 font-bold">
+            {m.quantidade}
           </span>
 
         </div>
