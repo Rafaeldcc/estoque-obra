@@ -5,7 +5,6 @@ type MovimentacaoProps = {
   materialId: string;
   materialNome: string;
 
-  // tipos de movimentação
   tipo: "entrada" | "saida" | "transferencia";
 
   quantidade: number;
@@ -13,56 +12,52 @@ type MovimentacaoProps = {
   obraId: string;
   obraNome: string;
 
-  // destino da movimentação
   destino?: "uso" | "transferencia";
 
-  // obra destino (quando for transferência)
   obraDestino?: string | null;
 
   usuarioId: string;
   usuarioNome: string;
 
-  // 🔹 empresa para sistema multiempresa
-  empresaId?: string;
+  empresaId: string;
 };
 
-export async function registrarMovimentacao({
-  materialId,
-  materialNome,
-  tipo,
-  quantidade,
-  obraId,
-  obraNome,
-  destino = "uso",
-  obraDestino = null,
-  usuarioId,
-  usuarioNome,
-  empresaId,
-}: MovimentacaoProps) {
+export async function registrarMovimentacao(data: MovimentacaoProps) {
+
   try {
-    await addDoc(collection(db, "movimentacoes"), {
-      materialId,
-      materialNome,
-      tipo,
-      quantidade,
 
-      obraId,
-      obraNome,
+    const movimentacao = {
+      materialId: data.materialId,
+      materialNome: data.materialNome,
 
-      destino,
-      obraDestino,
+      tipo: data.tipo,
+      quantidade: data.quantidade,
 
-      usuarioId,
-      usuarioNome,
+      obraId: data.obraId,
+      obraNome: data.obraNome,
 
-      // 🔹 agora salva empresa
-      empresaId: empresaId ?? null,
+      destino: data.destino ?? "uso",
 
-      createdAt: serverTimestamp(),
-    });
+      obraDestino: data.obraDestino ?? null,
+
+      usuarioId: data.usuarioId,
+      usuarioNome: data.usuarioNome,
+
+      empresaId: data.empresaId,
+
+      createdAt: serverTimestamp()
+    };
+
+    await addDoc(
+      collection(db, "movimentacoes"),
+      movimentacao
+    );
 
   } catch (error) {
+
     console.error("Erro ao registrar movimentação:", error);
     throw error;
+
   }
+
 }
