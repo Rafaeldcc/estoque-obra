@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import {
   collection,
   getDocs,
-  addDoc,
   deleteDoc,
-  doc
+  doc,
+  setDoc
 } from "firebase/firestore";
 
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { useAuth } from "@/lib/useAuth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 interface Usuario {
   id: string;
@@ -26,6 +27,8 @@ export default function UsuariosPage() {
   const [usuarios,setUsuarios] = useState<Usuario[]>([]);
 
   const [nome,setNome] = useState("");
+  const [email,setEmail] = useState("");
+  const [senha,setSenha] = useState("");
   const [role,setRole] = useState("user");
   const [empresaId,setEmpresaId] = useState("empresa_1");
 
@@ -58,19 +61,43 @@ export default function UsuariosPage() {
 
   async function criarUsuario(){
 
-    if(!nome.trim()) return;
+    if(!nome || !email || !senha){
+      alert("Preencha todos os campos");
+      return;
+    }
 
-    await addDoc(collection(db,"usuarios"),{
+    try{
 
-      nome,
-      role,
-      empresaId
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        senha
+      );
 
-    });
+      const uid = cred.user.uid;
 
-    setNome("");
+      await setDoc(doc(db,"usuarios",uid),{
 
-    carregarUsuarios();
+        nome,
+        role,
+        empresaId
+
+      });
+
+      alert("Usuário criado com sucesso");
+
+      setNome("");
+      setEmail("");
+      setSenha("");
+
+      carregarUsuarios();
+
+    }catch(error){
+
+      console.error(error);
+      alert("Erro ao criar usuário");
+
+    }
 
   }
 
@@ -113,6 +140,21 @@ export default function UsuariosPage() {
           className="border p-2 rounded w-full"
         />
 
+        <input
+          placeholder="Email"
+          value={email}
+          onChange={(e)=>setEmail(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
+
+        <input
+          placeholder="Senha"
+          type="password"
+          value={senha}
+          onChange={(e)=>setSenha(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
+
         <select
           value={role}
           onChange={(e)=>setRole(e.target.value)}
@@ -148,7 +190,7 @@ export default function UsuariosPage() {
         </h2>
 
         {usuarios.map((usuario)=>(
-          
+
           <div
             key={usuario.id}
             className="flex justify-between items-center bg-white p-4 rounded shadow"
