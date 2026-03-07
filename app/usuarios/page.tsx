@@ -4,38 +4,35 @@ import { useEffect, useState } from "react";
 import {
   collection,
   getDocs,
+  addDoc,
   deleteDoc,
-  doc,
-  setDoc
+  doc
 } from "firebase/firestore";
 
-import { db, auth } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/useAuth";
-import { createUserWithEmailAndPassword } from "firebase/auth";
 
 interface Usuario {
   id: string;
   nome: string;
+  email: string;
   role: string;
   empresaId: string;
 }
 
 export default function UsuariosPage() {
 
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   const [usuarios,setUsuarios] = useState<Usuario[]>([]);
 
   const [nome,setNome] = useState("");
   const [email,setEmail] = useState("");
-  const [senha,setSenha] = useState("");
   const [role,setRole] = useState("user");
   const [empresaId,setEmpresaId] = useState("empresa_1");
 
   useEffect(()=>{
-
     carregarUsuarios();
-
   },[]);
 
 
@@ -61,43 +58,26 @@ export default function UsuariosPage() {
 
   async function criarUsuario(){
 
-    if(!nome || !email || !senha){
-      alert("Preencha todos os campos");
+    if(!nome || !email){
+      alert("Preencha nome e email");
       return;
     }
 
-    try{
+    await addDoc(collection(db,"usuarios"),{
 
-      const cred = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        senha
-      );
+      nome,
+      email,
+      role,
+      empresaId
 
-      const uid = cred.user.uid;
+    });
 
-      await setDoc(doc(db,"usuarios",uid),{
+    alert("Usuário cadastrado. Agora ele pode criar senha no login.");
 
-        nome,
-        role,
-        empresaId
+    setNome("");
+    setEmail("");
 
-      });
-
-      alert("Usuário criado com sucesso");
-
-      setNome("");
-      setEmail("");
-      setSenha("");
-
-      carregarUsuarios();
-
-    }catch(error){
-
-      console.error(error);
-      alert("Erro ao criar usuário");
-
-    }
+    carregarUsuarios();
 
   }
 
@@ -147,14 +127,6 @@ export default function UsuariosPage() {
           className="border p-2 rounded w-full"
         />
 
-        <input
-          placeholder="Senha"
-          type="password"
-          value={senha}
-          onChange={(e)=>setSenha(e.target.value)}
-          className="border p-2 rounded w-full"
-        />
-
         <select
           value={role}
           onChange={(e)=>setRole(e.target.value)}
@@ -162,6 +134,7 @@ export default function UsuariosPage() {
         >
           <option value="user">Usuário</option>
           <option value="admin">Administrador</option>
+          <option value="almoxarifado">Almoxarife</option>
         </select>
 
         <input
@@ -200,6 +173,10 @@ export default function UsuariosPage() {
 
               <div className="font-semibold">
                 {usuario.nome}
+              </div>
+
+              <div className="text-sm text-gray-500">
+                {usuario.email}
               </div>
 
               <div className="text-sm text-gray-500">
