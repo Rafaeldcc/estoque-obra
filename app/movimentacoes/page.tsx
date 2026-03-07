@@ -7,9 +7,9 @@ import {
   query,
   orderBy,
   getDoc,
-  doc,
-  where,
+  doc
 } from "firebase/firestore";
+
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/useAuth";
 
@@ -31,39 +31,40 @@ export default function MovimentacoesPage() {
 
   const { user, loading } = useAuth();
 
-  const [role, setRole] = useState<string | null>(null);
-  const [empresaId, setEmpresaId] = useState<string | null>(null);
+  const [role,setRole] = useState<string | null>(null);
+  const [empresaId,setEmpresaId] = useState<string | null>(null);
 
-  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
-  const [carregando, setCarregando] = useState(true);
+  const [movimentacoes,setMovimentacoes] = useState<Movimentacao[]>([]);
+  const [carregando,setCarregando] = useState(true);
 
-  useEffect(() => {
 
-    if (!user) return;
+  useEffect(()=>{
+
+    if(!user) return;
 
     carregarUsuario();
 
-  }, [user]);
+  },[user]);
 
 
+  useEffect(()=>{
 
-  useEffect(() => {
+    if((role === "admin" || role === "almoxarifado") && empresaId){
 
-    if ((role === "admin" || role === "almoxarifado") && empresaId) {
       carregarMovimentacoes();
+
     }
 
-  }, [role, empresaId]);
+  },[role,empresaId]);
 
 
+  async function carregarUsuario(){
 
-  async function carregarUsuario() {
+    if(!user) return;
 
-    if (!user) return;
+    const snap = await getDoc(doc(db,"usuarios",user.uid));
 
-    const snap = await getDoc(doc(db, "usuarios", user.uid));
-
-    if (snap.exists()) {
+    if(snap.exists()){
 
       const data = snap.data();
 
@@ -75,34 +76,33 @@ export default function MovimentacoesPage() {
   }
 
 
+  async function carregarMovimentacoes(){
 
-  async function carregarMovimentacoes() {
-
-    if (!empresaId) return;
+    if(!empresaId) return;
 
     setCarregando(true);
 
-    try {
+    try{
 
       const q = query(
-        collection(db, "movimentacoes"),
-        where("empresaId", "==", empresaId),
-        orderBy("createdAt", "desc")
+        collection(db,"movimentacoes"),
+        orderBy("createdAt","desc")
       );
 
       const snap = await getDocs(q);
 
-      const lista = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Movimentacao[];
+      const lista = snap.docs
+        .map(doc=>({
+          id:doc.id,
+          ...doc.data()
+        }))
+        .filter((mov:any)=>mov.empresaId === empresaId) as Movimentacao[];
 
       setMovimentacoes(lista);
 
-    } catch (error) {
+    }catch(error){
 
-      console.error("Erro ao carregar movimentações:", error);
-
+      console.error("Erro ao carregar movimentações:",error);
       setMovimentacoes([]);
 
     }
@@ -112,30 +112,31 @@ export default function MovimentacoesPage() {
   }
 
 
-
-  function formatarData(mov: Movimentacao) {
+  function formatarData(mov:Movimentacao){
 
     const data = mov.createdAt || mov.criadoEm;
 
-    if (!data) return "";
+    if(!data) return "";
 
-    try {
+    try{
+
       return data.toDate().toLocaleString("pt-BR");
-    } catch {
+
+    }catch{
+
       return "";
+
     }
 
   }
 
 
-
-  if (loading) return null;
-
+  if(loading) return null;
 
 
-  if (role !== "admin" && role !== "almoxarifado") {
+  if(role !== "admin" && role !== "almoxarifado"){
 
-    return (
+    return(
 
       <div className="p-10 text-center text-red-600 font-semibold">
         Você não tem permissão para acessar esta página.
@@ -146,8 +147,7 @@ export default function MovimentacoesPage() {
   }
 
 
-
-  return (
+  return(
 
     <div className="max-w-6xl mx-auto p-8">
 
@@ -167,7 +167,7 @@ export default function MovimentacoesPage() {
 
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
 
-        {movimentacoes.map((mov) => (
+        {movimentacoes.map((mov)=>(
 
           <div
             key={mov.id}
