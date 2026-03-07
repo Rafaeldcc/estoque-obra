@@ -62,8 +62,6 @@ export default function Dashboard() {
   }
 
 
-  /* GERAR LISTA DE COMPRAS */
-
   function gerarListaCompras() {
 
     if (estoqueBaixo.length === 0) {
@@ -206,8 +204,6 @@ export default function Dashboard() {
     setGraficoSetores(dadosSetores);
     setEstoqueBaixo(materiaisBaixos);
 
-
-    /* MOVIMENTAÇÕES */
 
     const movQuery = query(
       collection(db, "movimentacoes"),
@@ -385,11 +381,13 @@ function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
 }
 
 
+/* LISTA COM ROLAGEM */
+
 function Lista({ titulo, dados }: any) {
 
   return (
 
-    <div className="bg-white p-6 rounded-xl shadow">
+    <div className="bg-white p-6 rounded-xl shadow max-h-[500px] overflow-y-auto">
 
       <h2 className="text-xl font-bold mb-4">{titulo}</h2>
 
