@@ -62,6 +62,38 @@ export default function Dashboard() {
   }
 
 
+  /* GERAR LISTA DE COMPRAS */
+
+  function gerarListaCompras() {
+
+    if (estoqueBaixo.length === 0) {
+      alert("Nenhum material precisa ser comprado.");
+      return;
+    }
+
+    let texto = "LISTA DE COMPRAS\n\n";
+
+    estoqueBaixo.forEach((item: any) => {
+
+      texto += `Material: ${item.material}\n`;
+      texto += `Saldo atual: ${item.saldo}\n`;
+      texto += `Mínimo necessário: ${item.minimo}\n`;
+      texto += `Comprar: ${item.comprar}\n\n`;
+
+    });
+
+    const blob = new Blob([texto], { type: "text/plain" });
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "lista-compras.txt";
+    a.click();
+
+  }
+
+
   async function carregarIndicadores() {
 
     if (!user) return;
@@ -160,8 +192,6 @@ export default function Dashboard() {
     }));
 
 
-    /* ESTOQUE BAIXO COM INFO COMPLETA */
-
     const materiaisBaixos = Object.values(mapaMateriais)
       .filter((m: any) => m.minimo > 0 && m.saldo <= m.minimo)
       .map((m: any) => ({
@@ -177,7 +207,7 @@ export default function Dashboard() {
     setEstoqueBaixo(materiaisBaixos);
 
 
-    /* ================= MOVIMENTAÇÕES ================= */
+    /* MOVIMENTAÇÕES */
 
     const movQuery = query(
       collection(db, "movimentacoes"),
@@ -285,7 +315,16 @@ export default function Dashboard() {
       )}
 
       {visao === "baixo" && (
-        <Lista titulo="⚠ Materiais com estoque baixo" dados={estoqueBaixo} />
+        <>
+          <Lista titulo="⚠ Materiais com estoque baixo" dados={estoqueBaixo} />
+
+          <button
+            onClick={gerarListaCompras}
+            className="mt-6 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow"
+          >
+            📦 Gerar Lista de Compras
+          </button>
+        </>
       )}
 
       {visao === "usados" && (
@@ -346,8 +385,6 @@ function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
 }
 
 
-/* LISTA ESTOQUE BAIXO */
-
 function Lista({ titulo, dados }: any) {
 
   return (
@@ -397,8 +434,6 @@ function Lista({ titulo, dados }: any) {
 
 }
 
-
-/* LISTA SIMPLES */
 
 function ListaSimples({ titulo, dados }: any) {
 
