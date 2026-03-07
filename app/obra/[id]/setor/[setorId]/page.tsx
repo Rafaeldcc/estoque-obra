@@ -20,6 +20,7 @@ interface Material {
   nome: string;
   saldo: number;
   unidade: string;
+  estoqueMinimo?: number;
 }
 
 interface Obra {
@@ -37,18 +38,16 @@ export default function ControleEstoque() {
   const [obras,setObras] = useState<Obra[]>([]);
   const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
   const [destinos,setDestinos] = useState<{[key:string]:string}>({});
-  const [mensagem,setMensagem] = useState("");
+  const [minimos,setMinimos] = useState<{[key:string]:number}>({});
 
+  const [mensagem,setMensagem] = useState("");
   const [empresaId,setEmpresaId] = useState<string>("");
 
   useEffect(()=>{
-
     carregarMateriais();
     carregarObras();
     carregarEmpresa();
-
   },[]);
-
 
   async function carregarEmpresa(){
 
@@ -58,13 +57,9 @@ export default function ControleEstoque() {
     const snap = await getDoc(doc(db,"usuarios",user.uid));
 
     if(snap.exists()){
-
       setEmpresaId(snap.data().empresaId);
-
     }
-
   }
-
 
   async function carregarMateriais(){
 
@@ -82,15 +77,14 @@ export default function ControleEstoque() {
         id:docSnap.id,
         nome:data.nome,
         saldo:data.saldo ?? 0,
-        unidade:data.unidade ?? ""
+        unidade:data.unidade ?? "",
+        estoqueMinimo:data.estoqueMinimo ?? 0
       });
 
     });
 
     setMateriais(lista);
-
   }
-
 
   async function carregarObras(){
 
@@ -108,9 +102,7 @@ export default function ControleEstoque() {
     });
 
     setObras(lista.filter((o)=>o.id !== obraId));
-
   }
-
 
   function corSaldo(saldo:number){
 
@@ -120,6 +112,28 @@ export default function ControleEstoque() {
 
   }
 
+  function mostrarMensagem(texto:string){
+
+    setMensagem(texto);
+    setTimeout(()=>setMensagem(""),3000);
+
+  }
+
+  async function salvarMinimo(material:Material){
+
+    const minimo = minimos[material.id];
+    if(minimo === undefined) return;
+
+    await updateDoc(
+      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+      { estoqueMinimo:minimo }
+    );
+
+    mostrarMensagem("Estoque mínimo atualizado");
+
+    carregarMateriais();
+
+  }
 
   async function entrada(material:Material){
 
@@ -182,7 +196,6 @@ export default function ControleEstoque() {
 
   }
 
-
   async function transferir(material:Material){
 
     const qtd = Number(quantidades[material.id] ?? 0);
@@ -230,7 +243,6 @@ export default function ControleEstoque() {
 
   }
 
-
   async function excluir(materialId:string){
 
     if(!confirm("Excluir material?")) return;
@@ -244,16 +256,6 @@ export default function ControleEstoque() {
     carregarMateriais();
 
   }
-
-
-  function mostrarMensagem(texto:string){
-
-    setMensagem(texto);
-
-    setTimeout(()=>setMensagem(""),3000);
-
-  }
-
 
   return(
 
@@ -277,7 +279,11 @@ export default function ControleEstoque() {
 
           <div
             key={material.id}
-            className="bg-white rounded-2xl shadow-md hover:shadow-xl transition p-6"
+            className={`rounded-2xl shadow-md hover:shadow-xl transition p-6 ${
+              material.estoqueMinimo && material.saldo <= material.estoqueMinimo
+              ? "bg-red-50 border border-red-400"
+              : "bg-white"
+            }`}
           >
 
             <div className="flex justify-between items-center mb-4">
@@ -291,6 +297,14 @@ export default function ControleEstoque() {
               </span>
 
             </div>
+
+            {material.estoqueMinimo && material.saldo <= material.estoqueMinimo && (
+
+              <div className="text-red-600 font-semibold mb-2">
+                ⚠ Estoque baixo
+              </div>
+
+            )}
 
             <div className="flex gap-2 mb-3">
 
@@ -344,6 +358,30 @@ export default function ControleEstoque() {
                 className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg"
               >
                 🔄 Transferir
+              </button>
+
+            </div>
+
+            <div className="flex gap-2 mt-3">
+
+              <input
+                type="number"
+                placeholder="Estoque mínimo"
+                value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
+                onChange={(e)=>
+                  setMinimos({
+                    ...minimos,
+                    [material.id]:Number(e.target.value)
+                  })
+                }
+                className="border rounded px-2 py-1 w-32"
+              />
+
+              <button
+                onClick={()=>salvarMinimo(material)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+              >
+                Salvar mínimo
               </button>
 
             </div>
