@@ -49,13 +49,13 @@ export default function MovimentacoesPage() {
 
   useEffect(()=>{
 
-    if((role === "admin" || role === "almoxarifado") && empresaId){
+    if(empresaId){
 
       carregarMovimentacoes();
 
     }
 
-  },[role,empresaId]);
+  },[empresaId]);
 
 
   async function carregarUsuario(){
@@ -134,12 +134,14 @@ export default function MovimentacoesPage() {
   if(loading) return null;
 
 
-  if(role !== "admin" && role !== "almoxarifado"){
+  /* BLOQUEIA APENAS SE NÃO TIVER ROLE */
+
+  if(!role){
 
     return(
 
       <div className="p-10 text-center text-red-600 font-semibold">
-        Você não tem permissão para acessar esta página.
+        Usuário sem permissão definida.
       </div>
 
     );
