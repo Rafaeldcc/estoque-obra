@@ -43,7 +43,7 @@ export default function RootLayout({
           
           <aside style={sidebar}>
             <h2 style={{ color: "white", marginBottom: 20 }}>
-              Estoque Obra v2
+              Estoque F.Vieira
             </h2>
 
             <nav style={{ marginTop: 10 }}>
