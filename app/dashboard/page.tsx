@@ -47,7 +47,6 @@ export default function Dashboard() {
   }, [user]);
 
 
-
   async function carregarEmpresa() {
 
     if (!user) return;
@@ -61,7 +60,6 @@ export default function Dashboard() {
     setEmpresa(data?.empresa || "Sistema");
 
   }
-
 
 
   async function carregarIndicadores() {
@@ -78,8 +76,6 @@ export default function Dashboard() {
 
     if (!empresaId) return;
 
-
-
     const obrasQuery = query(
       collection(db, "obras"),
       where("empresaId", "==", empresaId)
@@ -87,13 +83,9 @@ export default function Dashboard() {
 
     const obrasSnap = await getDocs(obrasQuery);
 
-
-
     const dadosGraficoObras: any[] = [];
     const mapaSetores: any = {};
     const mapaMateriais: any = {};
-
-
 
     for (const obraDoc of obrasSnap.docs) {
 
@@ -105,11 +97,9 @@ export default function Dashboard() {
 
       let estoqueObra = 0;
 
-
-
       for (const setorDoc of setoresSnap.docs) {
 
-        const setorNome = setorDoc.data().nome;
+        const setorNome = setorDoc.data().nome || "Setor";
 
         const materiaisSnap = await getDocs(
           collection(
@@ -125,9 +115,10 @@ export default function Dashboard() {
         materiaisSnap.forEach((docMat) => {
 
           const data = docMat.data();
-          const saldo = data.saldo ?? 0;
-          const minimo = data.estoqueMinimo ?? 0;
-          const materialNome = data.nome ?? "Material";
+
+          const saldo = Number(data.saldo || 0);
+          const minimo = Number(data.estoqueMinimo || 0);
+          const materialNome = data.nome || "Material";
 
           estoqueObra += saldo;
 
@@ -136,8 +127,6 @@ export default function Dashboard() {
           }
 
           mapaSetores[setorNome] += saldo;
-
-
 
           /* AGRUPAR MATERIAIS */
 
@@ -153,6 +142,12 @@ export default function Dashboard() {
 
           mapaMateriais[materialNome].saldo += saldo;
 
+          /* garantir que minimo não seja perdido */
+
+          if (minimo > mapaMateriais[materialNome].minimo) {
+            mapaMateriais[materialNome].minimo = minimo;
+          }
+
         });
 
       }
@@ -164,28 +159,18 @@ export default function Dashboard() {
 
     }
 
-
-
     const dadosSetores = Object.keys(mapaSetores).map((setor) => ({
       setor,
       estoque: mapaSetores[setor]
     }));
 
-
-
     const materiaisBaixos = Object.values(mapaMateriais).filter((m: any) => {
-
-      return m.minimo > 0 && m.saldo <= m.minimo;
-
+      return m.saldo <= m.minimo && m.minimo > 0;
     });
-
-
 
     setGraficoObras(dadosGraficoObras);
     setGraficoSetores(dadosSetores);
     setEstoqueBaixo(materiaisBaixos);
-
-
 
     /* ================= MOVIMENTAÇÕES ================= */
 
@@ -196,12 +181,8 @@ export default function Dashboard() {
 
     const movSnap = await getDocs(movQuery);
 
-
-
     const consumoMateriais: any = {};
     const consumoObras: any = {};
-
-
 
     movSnap.forEach((docMov) => {
 
@@ -210,7 +191,7 @@ export default function Dashboard() {
       if (data.tipo === "saida") {
 
         const material = data.materialNome;
-        const quantidade = data.quantidade ?? 0;
+        const quantidade = Number(data.quantidade || 0);
         const obra = data.obraNome;
 
         if (!consumoMateriais[material]) consumoMateriais[material] = 0;
@@ -223,8 +204,6 @@ export default function Dashboard() {
 
     });
 
-
-
     const rankingMateriais = Object.keys(consumoMateriais)
       .map((material) => ({
         material,
@@ -233,11 +212,7 @@ export default function Dashboard() {
       .sort((a, b) => b.quantidade - a.quantidade)
       .slice(0, 10);
 
-
-
     setMateriaisUsados(rankingMateriais);
-
-
 
     const rankingObras = Object.keys(consumoObras)
       .map((obra) => ({
@@ -246,17 +221,12 @@ export default function Dashboard() {
       }))
       .sort((a, b) => b.consumo - a.consumo);
 
-
-
     setGraficoConsumoObras(rankingObras);
 
   }
 
 
-
   if (loading) return null;
-
-
 
   if (visao === "menu") {
 
@@ -284,8 +254,6 @@ export default function Dashboard() {
 
   }
 
-
-
   return (
 
     <div className="max-w-7xl mx-auto p-8">
@@ -296,8 +264,6 @@ export default function Dashboard() {
       >
         ← Voltar
       </button>
-
-
 
       {visao === "obra" && (
         <Grafico titulo="Estoque por Obra" dados={graficoObras} chaveX="obra" chaveY="estoque" cor="#2563eb" />
@@ -326,7 +292,6 @@ export default function Dashboard() {
 }
 
 
-
 /* COMPONENTES */
 
 function MenuCard({ titulo, click }: any) {
@@ -343,8 +308,6 @@ function MenuCard({ titulo, click }: any) {
   );
 
 }
-
-
 
 function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
 
@@ -374,8 +337,6 @@ function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
 
 }
 
-
-
 function Lista({ titulo, dados, campoNome, campoValor, cor }: any) {
 
   return (
@@ -383,6 +344,10 @@ function Lista({ titulo, dados, campoNome, campoValor, cor }: any) {
     <div className="bg-white p-6 rounded-xl shadow">
 
       <h2 className="text-xl font-bold mb-4">{titulo}</h2>
+
+      {dados.length === 0 && (
+        <p className="text-gray-500">Nenhum material com estoque baixo</p>
+      )}
 
       {dados.map((m: any, i: number) => (
 
