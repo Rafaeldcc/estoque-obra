@@ -5,6 +5,7 @@ import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
 
@@ -117,6 +118,19 @@ export default function LoginPage() {
           </button>
 
         </form>
+
+        {/* LINK PARA CRIAR CONTA */}
+
+        <div className="text-center mt-5">
+
+          <Link
+            href="/criar-conta"
+            className="text-blue-600 hover:underline text-sm"
+          >
+            Criar conta / Definir senha
+          </Link>
+
+        </div>
 
       </div>
 
