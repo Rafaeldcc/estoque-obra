@@ -149,9 +149,9 @@ export default function MovimentacoesPage() {
 
   return(
 
-    <div className="max-w-6xl mx-auto p-8">
+    <div className="max-w-6xl mx-auto p-8 flex flex-col h-[85vh]">
 
-      <h1 className="text-3xl font-bold mb-8">
+      <h1 className="text-3xl font-bold mb-6">
         Histórico de Movimentações
       </h1>
 
@@ -165,7 +165,8 @@ export default function MovimentacoesPage() {
 
       )}
 
-      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+      {/* LISTA COM ROLAGEM */}
+      <div className="space-y-4 overflow-y-auto flex-1 pr-3">
 
         {movimentacoes.map((mov)=>(
 
