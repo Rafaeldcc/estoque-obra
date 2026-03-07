@@ -330,7 +330,7 @@ export default function CadastrarMaterial() {
           obras.find((o) => o.id === obraId)?.nome || "",
         usuarioId: user.uid,
         usuarioNome: user.email || "",
-        empresaId: empresaId ?? undefined
+        empresaId: empresaId || ""
 
       });
 
