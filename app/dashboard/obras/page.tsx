@@ -8,7 +8,8 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  getDoc
+  query,
+  where
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
@@ -22,11 +23,10 @@ interface Obra {
 
 export default function ObrasPage() {
 
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
 
   const [obras, setObras] = useState<Obra[]>([]);
   const [nomeObra, setNomeObra] = useState("");
-  const [role, setRole] = useState<string | null>(null);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,17 +43,26 @@ export default function ObrasPage() {
 
     if (!user) return;
 
-    const snap = await getDoc(doc(db, "usuarios", user.uid));
+    try {
 
-    if (!snap.exists()) return;
+      const userDoc = await getDocs(
+        query(collection(db, "usuarios"), where("__name__", "==", user.uid))
+      );
 
-    const data = snap.data();
+      if (userDoc.empty) return;
 
-    setRole(data.role || null);
-    setEmpresaId(data.empresaId || null);
+      const data = userDoc.docs[0].data();
 
-    if (data.empresaId) {
-      carregarObras(data.empresaId);
+      setEmpresaId(data.empresaId);
+
+      if (data.empresaId) {
+        carregarObras(data.empresaId);
+      }
+
+    } catch (error) {
+
+      console.error("Erro ao carregar usuário:", error);
+
     }
 
   }
@@ -64,7 +73,12 @@ export default function ObrasPage() {
 
     try {
 
-      const snapshot = await getDocs(collection(db, "obras"));
+      const q = query(
+        collection(db, "obras"),
+        where("empresaId", "==", empresaIdParam)
+      );
+
+      const snapshot = await getDocs(q);
 
       const lista: Obra[] = [];
 
@@ -72,14 +86,10 @@ export default function ObrasPage() {
 
         const data = docSnap.data();
 
-        if (data.empresaId === empresaIdParam) {
-
-          lista.push({
-            id: docSnap.id,
-            nome: data.nome
-          });
-
-        }
+        lista.push({
+          id: docSnap.id,
+          nome: data.nome
+        });
 
       });
 
