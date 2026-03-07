@@ -11,6 +11,7 @@ import {
   getDoc,
   serverTimestamp,
 } from "firebase/firestore";
+
 import { db } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useAuth } from "@/lib/useAuth";
@@ -23,54 +24,84 @@ type Material = {
 };
 
 export default function Controle() {
+
   const { user, loading } = useAuth();
 
-  const [role, setRole] = useState<string | null>(null);
-  const [obras, setObras] = useState<any[]>([]);
-  const [obraSelecionada, setObraSelecionada] = useState("");
-  const [materiais, setMateriais] = useState<Material[]>([]);
-  const [quantidades, setQuantidades] = useState<{ [key: string]: number }>({});
-  const [mensagem, setMensagem] = useState("");
+  const [role,setRole] = useState<string | null>(null);
+  const [empresaId,setEmpresaId] = useState<string>("");
 
-  useEffect(() => {
-    if (!user) return;
+  const [obras,setObras] = useState<any[]>([]);
+  const [obraSelecionada,setObraSelecionada] = useState("");
 
-    carregarRole();
+  const [materiais,setMateriais] = useState<Material[]>([]);
+  const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
+
+  const [mensagem,setMensagem] = useState("");
+
+
+  useEffect(()=>{
+
+    if(!user) return;
+
+    carregarUsuario();
     carregarObras();
-  }, [user]);
 
-  useEffect(() => {
-    if (obraSelecionada) {
+  },[user]);
+
+
+  useEffect(()=>{
+
+    if(obraSelecionada){
       carregarMateriais(obraSelecionada);
     }
-  }, [obraSelecionada]);
 
-  async function carregarRole() {
-    if (!user) return;
+  },[obraSelecionada]);
 
-    const snap = await getDoc(doc(db, "usuarios", user.uid));
-    if (snap.exists()) {
-      setRole(snap.data().role);
+
+  async function carregarUsuario(){
+
+    if(!user) return;
+
+    const snap = await getDoc(doc(db,"usuarios",user.uid));
+
+    if(snap.exists()){
+
+      const data = snap.data();
+
+      setRole(data.role);
+      setEmpresaId(data.empresaId);
+
     }
+
   }
 
-  async function carregarObras() {
-    const snap = await getDocs(collection(db, "obras"));
-    const lista = snap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
+
+
+  async function carregarObras(){
+
+    const snap = await getDocs(collection(db,"obras"));
+
+    const lista = snap.docs.map(doc=>({
+      id:doc.id,
+      ...doc.data()
     }));
+
     setObras(lista);
+
   }
 
-  async function carregarMateriais(obraId: string) {
+
+
+  async function carregarMateriais(obraId:string){
+
     const setoresSnap = await getDocs(
-      collection(db, "obras", obraId, "setores")
+      collection(db,"obras",obraId,"setores")
     );
 
-    let todos: any[] = [];
+    let todos:any[] = [];
 
-    for (const setorDoc of setoresSnap.docs) {
+    for(const setorDoc of setoresSnap.docs){
+
       const materiaisSnap = await getDocs(
         collection(
           db,
@@ -82,52 +113,76 @@ export default function Controle() {
         )
       );
 
-      materiaisSnap.docs.forEach((doc) => {
-        const data = doc.data();
+      materiaisSnap.docs.forEach(docSnap=>{
+
+        const data = docSnap.data();
+
         todos.push({
-          id: doc.id,
-          nome: data.nome,
-          saldo: data.saldo || 0,
-          unidade: data.unidade || "",
+          id:docSnap.id,
+          nome:data.nome,
+          saldo:data.saldo || 0,
+          unidade:data.unidade || ""
         });
+
       });
+
     }
 
-    const agrupado: { [key: string]: Material } = {};
+    const agrupado:{[key:string]:Material} = {};
 
-    todos.forEach((item) => {
-      if (!agrupado[item.id]) {
-        agrupado[item.id] = { ...item };
-      } else {
+    todos.forEach(item=>{
+
+      if(!agrupado[item.id]){
+
+        agrupado[item.id] = {...item};
+
+      }else{
+
         agrupado[item.id].saldo += item.saldo || 0;
+
       }
+
     });
 
     setMateriais(Object.values(agrupado));
+
   }
 
-  function mostrarMensagem(texto: string) {
+
+
+  function mostrarMensagem(texto:string){
+
     setMensagem(texto);
-    setTimeout(() => setMensagem(""), 3000);
+
+    setTimeout(()=>{
+      setMensagem("");
+    },3000);
+
   }
 
-  async function entrada(material: Material) {
-    if (role !== "admin" && role !== "almoxarifado") {
+
+
+  async function entrada(material:Material){
+
+    if(role !== "admin" && role !== "almoxarifado"){
       alert("Você não tem permissão.");
       return;
     }
 
     const qtd = quantidades[material.id];
-    if (!qtd || qtd <= 0) return;
 
-    if (!user) return;
+    if(!qtd || qtd <= 0) return;
 
-    try {
+    if(!user) return;
+
+    try{
+
       const setoresSnap = await getDocs(
-        collection(db, "obras", obraSelecionada, "setores")
+        collection(db,"obras",obraSelecionada,"setores")
       );
 
-      for (const setorDoc of setoresSnap.docs) {
+      for(const setorDoc of setoresSnap.docs){
+
         const materialRef = doc(
           db,
           "obras",
@@ -138,56 +193,83 @@ export default function Controle() {
           material.id
         );
 
-        await updateDoc(materialRef, {
+        await updateDoc(materialRef,{
           saldo: increment(qtd),
-          atualizadoEm: serverTimestamp(),
-        }).catch(() => {});
+          atualizadoEm: serverTimestamp()
+        }).catch(()=>{});
+
       }
 
+      const obraNome =
+        obras.find(o=>o.id === obraSelecionada)?.nome || "";
+
       await registrarMovimentacao({
+
         materialId: material.id,
         materialNome: material.nome,
+
         tipo: "entrada",
+
         quantidade: qtd,
+
         obraId: obraSelecionada,
-        obraNome:
-          obras.find((o) => o.id === obraSelecionada)?.nome || "",
+        obraNome: obraNome,
+
+        destino: "uso",
+
         usuarioId: user.uid,
         usuarioNome: user.email || "",
+
+        empresaId: empresaId
+
       });
 
       mostrarMensagem("Entrada registrada com sucesso!");
-      setQuantidades((prev) => ({ ...prev, [material.id]: 0 }));
+
+      setQuantidades(prev=>({
+        ...prev,
+        [material.id]:0
+      }));
+
       carregarMateriais(obraSelecionada);
 
-    } catch (error) {
+    }catch(error){
+
       console.error(error);
       alert("Erro na entrada.");
+
     }
+
   }
 
-  async function saida(material: Material) {
-    if (role !== "admin" && role !== "almoxarifado") {
+
+
+  async function saida(material:Material){
+
+    if(role !== "admin" && role !== "almoxarifado"){
       alert("Você não tem permissão.");
       return;
     }
 
     const qtd = quantidades[material.id];
-    if (!qtd || qtd <= 0) return;
 
-    if (qtd > material.saldo) {
+    if(!qtd || qtd <= 0) return;
+
+    if(qtd > material.saldo){
       alert("Quantidade maior que o saldo disponível.");
       return;
     }
 
-    if (!user) return;
+    if(!user) return;
 
-    try {
+    try{
+
       const setoresSnap = await getDocs(
-        collection(db, "obras", obraSelecionada, "setores")
+        collection(db,"obras",obraSelecionada,"setores")
       );
 
-      for (const setorDoc of setoresSnap.docs) {
+      for(const setorDoc of setoresSnap.docs){
+
         const materialRef = doc(
           db,
           "obras",
@@ -198,48 +280,74 @@ export default function Controle() {
           material.id
         );
 
-        await updateDoc(materialRef, {
+        await updateDoc(materialRef,{
           saldo: increment(-qtd),
-          atualizadoEm: serverTimestamp(),
-        }).catch(() => {});
+          atualizadoEm: serverTimestamp()
+        }).catch(()=>{});
+
       }
 
+      const obraNome =
+        obras.find(o=>o.id === obraSelecionada)?.nome || "";
+
       await registrarMovimentacao({
+
         materialId: material.id,
         materialNome: material.nome,
+
         tipo: "saida",
+
         quantidade: qtd,
+
         obraId: obraSelecionada,
-        obraNome:
-          obras.find((o) => o.id === obraSelecionada)?.nome || "",
+        obraNome: obraNome,
+
+        destino: "uso",
+
         usuarioId: user.uid,
         usuarioNome: user.email || "",
+
+        empresaId: empresaId
+
       });
 
       mostrarMensagem("Saída registrada com sucesso!");
-      setQuantidades((prev) => ({ ...prev, [material.id]: 0 }));
+
+      setQuantidades(prev=>({
+        ...prev,
+        [material.id]:0
+      }));
+
       carregarMateriais(obraSelecionada);
 
-    } catch (error) {
+    }catch(error){
+
       console.error(error);
       alert("Erro na saída.");
+
     }
+
   }
 
-  async function excluir(material: Material) {
-    if (role !== "admin") {
+
+
+  async function excluir(material:Material){
+
+    if(role !== "admin"){
       alert("Apenas administrador pode excluir.");
       return;
     }
 
-    if (!confirm("Deseja excluir este material?")) return;
+    if(!confirm("Deseja excluir este material?")) return;
 
-    try {
+    try{
+
       const setoresSnap = await getDocs(
-        collection(db, "obras", obraSelecionada, "setores")
+        collection(db,"obras",obraSelecionada,"setores")
       );
 
-      for (const setorDoc of setoresSnap.docs) {
+      for(const setorDoc of setoresSnap.docs){
+
         const materialRef = doc(
           db,
           "obras",
@@ -250,23 +358,36 @@ export default function Controle() {
           material.id
         );
 
-        await deleteDoc(materialRef).catch(() => {});
+        await deleteDoc(materialRef).catch(()=>{});
+
       }
 
       mostrarMensagem("Material excluído com sucesso!");
+
       carregarMateriais(obraSelecionada);
 
-    } catch (error) {
+    }catch(error){
+
       console.error(error);
       alert("Erro ao excluir.");
+
     }
+
   }
 
-  if (loading) return null;
 
-  return (
+
+  if(loading) return null;
+
+
+
+  return(
+
     <div className="max-w-4xl mx-auto p-8">
-      <h2 className="text-2xl font-bold mb-6">Controle de Estoque</h2>
+
+      <h2 className="text-2xl font-bold mb-6">
+        Controle de Estoque
+      </h2>
 
       {mensagem && (
         <div className="mb-4 bg-green-600 text-white p-3 rounded">
@@ -276,67 +397,84 @@ export default function Controle() {
 
       <select
         className="w-full p-3 border rounded mb-6"
-        onChange={(e) => setObraSelecionada(e.target.value)}
+        onChange={(e)=>setObraSelecionada(e.target.value)}
       >
+
         <option value="">Selecionar obra</option>
-        {obras.map((obra) => (
+
+        {obras.map(obra=>(
           <option key={obra.id} value={obra.id}>
             {obra.nome}
           </option>
         ))}
+
       </select>
 
-      {materiais.map((material) => (
+      {materiais.map(material=>(
+
         <div
           key={material.id}
           className="bg-white p-5 rounded-xl shadow mb-4"
         >
+
           <div className="flex justify-between mb-3">
+
             <b>{material.nome}</b>
+
             <span>
               Saldo: {material.saldo} {material.unidade}
             </span>
+
           </div>
 
           <div className="flex gap-3">
+
             <input
               type="number"
               placeholder="Qtd"
               value={quantidades[material.id] || ""}
-              onChange={(e) =>
-                setQuantidades((prev) => ({
+              onChange={(e)=>
+                setQuantidades(prev=>({
                   ...prev,
-                  [material.id]: Number(e.target.value),
+                  [material.id]: Number(e.target.value)
                 }))
               }
               className="border p-2 w-24 rounded"
             />
 
             <button
-              onClick={() => entrada(material)}
+              onClick={()=>entrada(material)}
               className="bg-green-600 text-white px-4 rounded"
             >
               Entrada
             </button>
 
             <button
-              onClick={() => saida(material)}
+              onClick={()=>saida(material)}
               className="bg-orange-500 text-white px-4 rounded"
             >
               Saída
             </button>
 
             {role === "admin" && (
+
               <button
-                onClick={() => excluir(material)}
+                onClick={()=>excluir(material)}
                 className="bg-red-600 text-white px-4 rounded"
               >
                 Excluir
               </button>
+
             )}
+
           </div>
+
         </div>
+
       ))}
+
     </div>
+
   );
+
 }
