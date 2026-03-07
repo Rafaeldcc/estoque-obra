@@ -7,17 +7,21 @@ import {
   addDoc,
   deleteDoc,
   doc,
-  getDocs
+  getDocs,
+  getDoc
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/lib/useAuth";
 
 export default function Setores() {
 
   const params = useParams();
   const obraId = params.id as string;
+
+  const { user, role } = useAuth();
 
   const [setores, setSetores] = useState<any[]>([]);
   const [novoSetor, setNovoSetor] = useState("");
@@ -58,7 +62,6 @@ export default function Setores() {
   }, [obraId]);
 
 
-
   /* CARREGAR SETORES DE TODAS AS OBRAS */
 
   useEffect(() => {
@@ -66,7 +69,6 @@ export default function Setores() {
     carregarTodosSetores();
 
   }, []);
-
 
 
   async function carregarTodosSetores() {
@@ -100,7 +102,6 @@ export default function Setores() {
   }
 
 
-
   /* NORMALIZAR TEXTO */
 
   function normalizarTexto(texto: string) {
@@ -112,7 +113,6 @@ export default function Setores() {
       .trim();
 
   }
-
 
 
   /* FILTRAR SUGESTÕES */
@@ -143,7 +143,6 @@ export default function Setores() {
   }
 
 
-
   /* CRIAR SETOR */
 
   async function criarSetor() {
@@ -164,7 +163,6 @@ export default function Setores() {
     if (existe) {
 
       alert("Este setor já existe.");
-
       return;
 
     }
@@ -189,10 +187,16 @@ export default function Setores() {
   }
 
 
-
   /* EXCLUIR SETOR */
 
   async function excluirSetor(id: string) {
+
+    if (role !== "admin") {
+      alert("Apenas administradores podem excluir setores.");
+      return;
+    }
+
+    if (!confirm("Deseja realmente excluir este setor?")) return;
 
     await deleteDoc(
       doc(
@@ -205,7 +209,6 @@ export default function Setores() {
     );
 
   }
-
 
 
   return (
@@ -275,14 +278,18 @@ export default function Setores() {
             {setor.nome}
           </Link>
 
-          <button
-            onClick={() =>
-              excluirSetor(setor.id)
-            }
-            className="bg-red-600 text-white px-3 py-1 rounded"
-          >
-            Excluir
-          </button>
+          {role === "admin" && (
+
+            <button
+              onClick={() =>
+                excluirSetor(setor.id)
+              }
+              className="bg-red-600 text-white px-3 py-1 rounded"
+            >
+              Excluir
+            </button>
+
+          )}
 
         </div>
 

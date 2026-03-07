@@ -14,6 +14,7 @@ import {
 import { db, auth } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useParams } from "next/navigation";
+import { useAuth } from "@/lib/useAuth";
 
 interface Material {
   id: string;
@@ -29,6 +30,8 @@ interface Obra {
 }
 
 export default function ControleEstoque() {
+
+  const { role } = useAuth();
 
   const params = useParams();
   const obraId = params.id as string;
@@ -147,25 +150,6 @@ export default function ControleEstoque() {
       { saldo:novoSaldo }
     );
 
-    await addDoc(
-      collection(
-        db,
-        "obras",
-        obraId,
-        "setores",
-        setorId,
-        "materiais",
-        material.id,
-        "historico"
-      ),
-      {
-        tipo:"ENTRADA",
-        quantidade:qtd,
-        unidade:material.unidade,
-        data:new Date()
-      }
-    );
-
     const user = auth.currentUser;
 
     await registrarMovimentacao({
@@ -244,6 +228,11 @@ export default function ControleEstoque() {
   }
 
   async function excluir(materialId:string){
+
+    if(role !== "admin"){
+      alert("Apenas administradores podem excluir materiais.");
+      return;
+    }
 
     if(!confirm("Excluir material?")) return;
 
@@ -388,12 +377,16 @@ export default function ControleEstoque() {
 
             <div className="flex justify-between mt-4">
 
-              <button
-                onClick={()=>excluir(material.id)}
-                className="text-red-600 hover:underline text-sm"
-              >
-                Excluir
-              </button>
+              {role === "admin" && (
+
+                <button
+                  onClick={()=>excluir(material.id)}
+                  className="text-red-600 hover:underline text-sm"
+                >
+                  Excluir
+                </button>
+
+              )}
 
             </div>
 
