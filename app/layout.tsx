@@ -5,16 +5,39 @@ import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  const [role,setRole] = useState<string | null>(null);
+
+  useEffect(()=>{
+
+    async function carregarRole(){
+
+      if(!user) return;
+
+      const snap = await getDoc(doc(db,"usuarios",user.uid));
+
+      if(snap.exists()){
+        setRole(snap.data().role);
+      }
+
+    }
+
+    carregarRole();
+
+  },[user]);
 
   async function handleLogout() {
     await signOut(auth);
@@ -42,6 +65,7 @@ export default function RootLayout({
         <div style={layout}>
           
           <aside style={sidebar}>
+
             <h2 style={{ color: "white", marginBottom: 20 }}>
               Estoque F.Vieira
             </h2>
@@ -76,14 +100,23 @@ export default function RootLayout({
                 Retirada Material
               </MenuLink>
 
-              {/* NOVA ABA */}
               <MenuLink href="/relatorios">
                 Relatórios PDF
               </MenuLink>
 
+              {/* MENU ADMIN */}
+              {role === "admin" && (
+
+                <MenuLink href="/usuarios">
+                  Usuários
+                </MenuLink>
+
+              )}
+
             </nav>
 
             <div style={{ marginTop: "auto", paddingTop: 30 }}>
+
               <button
                 onClick={handleLogout}
                 style={{
@@ -98,11 +131,13 @@ export default function RootLayout({
               >
                 Sair
               </button>
+
             </div>
 
           </aside>
 
           <main style={main}>
+
             <header style={header}>
               <h3 style={{ margin: 0 }}>
                 Sistema Profissional de Controle de Estoque
@@ -112,6 +147,7 @@ export default function RootLayout({
             <div style={{ padding: 30 }}>
               {children}
             </div>
+
           </main>
 
         </div>
@@ -121,6 +157,7 @@ export default function RootLayout({
 }
 
 function MenuLink({ href, children }: any) {
+
   return (
     <Link
       href={href}
@@ -137,6 +174,7 @@ function MenuLink({ href, children }: any) {
       {children}
     </Link>
   );
+
 }
 
 const layout = {
