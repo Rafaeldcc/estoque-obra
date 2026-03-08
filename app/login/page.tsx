@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -27,22 +27,42 @@ export default function LoginPage() {
 
       const cred = await signInWithEmailAndPassword(auth, email, senha);
 
-      const userDoc = await getDoc(doc(db, "usuarios", cred.user.uid));
+      const snap = await getDocs(collection(db, "usuarios"));
 
-      if (!userDoc.exists()) {
+      let usuario:any = null;
+
+      snap.forEach((doc) => {
+
+        const data = doc.data();
+
+        if (data.email === email) {
+          usuario = data;
+        }
+
+      });
+
+      if (!usuario) {
+
         setErro("Usuário sem permissão.");
         setCarregando(false);
         return;
+
       }
 
-      const role = userDoc.data().role;
+      const role = usuario.role;
 
       if (role === "admin") {
+
         router.push("/dashboard");
+
       } else if (role === "almoxarifado") {
+
         router.push("/controle");
+
       } else {
+
         router.push("/dashboard");
+
       }
 
     } catch {
@@ -118,8 +138,6 @@ export default function LoginPage() {
           </button>
 
         </form>
-
-        {/* LINK PARA CRIAR CONTA */}
 
         <div className="text-center mt-5">
 
