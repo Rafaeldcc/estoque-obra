@@ -46,12 +46,18 @@ export default function RootLayout({
 
   if (loading) return null;
 
-  if (!user && pathname !== "/login") {
+  // 🔓 liberar login e criar conta
+  if (
+    !user &&
+    pathname !== "/login" &&
+    pathname !== "/criar-conta"
+  ) {
     router.push("/login");
     return null;
   }
 
-  if (pathname === "/login") {
+  // 🔓 páginas públicas sem menu
+  if (pathname === "/login" || pathname === "/criar-conta") {
     return (
       <html lang="pt-br">
         <body>{children}</body>
@@ -104,13 +110,10 @@ export default function RootLayout({
                 Relatórios PDF
               </MenuLink>
 
-              {/* MENU ADMIN */}
               {role === "admin" && (
-
                 <MenuLink href="/usuarios">
                   Usuários
                 </MenuLink>
-
               )}
 
             </nav>
