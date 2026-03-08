@@ -27,9 +27,10 @@ export default function BuscarMaterial() {
 
   function normalizarTexto(texto: string) {
     return texto
-      .normalize("NFD")
+      ?.normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
+      .toLowerCase()
+      .trim();
   }
 
   async function carregarMateriais() {
@@ -61,9 +62,11 @@ export default function BuscarMaterial() {
           )
         );
 
-        materiaisSnap.docs.forEach((doc) => {
+        materiaisSnap.forEach((doc) => {
 
           const data = doc.data();
+
+          if (!data?.nome) return;
 
           lista.push({
             nome: data.nome,
@@ -79,7 +82,6 @@ export default function BuscarMaterial() {
 
     }
 
-    // ordenar lista
     lista.sort((a, b) =>
       a.nome.localeCompare(b.nome, "pt-BR")
     );
@@ -103,12 +105,17 @@ export default function BuscarMaterial() {
       normalizarTexto(m.nome).includes(buscaNormalizada) && m.saldo > 0
     );
 
-    // remover duplicados pelo nome
-    const unicos = Array.from(
-      new Map(
-        filtrados.map((item) => [item.nome.toLowerCase(), item])
-      ).values()
-    );
+    // remover duplicados
+    const mapa = new Map<string, Material>();
+
+    filtrados.forEach((item) => {
+      const chave = normalizarTexto(item.nome);
+      if (!mapa.has(chave)) {
+        mapa.set(chave, item);
+      }
+    });
+
+    const unicos = Array.from(mapa.values());
 
     unicos.sort((a, b) =>
       a.nome.localeCompare(b.nome, "pt-BR")
@@ -121,7 +128,9 @@ export default function BuscarMaterial() {
   function abrirMaterial(material: Material) {
 
     const listaMateriais = materiais
-      .filter((m) => m.nome.toLowerCase() === material.nome.toLowerCase())
+      .filter((m) =>
+        normalizarTexto(m.nome) === normalizarTexto(material.nome)
+      )
       .filter((m) => m.saldo > 0);
 
     const data = encodeURIComponent(JSON.stringify(listaMateriais));
