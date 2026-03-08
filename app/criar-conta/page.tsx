@@ -1,113 +1,156 @@
 "use client";
 
 import { useState } from "react";
+import { auth, db } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { collection, getDocs } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-
-import { db, auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
-export default function CriarContaPage() {
+export default function LoginPage() {
 
   const router = useRouter();
 
-  const [email,setEmail] = useState("");
-  const [senha,setSenha] = useState("");
-  const [confirmar,setConfirmar] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [erro, setErro] = useState("");
+  const [carregando, setCarregando] = useState(false);
 
-  const [loading,setLoading] = useState(false);
+  async function handleLogin(e: React.FormEvent) {
 
-  async function criarConta(){
+    e.preventDefault();
+    setErro("");
+    setCarregando(true);
 
-    if(!email || !senha){
-      alert("Preencha todos os campos");
-      return;
-    }
+    try {
 
-    if(senha !== confirmar){
-      alert("Senhas não conferem");
-      return;
-    }
+      const cred = await signInWithEmailAndPassword(auth, email, senha);
 
-    setLoading(true);
+      const uid = cred.user.uid;
 
-    try{
+      const snap = await getDocs(collection(db, "usuarios"));
 
-      const snap = await getDocs(collection(db,"usuarios"));
+      let usuario:any = null;
 
-      const existe = snap.docs.some((doc)=>
-        doc.data().email === email
-      );
+      snap.forEach((doc) => {
 
-      if(!existe){
+        const data = doc.data();
 
-        alert("Este email não está autorizado no sistema.");
-        setLoading(false);
+        if (data.uid === uid) {
+          usuario = data;
+        }
+
+      });
+
+      if (!usuario) {
+
+        setErro("Usuário sem permissão.");
+        setCarregando(false);
         return;
 
       }
 
-      await createUserWithEmailAndPassword(
-        auth,
-        email,
-        senha
-      );
+      const role = usuario.role;
 
-      alert("Conta criada com sucesso!");
+      if (role === "admin") {
 
-      router.push("/login");
+        router.push("/dashboard");
 
-    }catch(error){
+      } else if (role === "almoxarifado") {
 
-      console.error(error);
-      alert("Erro ao criar conta");
+        router.push("/controle");
+
+      } else {
+
+        router.push("/dashboard");
+
+      }
+
+    } catch {
+
+      setErro("Email ou senha inválidos.");
+      setCarregando(false);
 
     }
 
-    setLoading(false);
-
   }
 
-  return(
+  return (
 
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
 
-      <div className="bg-white p-8 rounded-xl shadow w-96 space-y-4">
+      <div className="bg-white p-10 rounded-2xl shadow-xl w-96">
 
-        <h1 className="text-2xl font-bold text-center">
-          Criar Conta
-        </h1>
+        <div className="text-center mb-8">
 
-        <input
-          placeholder="Email"
-          value={email}
-          onChange={(e)=>setEmail(e.target.value)}
-          className="border p-2 rounded w-full"
-        />
+          <h1 className="text-3xl font-bold text-gray-800">
+            Estoque F.Vieira
+          </h1>
 
-        <input
-          type="password"
-          placeholder="Senha"
-          value={senha}
-          onChange={(e)=>setSenha(e.target.value)}
-          className="border p-2 rounded w-full"
-        />
+          <p className="text-gray-500 mt-2 text-sm">
+            Controle Profissional de Materiais
+          </p>
 
-        <input
-          type="password"
-          placeholder="Confirmar senha"
-          value={confirmar}
-          onChange={(e)=>setConfirmar(e.target.value)}
-          className="border p-2 rounded w-full"
-        />
+        </div>
 
-        <button
-          onClick={criarConta}
-          disabled={loading}
-          className="bg-blue-600 text-white w-full py-2 rounded"
-        >
-          {loading ? "Criando..." : "Criar conta"}
-        </button>
+        {erro && (
+          <div className="bg-red-100 text-red-600 text-sm p-2 rounded mb-4 text-center">
+            {erro}
+          </div>
+        )}
+
+        <form onSubmit={handleLogin}>
+
+          <input
+            type="email"
+            placeholder="Seu email"
+            className="w-full p-3 border rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+
+          <div className="relative mb-6">
+
+            <input
+              type={mostrarSenha ? "text" : "password"}
+              placeholder="Sua senha"
+              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+            />
+
+            <span
+              onClick={() => setMostrarSenha(!mostrarSenha)}
+              className="absolute right-3 top-3 cursor-pointer text-gray-500 text-sm"
+            >
+              {mostrarSenha ? "Ocultar" : "Mostrar"}
+            </span>
+
+          </div>
+
+          <button
+            type="submit"
+            disabled={carregando}
+            className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition flex justify-center items-center"
+          >
+            {carregando ? "Entrando..." : "Entrar"}
+          </button>
+
+        </form>
+
+        <div className="text-center mt-5">
+
+          <Link
+            href="/criar-conta"
+            className="text-blue-600 hover:underline text-sm"
+          >
+            Criar conta / Definir senha
+          </Link>
+
+        </div>
 
       </div>
 
