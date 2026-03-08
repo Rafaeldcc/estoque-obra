@@ -282,8 +282,10 @@ export default function CadastrarMaterial() {
       return;
     }
 
-    if (role !== "admin" && role !== "almoxarifado") {
-      alert("Sem permissão.");
+    /* PERMISSÃO ATUALIZADA */
+
+    if (!role) {
+      alert("Usuário sem permissão definida.");
       return;
     }
 
