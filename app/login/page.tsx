@@ -25,27 +25,27 @@ export default function LoginPage() {
 
     try {
 
-      // Login no Firebase Auth
-      await signInWithEmailAndPassword(auth, email, senha);
+      // Login Firebase
+      const cred = await signInWithEmailAndPassword(auth, email, senha);
 
-      // Buscar usuários cadastrados
-      const snap = await getDocs(collection(db, "usuarios"));
+      // Buscar usuário no Firestore
+      const snap = await getDocs(collection(db,"usuarios"));
 
-      let usuario: any = null;
+      let usuario:any = null;
 
-      snap.forEach((doc) => {
+      snap.forEach((doc)=>{
 
         const data = doc.data();
 
-        if (data.email === email) {
+        if(data.email === email){
           usuario = data;
         }
 
       });
 
-      if (!usuario) {
+      if(!usuario){
 
-        setErro("Usuário sem permissão.");
+        setErro("Usuário não autorizado.");
         setCarregando(false);
         return;
 
@@ -53,22 +53,27 @@ export default function LoginPage() {
 
       const role = usuario.role;
 
-      // Redirecionamento por tipo de usuário
-      if (role === "admin") {
+      // Redirecionamento
+      if(role === "admin"){
 
         router.push("/dashboard");
 
-      } else if (role === "almoxarifado") {
-
-        router.push("/controle");
-
-      } else {
+      }else if(role === "user"){
 
         router.push("/dashboard");
+
+      }else if(role === "almoxarifado"){
+
+        router.push("/dashboard");
+
+      }else{
+
+        setErro("Usuário sem permissão definida.");
+        setCarregando(false);
 
       }
 
-    } catch (error) {
+    } catch (error){
 
       console.error(error);
       setErro("Email ou senha inválidos.");
@@ -107,9 +112,9 @@ export default function LoginPage() {
           <input
             type="email"
             placeholder="Seu email"
-            className="w-full p-3 border rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full p-3 border rounded-lg mb-4"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e)=>setEmail(e.target.value)}
             required
           />
 
@@ -118,14 +123,14 @@ export default function LoginPage() {
             <input
               type={mostrarSenha ? "text" : "password"}
               placeholder="Sua senha"
-              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-3 border rounded-lg"
               value={senha}
-              onChange={(e) => setSenha(e.target.value)}
+              onChange={(e)=>setSenha(e.target.value)}
               required
             />
 
             <span
-              onClick={() => setMostrarSenha(!mostrarSenha)}
+              onClick={()=>setMostrarSenha(!mostrarSenha)}
               className="absolute right-3 top-3 cursor-pointer text-gray-500 text-sm"
             >
               {mostrarSenha ? "Ocultar" : "Mostrar"}
@@ -136,7 +141,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={carregando}
-            className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition flex justify-center items-center"
+            className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold"
           >
             {carregando ? "Entrando..." : "Entrar"}
           </button>
