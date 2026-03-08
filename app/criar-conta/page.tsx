@@ -3,51 +3,84 @@
 import { useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
-export default function CriarContaPage(){
+export default function CriarContaPage() {
 
   const router = useRouter();
 
-  const [email,setEmail] = useState("");
-  const [senha,setSenha] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function criarConta(){
+  async function criarConta() {
 
-    const cred = await createUserWithEmailAndPassword(auth,email,senha);
+    if (!email || !senha) {
+      alert("Preencha todos os campos");
+      return;
+    }
 
-    const uid = cred.user.uid;
+    setLoading(true);
 
-    const snap = await getDocs(collection(db,"usuarios"));
+    try {
 
-    snap.forEach(async(docSnap)=>{
+      // verifica se email existe no cadastro de usuários
+      const snap = await getDocs(collection(db, "usuarios"));
 
-      const data = docSnap.data();
+      let usuarioEncontrado:any = null;
+      let docId:any = null;
 
-      if(data.email === email){
+      snap.forEach((docSnap) => {
 
-        await updateDoc(doc(db,"usuarios",docSnap.id),{
-          uid
-        });
+        const data = docSnap.data();
 
+        if (data.email === email) {
+          usuarioEncontrado = data;
+          docId = docSnap.id;
+        }
+
+      });
+
+      if (!usuarioEncontrado) {
+        alert("Este email não está autorizado no sistema.");
+        setLoading(false);
+        return;
       }
 
-    });
+      // cria login no Firebase Auth
+      const cred = await createUserWithEmailAndPassword(auth, email, senha);
 
-    alert("Conta criada com sucesso");
+      const uid = cred.user.uid;
 
-    router.push("/login");
+      // atualiza o documento do usuário com UID
+      await setDoc(doc(db, "usuarios", uid), {
+        ...usuarioEncontrado,
+        uid
+      });
+
+      alert("Conta criada com sucesso!");
+
+      router.push("/login");
+
+    } catch (error:any) {
+
+      console.error(error);
+      alert("Erro ao criar conta: " + error.message);
+
+    }
+
+    setLoading(false);
 
   }
 
-  return(
+  return (
 
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
 
-      <div className="bg-white p-8 rounded shadow w-96">
+      <div className="bg-white p-8 rounded-xl shadow w-96 space-y-4">
 
-        <h1 className="text-xl font-bold mb-4">
+        <h1 className="text-2xl font-bold text-center">
           Criar Conta
         </h1>
 
@@ -55,7 +88,7 @@ export default function CriarContaPage(){
           placeholder="Email"
           value={email}
           onChange={(e)=>setEmail(e.target.value)}
-          className="border p-2 rounded w-full mb-3"
+          className="border p-2 rounded w-full"
         />
 
         <input
@@ -63,14 +96,15 @@ export default function CriarContaPage(){
           placeholder="Senha"
           value={senha}
           onChange={(e)=>setSenha(e.target.value)}
-          className="border p-2 rounded w-full mb-4"
+          className="border p-2 rounded w-full"
         />
 
         <button
           onClick={criarConta}
+          disabled={loading}
           className="bg-blue-600 text-white w-full py-2 rounded"
         >
-          Criar conta
+          {loading ? "Criando..." : "Criar conta"}
         </button>
 
       </div>
