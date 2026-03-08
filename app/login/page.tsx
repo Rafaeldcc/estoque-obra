@@ -25,11 +25,13 @@ export default function LoginPage() {
 
     try {
 
-      const cred = await signInWithEmailAndPassword(auth, email, senha);
+      // Login no Firebase Auth
+      await signInWithEmailAndPassword(auth, email, senha);
 
+      // Buscar usuários cadastrados
       const snap = await getDocs(collection(db, "usuarios"));
 
-      let usuario:any = null;
+      let usuario: any = null;
 
       snap.forEach((doc) => {
 
@@ -51,6 +53,7 @@ export default function LoginPage() {
 
       const role = usuario.role;
 
+      // Redirecionamento por tipo de usuário
       if (role === "admin") {
 
         router.push("/dashboard");
@@ -65,8 +68,9 @@ export default function LoginPage() {
 
       }
 
-    } catch {
+    } catch (error) {
 
+      console.error(error);
       setErro("Email ou senha inválidos.");
       setCarregando(false);
 
