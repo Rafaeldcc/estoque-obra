@@ -213,8 +213,8 @@ export default function CadastrarMaterial() {
 
     const filtradas = materiaisExistentes
       .filter((m) =>
-        normalizarTexto(m).includes(normalizarTexto(valor))
-      )
+       normalizarTexto(m).startsWith(normalizarTexto(valor))
+   )
       .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
     setSugestoes(filtradas);
