@@ -2,71 +2,101 @@
 
 import { useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from "firebase/auth";
+import {
+  collection,
+  getDocs,
+  doc,
+  setDoc
+} from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 export default function CriarContaPage() {
 
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email,setEmail] = useState("");
+  const [senha,setSenha] = useState("");
+  const [loading,setLoading] = useState(false);
 
-  async function criarConta() {
+  async function criarConta(){
 
-    if (!email || !senha) {
+    if(!email || !senha){
       alert("Preencha todos os campos");
       return;
     }
 
     setLoading(true);
 
-    try {
+    try{
 
-      // verifica se email existe no cadastro de usuários
-      const snap = await getDocs(collection(db, "usuarios"));
+      // 🔎 verifica se email está autorizado
+      const snap = await getDocs(collection(db,"usuarios"));
 
       let usuarioEncontrado:any = null;
-      let docId:any = null;
 
-      snap.forEach((docSnap) => {
+      snap.forEach((docSnap)=>{
 
         const data = docSnap.data();
 
-        if (data.email === email) {
+        if(data.email === email){
           usuarioEncontrado = data;
-          docId = docSnap.id;
         }
 
       });
 
-      if (!usuarioEncontrado) {
+      if(!usuarioEncontrado){
+
         alert("Este email não está autorizado no sistema.");
         setLoading(false);
         return;
+
       }
 
-      // cria login no Firebase Auth
-      const cred = await createUserWithEmailAndPassword(auth, email, senha);
+      try{
 
-      const uid = cred.user.uid;
+        // 🚀 tenta criar conta
+        const cred = await createUserWithEmailAndPassword(auth,email,senha);
 
-      // atualiza o documento do usuário com UID
-      await setDoc(doc(db, "usuarios", uid), {
-        ...usuarioEncontrado,
-        uid
-      });
+        const uid = cred.user.uid;
 
-      alert("Conta criada com sucesso!");
+        // salva no firestore usando UID
+        await setDoc(doc(db,"usuarios",uid),{
+          ...usuarioEncontrado,
+          uid,
+          email
+        });
 
-      router.push("/login");
+        alert("Conta criada com sucesso!");
 
-    } catch (error:any) {
+        router.push("/dashboard");
+
+      }catch(error:any){
+
+        // 🔄 se já existir → faz login
+        if(error.code === "auth/email-already-in-use"){
+
+          await signInWithEmailAndPassword(auth,email,senha);
+
+          alert("Conta já existia. Login realizado.");
+
+          router.push("/dashboard");
+
+        }else{
+
+          throw error;
+
+        }
+
+      }
+
+    }catch(error){
 
       console.error(error);
-      alert("Erro ao criar conta: " + error.message);
+      alert("Erro ao criar conta");
 
     }
 
@@ -74,7 +104,7 @@ export default function CriarContaPage() {
 
   }
 
-  return (
+  return(
 
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
 
