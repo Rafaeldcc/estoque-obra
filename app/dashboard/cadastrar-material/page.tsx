@@ -80,8 +80,8 @@ export default function CadastrarMaterial() {
   }, [obraId]);
 
   useEffect(() => {
-    if (obraId && setorId) carregarMateriais();
-  }, [obraId, setorId]);
+    carregarMateriais();
+  }, []);
 
   async function carregarUsuario() {
 
@@ -159,19 +159,47 @@ export default function CadastrarMaterial() {
 
   async function carregarMateriais() {
 
-    if (!obraId || !setorId) return;
+    const obrasSnap = await getDocs(collection(db, "obras"));
 
-    const snap = await getDocs(
-      collection(db, "obras", obraId, "setores", setorId, "materiais")
-    );
+    let lista: string[] = [];
 
-    const nomes = snap.docs.map((doc) => doc.data().nome);
+    for (const obra of obrasSnap.docs) {
 
-    nomes.sort((a, b) => a.localeCompare(b, "pt-BR"));
+      const setoresSnap = await getDocs(
+        collection(db, "obras", obra.id, "setores")
+      );
 
-    setMateriaisExistentes(nomes);
+      for (const setor of setoresSnap.docs) {
+
+        const materiaisSnap = await getDocs(
+          collection(
+            db,
+            "obras",
+            obra.id,
+            "setores",
+            setor.id,
+            "materiais"
+        )
+      );
+
+      materiaisSnap.forEach((doc) => {
+        const data = doc.data();
+        if (data?.nome) {
+          lista.push(data.nome);
+        }
+      });
+
+    }
 
   }
+
+  lista = [...new Set(lista)];
+
+  lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  setMateriaisExistentes(lista);
+
+}
 
   function filtrarSugestoes(valor: string) {
 
