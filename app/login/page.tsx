@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { collection, getDocs } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -11,79 +11,61 @@ export default function LoginPage() {
 
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [erro, setErro] = useState("");
-  const [carregando, setCarregando] = useState(false);
+  const [email,setEmail] = useState("");
+  const [senha,setSenha] = useState("");
+  const [mostrarSenha,setMostrarSenha] = useState(false);
+  const [erro,setErro] = useState("");
+  const [loading,setLoading] = useState(false);
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e:any){
 
     e.preventDefault();
     setErro("");
-    setCarregando(true);
+    setLoading(true);
 
-    try {
+    try{
 
-      // Login Firebase
-      const cred = await signInWithEmailAndPassword(auth, email, senha);
+      const cred = await signInWithEmailAndPassword(auth,email,senha);
 
-      // Buscar usuário no Firestore
-      const snap = await getDocs(collection(db,"usuarios"));
+      const uid = cred.user.uid;
 
-      let usuario:any = null;
+      const snap = await getDoc(doc(db,"usuarios",uid));
 
-      snap.forEach((doc)=>{
+      if(!snap.exists()){
 
-        const data = doc.data();
-
-        if(data.email === email){
-          usuario = data;
-        }
-
-      });
-
-      if(!usuario){
-
-        setErro("Usuário não autorizado.");
-        setCarregando(false);
+        setErro("Usuário sem permissão.");
+        setLoading(false);
         return;
 
       }
 
-      const role = usuario.role;
+      const role = snap.data().role;
 
-      // Redirecionamento
       if(role === "admin"){
-
         router.push("/dashboard");
-
-      }else if(role === "user"){
-
+      }
+      else if(role === "user"){
         router.push("/dashboard");
-
-      }else if(role === "almoxarifado"){
-
+      }
+      else if(role === "almoxarifado"){
         router.push("/dashboard");
-
-      }else{
-
+      }
+      else{
         setErro("Usuário sem permissão definida.");
-        setCarregando(false);
-
+        setLoading(false);
       }
 
-    } catch (error){
+    }catch(error){
 
       console.error(error);
       setErro("Email ou senha inválidos.");
-      setCarregando(false);
+      setLoading(false);
 
     }
 
   }
 
-  return (
+  return(
 
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
 
@@ -101,10 +83,12 @@ export default function LoginPage() {
 
         </div>
 
-        {erro && (
+        {erro &&(
+
           <div className="bg-red-100 text-red-600 text-sm p-2 rounded mb-4 text-center">
             {erro}
           </div>
+
         )}
 
         <form onSubmit={handleLogin}>
@@ -112,20 +96,20 @@ export default function LoginPage() {
           <input
             type="email"
             placeholder="Seu email"
-            className="w-full p-3 border rounded-lg mb-4"
             value={email}
             onChange={(e)=>setEmail(e.target.value)}
+            className="w-full p-3 border rounded-lg mb-4"
             required
           />
 
           <div className="relative mb-6">
 
             <input
-              type={mostrarSenha ? "text" : "password"}
+              type={mostrarSenha ? "text":"password"}
               placeholder="Sua senha"
-              className="w-full p-3 border rounded-lg"
               value={senha}
               onChange={(e)=>setSenha(e.target.value)}
+              className="w-full p-3 border rounded-lg"
               required
             />
 
@@ -133,17 +117,17 @@ export default function LoginPage() {
               onClick={()=>setMostrarSenha(!mostrarSenha)}
               className="absolute right-3 top-3 cursor-pointer text-gray-500 text-sm"
             >
-              {mostrarSenha ? "Ocultar" : "Mostrar"}
+              {mostrarSenha ? "Ocultar":"Mostrar"}
             </span>
 
           </div>
 
           <button
             type="submit"
-            disabled={carregando}
-            className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white p-3 rounded-lg"
           >
-            {carregando ? "Entrando..." : "Entrar"}
+            {loading ? "Entrando..." : "Entrar"}
           </button>
 
         </form>
