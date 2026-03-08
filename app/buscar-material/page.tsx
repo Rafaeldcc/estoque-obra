@@ -25,6 +25,13 @@ export default function BuscarMaterial() {
     carregarMateriais();
   }, []);
 
+  function normalizarTexto(texto: string) {
+    return texto
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
+
   async function carregarMateriais() {
 
     const lista: Material[] = [];
@@ -72,6 +79,7 @@ export default function BuscarMaterial() {
 
     }
 
+    // ordenar lista
     lista.sort((a, b) =>
       a.nome.localeCompare(b.nome, "pt-BR")
     );
@@ -89,10 +97,13 @@ export default function BuscarMaterial() {
       return;
     }
 
+    const buscaNormalizada = normalizarTexto(valor);
+
     const filtrados = materiais.filter((m) =>
-      m.nome.toLowerCase().includes(valor.toLowerCase()) && m.saldo > 0
+      normalizarTexto(m.nome).includes(buscaNormalizada) && m.saldo > 0
     );
 
+    // remover duplicados pelo nome
     const unicos = Array.from(
       new Map(
         filtrados.map((item) => [item.nome.toLowerCase(), item])
