@@ -13,15 +13,11 @@ export default function LoginPage() {
 
   const [email,setEmail] = useState("");
   const [senha,setSenha] = useState("");
-  const [mostrarSenha,setMostrarSenha] = useState(false);
   const [erro,setErro] = useState("");
-  const [loading,setLoading] = useState(false);
 
   async function handleLogin(e:any){
 
     e.preventDefault();
-    setErro("");
-    setLoading(true);
 
     try{
 
@@ -32,35 +28,14 @@ export default function LoginPage() {
       const snap = await getDoc(doc(db,"usuarios",uid));
 
       if(!snap.exists()){
-
         setErro("Usuário sem permissão.");
-        setLoading(false);
         return;
-
       }
 
-      const role = snap.data().role;
+      router.push("/dashboard");
 
-      if(role === "admin"){
-        router.push("/dashboard");
-      }
-      else if(role === "user"){
-        router.push("/dashboard");
-      }
-      else if(role === "almoxarifado"){
-        router.push("/dashboard");
-      }
-      else{
-        setErro("Usuário sem permissão definida.");
-        setLoading(false);
-      }
-
-    }catch(error){
-
-      console.error(error);
+    }catch{
       setErro("Email ou senha inválidos.");
-      setLoading(false);
-
     }
 
   }
@@ -69,74 +44,46 @@ export default function LoginPage() {
 
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
 
-      <div className="bg-white p-10 rounded-2xl shadow-xl w-96">
+      <div className="bg-white p-10 rounded-xl shadow w-96">
 
-        <div className="text-center mb-8">
-
-          <h1 className="text-3xl font-bold text-gray-800">
-            Estoque F.Vieira
-          </h1>
-
-          <p className="text-gray-500 mt-2 text-sm">
-            Controle Profissional de Materiais
-          </p>
-
-        </div>
+        <h1 className="text-2xl font-bold text-center mb-6">
+          Estoque F.Vieira
+        </h1>
 
         {erro &&(
-
-          <div className="bg-red-100 text-red-600 text-sm p-2 rounded mb-4 text-center">
+          <div className="bg-red-100 text-red-600 p-2 rounded mb-4 text-center">
             {erro}
           </div>
-
         )}
 
         <form onSubmit={handleLogin}>
 
           <input
-            type="email"
-            placeholder="Seu email"
+            placeholder="Email"
             value={email}
             onChange={(e)=>setEmail(e.target.value)}
-            className="w-full p-3 border rounded-lg mb-4"
-            required
+            className="border p-2 rounded w-full mb-3"
           />
 
-          <div className="relative mb-6">
+          <input
+            type="password"
+            placeholder="Senha"
+            value={senha}
+            onChange={(e)=>setSenha(e.target.value)}
+            className="border p-2 rounded w-full mb-4"
+          />
 
-            <input
-              type={mostrarSenha ? "text":"password"}
-              placeholder="Sua senha"
-              value={senha}
-              onChange={(e)=>setSenha(e.target.value)}
-              className="w-full p-3 border rounded-lg"
-              required
-            />
-
-            <span
-              onClick={()=>setMostrarSenha(!mostrarSenha)}
-              className="absolute right-3 top-3 cursor-pointer text-gray-500 text-sm"
-            >
-              {mostrarSenha ? "Ocultar":"Mostrar"}
-            </span>
-
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white p-3 rounded-lg"
-          >
-            {loading ? "Entrando..." : "Entrar"}
+          <button className="bg-blue-600 text-white w-full py-2 rounded">
+            Entrar
           </button>
 
         </form>
 
-        <div className="text-center mt-5">
+        <div className="text-center mt-4">
 
           <Link
             href="/criar-conta"
-            className="text-blue-600 hover:underline text-sm"
+            className="text-blue-600 text-sm"
           >
             Criar conta / Definir senha
           </Link>
