@@ -73,12 +73,15 @@ export default function CadastrarMaterial() {
   useEffect(() => {
     carregarObras();
     carregarTodosSetores();
-    carregarMateriais(); // 🔥 agora carrega materiais de TODAS as obras
   }, []);
 
   useEffect(() => {
     if (obraId) carregarSetores();
   }, [obraId]);
+
+  useEffect(() => {
+    if (obraId && setorId) carregarMateriais();
+  }, [obraId, setorId]);
 
   async function carregarUsuario() {
 
@@ -154,51 +157,19 @@ export default function CadastrarMaterial() {
 
   }
 
-  /* 🔥 FUNÇÃO ATUALIZADA */
   async function carregarMateriais() {
 
-    const obrasSnap = await getDocs(collection(db, "obras"));
+    if (!obraId || !setorId) return;
 
-    let lista: string[] = [];
+    const snap = await getDocs(
+      collection(db, "obras", obraId, "setores", setorId, "materiais")
+    );
 
-    for (const obra of obrasSnap.docs) {
+    const nomes = snap.docs.map((doc) => doc.data().nome);
 
-      const setoresSnap = await getDocs(
-        collection(db, "obras", obra.id, "setores")
-      );
+    nomes.sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-      for (const setor of setoresSnap.docs) {
-
-        const materiaisSnap = await getDocs(
-          collection(
-            db,
-            "obras",
-            obra.id,
-            "setores",
-            setor.id,
-            "materiais"
-          )
-        );
-
-        materiaisSnap.forEach((doc) => {
-
-          const data = doc.data();
-
-          if (data?.nome) {
-            lista.push(data.nome);
-          }
-
-        });
-
-      }
-
-    }
-
-    lista = [...new Set(lista)];
-
-    lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-    setMateriaisExistentes(lista);
+    setMateriaisExistentes(nomes);
 
   }
 
@@ -311,6 +282,8 @@ export default function CadastrarMaterial() {
       return;
     }
 
+    /* PERMISSÃO ATUALIZADA */
+
     if (!role) {
       alert("Usuário sem permissão definida.");
       return;
@@ -389,7 +362,156 @@ export default function CadastrarMaterial() {
 
     <div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow space-y-4">
 
-      {/* SEU JSX ORIGINAL CONTINUA EXATAMENTE IGUAL */}
+      <h2 className="text-center text-lg font-semibold">
+        Cadastrar Material
+      </h2>
+
+      {mensagem && (
+        <div className="bg-green-600 text-white p-2 rounded text-center">
+          {mensagem}
+        </div>
+      )}
+
+      <select
+        value={obraId}
+        onChange={(e) => setObraId(e.target.value)}
+        className="w-full p-2 border rounded"
+      >
+        <option value="">Selecionar obra</option>
+
+        {obras.map((obra) => (
+          <option key={obra.id} value={obra.id}>
+            {obra.nome}
+          </option>
+        ))}
+
+      </select>
+
+      <select
+        value={setorId}
+        onChange={(e) => setSetorId(e.target.value)}
+        className="w-full p-2 border rounded"
+      >
+
+        <option value="">Selecionar setor</option>
+
+        {setores.map((setor) => (
+          <option key={setor.id} value={setor.id}>
+            {setor.nome}
+          </option>
+        ))}
+
+      </select>
+
+      {obraId && (
+
+        <div className="relative flex gap-2">
+
+          <div className="flex-1 relative">
+
+            <input
+              placeholder="Novo setor"
+              value={novoSetor}
+              onChange={(e) => filtrarSetores(e.target.value)}
+              className="w-full p-2 border rounded"
+            />
+
+            {mostrarSugestoesSetor && sugestoesSetor.length > 0 && (
+
+              <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto z-10">
+
+                {sugestoesSetor.map((item, index) => (
+
+                  <div
+                    key={index}
+                    onClick={() => {
+                      setNovoSetor(item)
+                      setMostrarSugestoesSetor(false)
+                    }}
+                    className="p-2 cursor-pointer hover:bg-gray-100"
+                  >
+                    {item}
+                  </div>
+
+                ))}
+
+              </div>
+
+            )}
+
+          </div>
+
+          <button
+            onClick={criarSetor}
+            className="bg-gray-800 text-white px-4 rounded"
+          >
+            Criar
+          </button>
+
+        </div>
+
+      )}
+
+      <div className="relative">
+
+        <input
+          placeholder="Nome do material"
+          value={nomeMaterial}
+          onChange={(e) => filtrarSugestoes(e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+
+        {mostrarSugestoes && sugestoes.length > 0 && (
+
+          <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto z-10">
+
+            {sugestoes.map((item, index) => (
+
+              <div
+                key={index}
+                onClick={() => {
+                  setNomeMaterial(item)
+                  setMostrarSugestoes(false)
+                }}
+                className="p-2 cursor-pointer hover:bg-gray-100"
+              >
+                {item}
+              </div>
+
+            ))}
+
+          </div>
+
+        )}
+
+      </div>
+
+      <input
+        type="number"
+        placeholder="Quantidade"
+        value={quantidade}
+        onChange={(e) => setQuantidade(Number(e.target.value))}
+        className="w-full p-2 border rounded"
+      />
+
+      <select
+        value={unidade}
+        onChange={(e) => setUnidade(e.target.value)}
+        className="w-full p-2 border rounded"
+      >
+
+        <option value="un">Unidade</option>
+        <option value="m">Metro</option>
+        <option value="pc">Peça</option>
+
+      </select>
+
+      <button
+        onClick={salvarMaterial}
+        className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+      >
+        Salvar Material
+      </button>
 
     </div>
 
