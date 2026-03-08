@@ -77,6 +77,7 @@ export default function BuscarMaterial() {
     );
 
     setMateriais(lista);
+
   }
 
   function pesquisar(valor: string) {
@@ -92,7 +93,6 @@ export default function BuscarMaterial() {
       m.nome.toLowerCase().includes(valor.toLowerCase()) && m.saldo > 0
     );
 
-    // remover duplicados pelo nome
     const unicos = Array.from(
       new Map(
         filtrados.map((item) => [item.nome.toLowerCase(), item])
@@ -104,6 +104,7 @@ export default function BuscarMaterial() {
     );
 
     setSugestoes(unicos.slice(0, 10));
+
   }
 
   function abrirMaterial(material: Material) {
@@ -115,6 +116,7 @@ export default function BuscarMaterial() {
     const data = encodeURIComponent(JSON.stringify(listaMateriais));
 
     router.push(`/material?data=${data}`);
+
   }
 
   return (
@@ -132,23 +134,39 @@ export default function BuscarMaterial() {
         className="w-full p-3 border rounded"
       />
 
-      <div className="mt-2 border rounded bg-white shadow">
+      {sugestoes.length > 0 && (
 
-        {sugestoes.map((mat, index) => (
+        <div className="mt-2 border rounded bg-white shadow">
 
-          <div
-            key={index}
-            onClick={() => abrirMaterial(mat)}
-            className="p-2 cursor-pointer hover:bg-gray-100 border-b text-sm"
-          >
-            {mat.nome}
-          </div>
+          {sugestoes.map((mat, index) => (
 
-        ))}
+            <div
+              key={index}
+              onClick={() => abrirMaterial(mat)}
+              className="p-3 cursor-pointer hover:bg-gray-100 border-b"
+            >
 
-      </div>
+              <div className="font-medium">
+                {mat.nome}
+              </div>
+
+              <div className="text-xs text-gray-500">
+
+                {mat.setor} • {mat.obra}  
+                • Estoque: {mat.saldo} {mat.unidade}
+
+              </div>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      )}
 
     </div>
 
   );
+
 }
