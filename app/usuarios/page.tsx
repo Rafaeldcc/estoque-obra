@@ -4,12 +4,16 @@ import { useEffect, useState } from "react";
 import {
   collection,
   getDocs,
-  addDoc,
   deleteDoc,
-  doc
+  doc,
+  setDoc
 } from "firebase/firestore";
 
-import { db } from "@/lib/firebase";
+import {
+  createUserWithEmailAndPassword
+} from "firebase/auth";
+
+import { db, auth } from "@/lib/firebase";
 import { useAuth } from "@/lib/useAuth";
 
 interface Usuario {
@@ -28,6 +32,7 @@ export default function UsuariosPage() {
 
   const [nome,setNome] = useState("");
   const [email,setEmail] = useState("");
+  const [senha,setSenha] = useState("");
   const [role,setRole] = useState("user");
   const [empresaId,setEmpresaId] = useState("empresa_1");
 
@@ -58,26 +63,45 @@ export default function UsuariosPage() {
 
   async function criarUsuario(){
 
-    if(!nome || !email){
-      alert("Preencha nome e email");
+    if(!nome || !email || !senha){
+      alert("Preencha todos os campos");
       return;
     }
 
-    await addDoc(collection(db,"usuarios"),{
+    try{
 
-      nome,
-      email,
-      role,
-      empresaId
+      // cria login no Firebase Auth
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        senha
+      );
 
-    });
+      const uid = cred.user.uid;
 
-    alert("Usuário cadastrado. Agora ele pode criar senha no login.");
+      // salva no Firestore
+      await setDoc(doc(db,"usuarios",uid),{
 
-    setNome("");
-    setEmail("");
+        nome,
+        email,
+        role,
+        empresaId
 
-    carregarUsuarios();
+      });
+
+      alert("Usuário criado com sucesso!");
+
+      setNome("");
+      setEmail("");
+      setSenha("");
+
+      carregarUsuarios();
+
+    }catch(error:any){
+
+      alert("Erro ao criar usuário: " + error.message);
+
+    }
 
   }
 
@@ -124,6 +148,14 @@ export default function UsuariosPage() {
           placeholder="Email"
           value={email}
           onChange={(e)=>setEmail(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
+
+        <input
+          type="password"
+          placeholder="Senha"
+          value={senha}
+          onChange={(e)=>setSenha(e.target.value)}
           className="border p-2 rounded w-full"
         />
 
