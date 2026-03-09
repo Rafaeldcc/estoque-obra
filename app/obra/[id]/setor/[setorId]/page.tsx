@@ -17,7 +17,6 @@ import {
 } from "firebase/storage";
 
 import { db, auth, storage } from "@/lib/firebase";
-
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 
@@ -49,30 +48,13 @@ export default function ControleEstoque() {
   const [destinos,setDestinos] = useState<{[key:string]:string}>({});
   const [minimos,setMinimos] = useState<{[key:string]:number}>({});
   const [busca,setBusca] = useState("");
-
   const [materialSelecionado,setMaterialSelecionado] = useState<string | null>(null);
-
   const [mensagem,setMensagem] = useState("");
-  const [empresaId,setEmpresaId] = useState<string>("");
 
   useEffect(()=>{
     carregarMateriais();
     carregarObras();
-    carregarEmpresa();
   },[]);
-
-  async function carregarEmpresa(){
-
-    const user = auth.currentUser;
-    if(!user) return;
-
-    const snap = await getDoc(doc(db,"usuarios",user.uid));
-
-    if(snap.exists()){
-      setEmpresaId(snap.data().empresaId);
-    }
-
-  }
 
   async function carregarMateriais(){
 
@@ -136,7 +118,10 @@ export default function ControleEstoque() {
 
     try{
 
-      const storageRef = ref(storage,`materiais/${material.id}-${Date.now()}`);
+      const storageRef = ref(
+        storage,
+        `materiais/${material.id}-${Date.now()}`
+      );
 
       await uploadBytes(storageRef,file);
 
@@ -292,33 +277,32 @@ export default function ControleEstoque() {
 
               <td className="p-3">
 
-                {material.foto ? (
+                <div className="flex flex-col items-center gap-2">
 
-                  <div className="flex flex-col gap-2">
+                  {material.foto && (
 
                     <img
                       src={material.foto}
                       alt={material.nome}
-                      className="w-14 h-14 object-cover rounded"
+                      className="w-16 h-16 object-cover rounded border"
                     />
+
+                  )}
+
+                  <label className="text-xs bg-gray-200 px-2 py-1 rounded cursor-pointer">
+
+                    {material.foto ? "Trocar foto" : "Adicionar foto"}
 
                     <input
                       type="file"
                       accept="image/*"
+                      className="hidden"
                       onChange={(e)=>uploadFoto(e,material)}
                     />
 
-                  </div>
+                  </label>
 
-                ) : (
-
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e)=>uploadFoto(e,material)}
-                  />
-
-                )}
+                </div>
 
               </td>
 
