@@ -151,15 +151,35 @@ export default function ControleEstoque() {
 
   async function salvarMinimo(material:Material){
 
-    const minimo = minimos[material.id];
-    if(minimo === undefined) return;
+    const minimo = Number(minimos[material.id]);
 
-    await updateDoc(
-      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
-      { estoqueMinimo:minimo }
-    );
+    if(isNaN(minimo)){
+      alert("Digite o estoque mínimo");
+      return;
+    }
 
-    mostrarMensagem("Estoque mínimo atualizado");
+    try{
+
+      await updateDoc(
+        doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+        { estoqueMinimo:minimo }
+      );
+
+      mostrarMensagem("Estoque mínimo atualizado");
+
+      setMaterialSelecionado({
+        ...material,
+        estoqueMinimo:minimo
+      });
+
+      carregarMateriais();
+
+    }catch(error){
+
+      console.error(error);
+      alert("Erro ao salvar estoque mínimo");
+
+    }
 
   }
 
@@ -399,6 +419,11 @@ export default function ControleEstoque() {
               <input
                 type="number"
                 placeholder="Estoque mínimo"
+                value={
+                  minimos[materialSelecionado.id] ??
+                  materialSelecionado.estoqueMinimo ??
+                  ""
+                }
                 onChange={(e)=>
                   setMinimos({
                     ...minimos,
