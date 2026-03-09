@@ -7,17 +7,22 @@ const firebaseConfig = {
   apiKey: "AIzaSyDVPQV37mBO5QfknQcnhHCCu7KjAblwgzw",
   authDomain: "estoque-obra.firebaseapp.com",
   projectId: "estoque-obra",
-  storageBucket: "estoque-obra.appspot.com",
+
+  // ⚠️ bucket correto do storage
+  storageBucket: "estoque-obra.firebasestorage.app",
+
   messagingSenderId: "598372144788",
   appId: "1:598372144788:web:25d3028b9d7f76684d0681",
 };
 
-// Evita reinicializar o Firebase no Next.js
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// evita reinicialização no Next.js
+const app = getApps().length === 0
+  ? initializeApp(firebaseConfig)
+  : getApp();
 
-// Serviços Firebase
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+// serviços
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
 
-export { app, auth, db, storage };
+export default app;
