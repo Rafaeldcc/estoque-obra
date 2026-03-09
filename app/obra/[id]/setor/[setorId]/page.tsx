@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   collection,
   getDocs,
-  addDoc,
   updateDoc,
   deleteDoc,
   doc,
@@ -42,6 +41,9 @@ export default function ControleEstoque() {
   const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
   const [destinos,setDestinos] = useState<{[key:string]:string}>({});
   const [minimos,setMinimos] = useState<{[key:string]:number}>({});
+  const [busca,setBusca] = useState("");
+
+  const [materialSelecionado,setMaterialSelecionado] = useState<string | null>(null);
 
   const [mensagem,setMensagem] = useState("");
   const [empresaId,setEmpresaId] = useState<string>("");
@@ -85,6 +87,8 @@ export default function ControleEstoque() {
       });
 
     });
+
+    lista.sort((a,b)=>a.nome.localeCompare(b.nome));
 
     setMateriais(lista);
   }
@@ -161,7 +165,7 @@ export default function ControleEstoque() {
       quantidade: qtd,
 
       obraId: obraId,
-      obraNome: obras.find(o=>o.id === obraId)?.nome || "",
+      obraNome: "",
 
       destino: "uso",
 
@@ -195,30 +199,7 @@ export default function ControleEstoque() {
       { saldo:novoSaldo }
     );
 
-    const user = auth.currentUser;
-
-    await registrarMovimentacao({
-
-      materialId: material.id,
-      materialNome: material.nome,
-
-      tipo: "transferencia",
-      quantidade: qtd,
-
-      obraId: obraId,
-      obraNome: obras.find(o=>o.id === obraId)?.nome || "",
-
-      destino: "transferencia",
-      obraDestino: obras.find(o=>o.id === destinoObra)?.nome || "",
-
-      usuarioId: user?.uid || "",
-      usuarioNome: user?.email || "",
-
-      empresaId: empresaId
-
-    });
-
-    mostrarMensagem("Transferência realizada com sucesso");
+    mostrarMensagem("Transferência realizada");
 
     setQuantidades({...quantidades,[material.id]:0});
     setDestinos({...destinos,[material.id]:""});
@@ -246,13 +227,24 @@ export default function ControleEstoque() {
 
   }
 
+  const filtrados = materiais.filter(m =>
+    m.nome.toLowerCase().includes(busca.toLowerCase())
+  );
+
   return(
 
     <div className="max-w-6xl mx-auto p-8">
 
-      <h1 className="text-3xl font-bold mb-8">
+      <h1 className="text-3xl font-bold mb-6">
         Controle de Estoque
       </h1>
+
+      <input
+        placeholder="Buscar material..."
+        value={busca}
+        onChange={(e)=>setBusca(e.target.value)}
+        className="border p-3 rounded mb-6 w-full"
+      />
 
       {mensagem && (
 
@@ -262,137 +254,148 @@ export default function ControleEstoque() {
 
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="bg-white rounded-xl shadow overflow-hidden">
 
-        {materiais.map((material)=>(
+        <table className="w-full">
 
-          <div
-            key={material.id}
-            className={`rounded-2xl shadow-md hover:shadow-xl transition p-6 ${
-              material.estoqueMinimo && material.saldo <= material.estoqueMinimo
-              ? "bg-red-50 border border-red-400"
-              : "bg-white"
-            }`}
-          >
+          <thead className="bg-gray-100">
 
-            <div className="flex justify-between items-center mb-4">
+            <tr>
+              <th className="p-3 text-left">Material</th>
+              <th className="p-3 text-center">Saldo</th>
+              <th className="p-3 text-center">Ação</th>
+            </tr>
 
-              <h2 className="text-xl font-semibold">
-                {material.nome}
-              </h2>
+          </thead>
 
-              <span className={`text-2xl font-bold ${corSaldo(material.saldo)}`}>
-                {material.saldo} {material.unidade}
-              </span>
+          <tbody>
 
-            </div>
+            {filtrados.map(material=>(
 
-            {material.estoqueMinimo && material.saldo <= material.estoqueMinimo && (
-
-              <div className="text-red-600 font-semibold mb-2">
-                ⚠ Estoque baixo
-              </div>
-
-            )}
-
-            <div className="flex gap-2 mb-3">
-
-              <input
-                type="number"
-                placeholder="Qtd"
-                className="border rounded px-2 py-1 w-20"
-                value={quantidades[material.id] ?? ""}
-                onChange={(e)=>
-                  setQuantidades({
-                    ...quantidades,
-                    [material.id]:Number(e.target.value)
-                  })
-                }
-              />
-
-              <button
-                onClick={()=>entrada(material)}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg"
-              >
-                ➕ Entrada
-              </button>
-
-            </div>
-
-            <div className="flex gap-2 mb-3">
-
-              <select
-                value={destinos[material.id] ?? ""}
-                onChange={(e)=>
-                  setDestinos({
-                    ...destinos,
-                    [material.id]:e.target.value
-                  })
-                }
-                className="border rounded px-2 py-1 flex-1"
+              <>
+              <tr
+                key={material.id}
+                className="border-t hover:bg-gray-50 cursor-pointer"
+                onClick={()=>setMaterialSelecionado(
+                  materialSelecionado === material.id ? null : material.id
+                )}
               >
 
-                <option value="">Obra destino</option>
+                <td className="p-3 font-medium">
+                  {material.nome}
+                </td>
 
-                {obras.map((obra)=>(
-                  <option key={obra.id} value={obra.id}>
-                    {obra.nome}
-                  </option>
-                ))}
+                <td className={`p-3 text-center font-bold ${corSaldo(material.saldo)}`}>
+                  {material.saldo} {material.unidade}
+                </td>
 
-              </select>
+                <td className="p-3 text-center">
+                  Abrir
+                </td>
 
-              <button
-                onClick={()=>transferir(material)}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-lg"
-              >
-                🔄 Transferir
-              </button>
+              </tr>
 
-            </div>
+              {materialSelecionado === material.id && (
 
-            <div className="flex gap-2 mt-3">
+                <tr className="bg-gray-50">
 
-              <input
-                type="number"
-                placeholder="Estoque mínimo"
-                value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
-                onChange={(e)=>
-                  setMinimos({
-                    ...minimos,
-                    [material.id]:Number(e.target.value)
-                  })
-                }
-                className="border rounded px-2 py-1 w-32"
-              />
+                  <td colSpan={3} className="p-4">
 
-              <button
-                onClick={()=>salvarMinimo(material)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
-              >
-                Salvar mínimo
-              </button>
+                    <div className="flex flex-wrap gap-3">
 
-            </div>
+                      <input
+                        type="number"
+                        placeholder="Qtd"
+                        className="border p-2 w-24 rounded"
+                        value={quantidades[material.id] ?? ""}
+                        onChange={(e)=>
+                          setQuantidades({
+                            ...quantidades,
+                            [material.id]:Number(e.target.value)
+                          })
+                        }
+                      />
 
-            <div className="flex justify-between mt-4">
+                      <button
+                        onClick={()=>entrada(material)}
+                        className="bg-green-600 text-white px-4 py-2 rounded"
+                      >
+                        Entrada
+                      </button>
 
-              {role === "admin" && (
+                      <select
+                        value={destinos[material.id] ?? ""}
+                        onChange={(e)=>
+                          setDestinos({
+                            ...destinos,
+                            [material.id]:e.target.value
+                          })
+                        }
+                        className="border p-2 rounded"
+                      >
+                        <option value="">Obra destino</option>
 
-                <button
-                  onClick={()=>excluir(material.id)}
-                  className="text-red-600 hover:underline text-sm"
-                >
-                  Excluir
-                </button>
+                        {obras.map(obra=>(
+                          <option key={obra.id} value={obra.id}>
+                            {obra.nome}
+                          </option>
+                        ))}
+
+                      </select>
+
+                      <button
+                        onClick={()=>transferir(material)}
+                        className="bg-purple-600 text-white px-4 py-2 rounded"
+                      >
+                        Transferir
+                      </button>
+
+                      <input
+                        type="number"
+                        placeholder="Estoque mínimo"
+                        value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
+                        onChange={(e)=>
+                          setMinimos({
+                            ...minimos,
+                            [material.id]:Number(e.target.value)
+                          })
+                        }
+                        className="border p-2 w-32 rounded"
+                      />
+
+                      <button
+                        onClick={()=>salvarMinimo(material)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded"
+                      >
+                        Salvar mínimo
+                      </button>
+
+                      {role === "admin" && (
+
+                        <button
+                          onClick={()=>excluir(material.id)}
+                          className="text-red-600 font-semibold"
+                        >
+                          Excluir
+                        </button>
+
+                      )}
+
+                    </div>
+
+                  </td>
+
+                </tr>
 
               )}
 
-            </div>
+              </>
 
-          </div>
+            ))}
 
-        ))}
+          </tbody>
+
+        </table>
 
       </div>
 
