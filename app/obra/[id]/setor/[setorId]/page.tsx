@@ -10,8 +10,13 @@ import {
   getDoc
 } from "firebase/firestore";
 
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "firebase/storage";
+
 import { db, auth, storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useParams } from "next/navigation";
@@ -67,6 +72,7 @@ export default function ControleEstoque() {
     if(snap.exists()){
       setEmpresaId(snap.data().empresaId);
     }
+
   }
 
   async function carregarMateriais(){
@@ -95,6 +101,7 @@ export default function ControleEstoque() {
     lista.sort((a,b)=>a.nome.localeCompare(b.nome));
 
     setMateriais(lista);
+
   }
 
   async function carregarObras(){
@@ -113,13 +120,6 @@ export default function ControleEstoque() {
     });
 
     setObras(lista.filter((o)=>o.id !== obraId));
-  }
-
-  function corSaldo(saldo:number){
-
-    if(saldo <= 10) return "text-red-600";
-    if(saldo <= 50) return "text-yellow-600";
-    return "text-green-600";
 
   }
 
@@ -135,20 +135,30 @@ export default function ControleEstoque() {
     const file = e.target.files[0];
     if(!file) return;
 
-    const storageRef = ref(storage,`materiais/${material.id}`);
+    try{
 
-    await uploadBytes(storageRef,file);
+      const storageRef = ref(storage,`materiais/${material.id}`);
 
-    const url = await getDownloadURL(storageRef);
+      await uploadBytes(storageRef,file);
 
-    await updateDoc(
-      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
-      { foto:url }
-    );
+      const url = await getDownloadURL(storageRef);
 
-    mostrarMensagem("Foto atualizada");
+      await updateDoc(
+        doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+        { foto:url }
+      );
 
-    carregarMateriais();
+      mostrarMensagem("Foto salva com sucesso");
+
+      carregarMateriais();
+
+    }catch(error){
+
+      console.error(error);
+      alert("Erro ao enviar foto");
+
+    }
+
   }
 
   async function salvarMinimo(material:Material){
@@ -179,7 +189,7 @@ export default function ControleEstoque() {
       { saldo:novoSaldo }
     );
 
-    mostrarMensagem("Entrada realizada com sucesso");
+    mostrarMensagem("Entrada realizada");
 
     setQuantidades({...quantidades,[material.id]:0});
 
@@ -203,9 +213,6 @@ export default function ControleEstoque() {
     );
 
     mostrarMensagem("Transferência realizada");
-
-    setQuantidades({...quantidades,[material.id]:0});
-    setDestinos({...destinos,[material.id]:""});
 
     carregarMateriais();
 
@@ -257,166 +264,170 @@ export default function ControleEstoque() {
 
       )}
 
-      <div className="bg-white rounded-xl shadow overflow-hidden">
+      <table className="w-full border rounded-xl overflow-hidden">
 
-        <table className="w-full">
+        <thead className="bg-gray-100">
 
-          <thead className="bg-gray-100">
+          <tr>
+            <th className="p-3">Foto</th>
+            <th className="p-3 text-left">Material</th>
+            <th className="p-3 text-center">Saldo</th>
+            <th className="p-3 text-center">Ação</th>
+          </tr>
 
-            <tr>
-              <th className="p-3 text-left">Foto</th>
-              <th className="p-3 text-left">Material</th>
-              <th className="p-3 text-center">Saldo</th>
-              <th className="p-3 text-center">Ação</th>
+        </thead>
+
+        <tbody>
+
+          {filtrados.map(material=>(
+
+            <>
+            <tr
+              key={material.id}
+              className="border-t hover:bg-gray-50 cursor-pointer"
+              onClick={()=>setMaterialSelecionado(
+                materialSelecionado === material.id ? null : material.id
+              )}
+            >
+
+              <td className="p-3">
+
+                {material.foto ? (
+
+                  <img
+                    src={material.foto}
+                    className="w-14 h-14 object-cover rounded"
+                  />
+
+                ) : (
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e)=>uploadFoto(e,material)}
+                  />
+
+                )}
+
+              </td>
+
+              <td className="p-3 font-medium">
+                {material.nome}
+              </td>
+
+              <td className="p-3 text-center font-bold">
+                {material.saldo} {material.unidade}
+              </td>
+
+              <td className="p-3 text-center">
+                Abrir
+              </td>
+
             </tr>
 
-          </thead>
+            {materialSelecionado === material.id && (
 
-          <tbody>
+              <tr className="bg-gray-50">
 
-            {filtrados.map(material=>(
+                <td colSpan={4} className="p-4">
 
-              <>
-              <tr
-                key={material.id}
-                className="border-t hover:bg-gray-50 cursor-pointer"
-                onClick={()=>setMaterialSelecionado(
-                  materialSelecionado === material.id ? null : material.id
-                )}
-              >
+                  <div className="flex gap-3 flex-wrap">
 
-                <td className="p-3">
-                  {material.foto && (
-                    <img
-                      src={material.foto}
-                      className="w-12 h-12 object-cover rounded"
+                    <input
+                      type="number"
+                      placeholder="Qtd"
+                      className="border p-2 w-24 rounded"
+                      value={quantidades[material.id] ?? ""}
+                      onChange={(e)=>
+                        setQuantidades({
+                          ...quantidades,
+                          [material.id]:Number(e.target.value)
+                        })
+                      }
                     />
-                  )}
-                </td>
 
-                <td className="p-3 font-medium">
-                  {material.nome}
-                </td>
+                    <button
+                      onClick={()=>entrada(material)}
+                      className="bg-green-600 text-white px-4 py-2 rounded"
+                    >
+                      Entrada
+                    </button>
 
-                <td className={`p-3 text-center font-bold ${corSaldo(material.saldo)}`}>
-                  {material.saldo} {material.unidade}
-                </td>
+                    <select
+                      value={destinos[material.id] ?? ""}
+                      onChange={(e)=>
+                        setDestinos({
+                          ...destinos,
+                          [material.id]:e.target.value
+                        })
+                      }
+                      className="border p-2 rounded"
+                    >
+                      <option value="">Obra destino</option>
 
-                <td className="p-3 text-center">
-                  Abrir
+                      {obras.map(obra=>(
+
+                        <option key={obra.id} value={obra.id}>
+                          {obra.nome}
+                        </option>
+
+                      ))}
+
+                    </select>
+
+                    <button
+                      onClick={()=>transferir(material)}
+                      className="bg-purple-600 text-white px-4 py-2 rounded"
+                    >
+                      Transferir
+                    </button>
+
+                    <input
+                      type="number"
+                      placeholder="Estoque mínimo"
+                      value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
+                      onChange={(e)=>
+                        setMinimos({
+                          ...minimos,
+                          [material.id]:Number(e.target.value)
+                        })
+                      }
+                      className="border p-2 w-32 rounded"
+                    />
+
+                    <button
+                      onClick={()=>salvarMinimo(material)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded"
+                    >
+                      Salvar mínimo
+                    </button>
+
+                    {role === "admin" && (
+
+                      <button
+                        onClick={()=>excluir(material.id)}
+                        className="text-red-600 font-semibold"
+                      >
+                        Excluir
+                      </button>
+
+                    )}
+
+                  </div>
+
                 </td>
 
               </tr>
 
-              {materialSelecionado === material.id && (
+            )}
 
-                <tr className="bg-gray-50">
+            </>
 
-                  <td colSpan={4} className="p-4">
+          ))}
 
-                    <div className="flex flex-wrap gap-3">
+        </tbody>
 
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e)=>uploadFoto(e,material)}
-                      />
-
-                      <input
-                        type="number"
-                        placeholder="Qtd"
-                        className="border p-2 w-24 rounded"
-                        value={quantidades[material.id] ?? ""}
-                        onChange={(e)=>
-                          setQuantidades({
-                            ...quantidades,
-                            [material.id]:Number(e.target.value)
-                          })
-                        }
-                      />
-
-                      <button
-                        onClick={()=>entrada(material)}
-                        className="bg-green-600 text-white px-4 py-2 rounded"
-                      >
-                        Entrada
-                      </button>
-
-                      <select
-                        value={destinos[material.id] ?? ""}
-                        onChange={(e)=>
-                          setDestinos({
-                            ...destinos,
-                            [material.id]:e.target.value
-                          })
-                        }
-                        className="border p-2 rounded"
-                      >
-                        <option value="">Obra destino</option>
-
-                        {obras.map(obra=>(
-                          <option key={obra.id} value={obra.id}>
-                            {obra.nome}
-                          </option>
-                        ))}
-
-                      </select>
-
-                      <button
-                        onClick={()=>transferir(material)}
-                        className="bg-purple-600 text-white px-4 py-2 rounded"
-                      >
-                        Transferir
-                      </button>
-
-                      <input
-                        type="number"
-                        placeholder="Estoque mínimo"
-                        value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
-                        onChange={(e)=>
-                          setMinimos({
-                            ...minimos,
-                            [material.id]:Number(e.target.value)
-                          })
-                        }
-                        className="border p-2 w-32 rounded"
-                      />
-
-                      <button
-                        onClick={()=>salvarMinimo(material)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded"
-                      >
-                        Salvar mínimo
-                      </button>
-
-                      {role === "admin" && (
-
-                        <button
-                          onClick={()=>excluir(material.id)}
-                          className="text-red-600 font-semibold"
-                        >
-                          Excluir
-                        </button>
-
-                      )}
-
-                    </div>
-
-                  </td>
-
-                </tr>
-
-              )}
-
-              </>
-
-            ))}
-
-          </tbody>
-
-        </table>
-
-      </div>
+      </table>
 
     </div>
 
