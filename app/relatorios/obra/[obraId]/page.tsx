@@ -70,13 +70,19 @@ export default function RelatorioObra() {
 
     let y = 20;
 
-    pdf.setFontSize(18);
+    pdf.setFontSize(20);
     pdf.text("Relatório Geral da Obra",20,y);
 
     y += 10;
 
     pdf.setFontSize(12);
     pdf.text(`Obra: ${obraNome}`,20,y);
+
+    y += 8;
+
+    const data = new Date().toLocaleDateString();
+
+    pdf.text(`Data: ${data}`,20,y);
 
     y += 15;
 
@@ -85,15 +91,35 @@ export default function RelatorioObra() {
       pdf.setFontSize(14);
       pdf.text(`Setor: ${setor.nome}`,20,y);
 
-      y += 10;
+      y += 8;
 
       pdf.setFontSize(11);
+
+      pdf.text("Material",25,y);
+      pdf.text("Quantidade",150,y);
+
+      y += 3;
+
+      pdf.line(25,y,190,y);
+
+      y += 8;
 
       setor.materiais.forEach((m:any)=>{
 
         const saldo = m.saldo ?? 0;
+        const unidade = m.unidade || "";
 
-        pdf.text(`${m.nome} - ${saldo}`,25,y);
+        pdf.text(
+          m.nome,
+          25,
+          y
+        );
+
+        pdf.text(
+          `${saldo} ${unidade}`,
+          150,
+          y
+        );
 
         y += 7;
 
@@ -126,7 +152,7 @@ export default function RelatorioObra() {
 
       <button
         onClick={gerarPDF}
-        className="bg-green-600 text-white px-6 py-3 rounded"
+        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded"
       >
         Gerar PDF da Obra
       </button>
