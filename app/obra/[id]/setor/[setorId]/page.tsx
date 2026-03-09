@@ -250,7 +250,6 @@ export default function ControleEstoque() {
 
         <thead className="bg-gray-100">
           <tr>
-            <th className="p-3">Foto</th>
             <th className="p-3 text-left">Material</th>
             <th className="p-3 text-center">Saldo</th>
             <th className="p-3 text-center">Ação</th>
@@ -266,25 +265,6 @@ export default function ControleEstoque() {
               className="border-t hover:bg-gray-50 cursor-pointer"
               onClick={()=>setMaterialSelecionado(material)}
             >
-
-              <td className="p-3 text-center">
-
-                {material.foto ? (
-
-                  <img
-                    src={material.foto}
-                    className="w-12 h-12 object-cover rounded mx-auto"
-                  />
-
-                ) : (
-
-                  <span className="text-gray-400 text-sm">
-                    Sem foto
-                  </span>
-
-                )}
-
-              </td>
 
               <td className="p-3 font-medium">
                 {material.nome}
