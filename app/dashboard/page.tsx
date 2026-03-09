@@ -145,10 +145,9 @@ export default function Dashboard() {
 
           const data = docMat.data();
 
-          const saldo = Number(data.saldo || 0);
-          const minimo = Number(data.estoqueMinimo || 0);
-          const materialNome = data.nome || "Material";
-
+          const saldo = Number(data.saldo ?? 0);
+          const minimo = Number(data.estoqueMinimo ?? 0);
+          const materialNome = data.nome ?? "Material";
           estoqueObra += saldo;
 
           if (!mapaSetores[setorNome]) {
@@ -162,16 +161,17 @@ export default function Dashboard() {
             mapaMateriais[materialNome] = {
               material: materialNome,
               saldo: 0,
-              minimo: minimo
+              minimo: minimo ?? 0
             };
 
           }
 
           mapaMateriais[materialNome].saldo += saldo;
 
-          if (minimo > mapaMateriais[materialNome].minimo) {
-            mapaMateriais[materialNome].minimo = minimo;
-          }
+          mapaMateriais[materialNome].minimo = Math.max(
+            mapaMateriais[materialNome].minimo,
+            minimo
+        );
 
         });
 
