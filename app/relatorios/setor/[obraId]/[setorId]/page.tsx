@@ -63,26 +63,69 @@ export default function RelatorioSetor() {
 
     const pdf = new jsPDF();
 
-    pdf.setFontSize(18);
-    pdf.text("Relatório de Estoque",20,20);
+    let y = 20;
+
+    pdf.setFontSize(20);
+    pdf.text("Relatório de Estoque",20,y);
+
+    y += 10;
 
     pdf.setFontSize(12);
-    pdf.text(`Obra: ${nomeObra}`,20,35);
-    pdf.text(`Setor: ${nomeSetor}`,20,45);
+    pdf.text(`Obra: ${nomeObra}`,20,y);
 
-    let y = 65;
+    y += 8;
+
+    pdf.text(`Setor: ${nomeSetor}`,20,y);
+
+    y += 12;
+
+    // Cabeçalho da tabela
+
+    pdf.setFontSize(12);
+    pdf.text("Material",20,y);
+    pdf.text("Quantidade",150,y);
+
+    y += 3;
+
+    pdf.line(20,y,190,y);
+
+    y += 8;
 
     materiais.forEach((m:any)=>{
 
+      const unidade = m.unidade || "";
+
       pdf.text(
-        `${m.nome} - ${m.saldo}`,
+        m.nome,
         20,
         y
       );
 
-      y += 10;
+      pdf.text(
+        `${m.saldo} ${unidade}`,
+        150,
+        y
+      );
+
+      y += 8;
+
+      // quebra de página automática
+
+      if(y > 270){
+
+        pdf.addPage();
+        y = 20;
+
+      }
 
     });
+
+    y += 10;
+
+    const data = new Date().toLocaleDateString();
+
+    pdf.setFontSize(10);
+    pdf.text(`Gerado em: ${data}`,20,y);
 
     pdf.save(`relatorio-${nomeSetor}.pdf`);
 
@@ -103,16 +146,16 @@ export default function RelatorioSetor() {
 
       <button
         onClick={gerarPDF}
-        className="bg-green-600 text-white px-6 py-3 rounded"
+        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded"
       >
         Gerar PDF
       </button>
 
-      <div className="mt-10">
+      <div className="mt-10 space-y-2">
 
         {materiais.map((m)=>(
           <div key={m.id}>
-            {m.nome} — {m.saldo}
+            {m.nome} — {m.saldo} {m.unidade || ""}
           </div>
         ))}
 
