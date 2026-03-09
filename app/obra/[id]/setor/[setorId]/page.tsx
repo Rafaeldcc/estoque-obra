@@ -18,7 +18,6 @@ import {
 
 import { db, auth, storage } from "@/lib/firebase";
 
-import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 
@@ -137,7 +136,7 @@ export default function ControleEstoque() {
 
     try{
 
-      const storageRef = ref(storage,`materiais/${material.id}`);
+      const storageRef = ref(storage,`materiais/${material.id}-${Date.now()}`);
 
       await uploadBytes(storageRef,file);
 
@@ -279,9 +278,10 @@ export default function ControleEstoque() {
 
         <tbody>
 
-          {filtrados.map(material=>(
+          {filtrados.map(material => (
 
             <>
+
             <tr
               key={material.id}
               className="border-t hover:bg-gray-50 cursor-pointer"
@@ -294,10 +294,21 @@ export default function ControleEstoque() {
 
                 {material.foto ? (
 
-                  <img
-                    src={material.foto}
-                    className="w-14 h-14 object-cover rounded"
-                  />
+                  <div className="flex flex-col gap-2">
+
+                    <img
+                      src={material.foto}
+                      alt={material.nome}
+                      className="w-14 h-14 object-cover rounded"
+                    />
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e)=>uploadFoto(e,material)}
+                    />
+
+                  </div>
 
                 ) : (
 
