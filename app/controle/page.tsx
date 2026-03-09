@@ -6,7 +6,6 @@ import {
   getDocs,
   doc,
   updateDoc,
-  deleteDoc,
   increment,
   getDoc,
   serverTimestamp,
@@ -40,6 +39,8 @@ export default function Controle() {
 
   const [mensagem,setMensagem] = useState("");
 
+  const [busca,setBusca] = useState("");
+  const [aberto,setAberto] = useState<string | null>(null);
 
   useEffect(()=>{
 
@@ -50,7 +51,6 @@ export default function Controle() {
 
   },[user]);
 
-
   useEffect(()=>{
 
     if(obraSelecionada){
@@ -58,7 +58,6 @@ export default function Controle() {
     }
 
   },[obraSelecionada]);
-
 
   async function carregarUsuario(){
 
@@ -77,8 +76,6 @@ export default function Controle() {
 
   }
 
-
-
   async function carregarObras(){
 
     const snap = await getDocs(collection(db,"obras"));
@@ -91,8 +88,6 @@ export default function Controle() {
     setObras(lista);
 
   }
-
-
 
   async function carregarMateriais(obraId:string){
 
@@ -136,13 +131,9 @@ export default function Controle() {
     todos.forEach(item=>{
 
       if(!agrupado[item.id]){
-
         agrupado[item.id] = {...item};
-
       }else{
-
         agrupado[item.id].saldo += item.saldo || 0;
-
       }
 
     });
@@ -150,8 +141,6 @@ export default function Controle() {
     setMateriais(Object.values(agrupado));
 
   }
-
-
 
   function mostrarMensagem(texto:string){
 
@@ -162,8 +151,6 @@ export default function Controle() {
     },3000);
 
   }
-
-
 
   async function salvarMinimo(material:Material){
 
@@ -198,8 +185,6 @@ export default function Controle() {
     carregarMateriais(obraSelecionada);
 
   }
-
-
 
   async function entrada(material:Material){
 
@@ -274,8 +259,6 @@ export default function Controle() {
     }
 
   }
-
-
 
   async function saida(material:Material){
 
@@ -356,17 +339,17 @@ export default function Controle() {
 
   }
 
-
-
   if(loading) return null;
 
-
+  const materiaisFiltrados = materiais.filter(m =>
+    m.nome.toLowerCase().includes(busca.toLowerCase())
+  );
 
   return(
 
     <div className="max-w-4xl mx-auto p-8">
 
-      <h2 className="text-2xl font-bold mb-6">
+      <h2 className="text-2xl font-bold mb-4">
         Controle de Estoque
       </h2>
 
@@ -391,91 +374,119 @@ export default function Controle() {
 
       </select>
 
-      {materiais.map(material=>(
+      <input
+        placeholder="Buscar material..."
+        value={busca}
+        onChange={(e)=>setBusca(e.target.value)}
+        className="border p-3 rounded w-full mb-6"
+      />
+
+      {materiaisFiltrados.map(material=>{
+
+        const abertoMaterial = aberto === material.id;
+
+        return(
 
         <div
           key={material.id}
-          className={`p-5 rounded-xl shadow mb-4 border ${
+          className={`p-5 rounded-xl shadow mb-3 border ${
             material.estoqueMinimo && material.saldo <= material.estoqueMinimo
               ? "bg-red-50 border-red-400"
               : "bg-white"
           }`}
         >
 
-          <div className="flex justify-between mb-3">
+          <div
+            className="flex justify-between cursor-pointer"
+            onClick={()=>setAberto(
+              abertoMaterial ? null : material.id
+            )}
+          >
 
-            <b>{material.nome}</b>
+            <b>
+              {abertoMaterial ? "▼" : "▶"} {material.nome}
+            </b>
 
             <span className="font-semibold">
-              Saldo: {material.saldo} {material.unidade}
+              {material.saldo} {material.unidade}
             </span>
 
           </div>
 
-          {material.estoqueMinimo && material.saldo <= material.estoqueMinimo && (
-            <div className="text-red-600 font-semibold mb-2">
-              ⚠ Estoque baixo
+          {abertoMaterial && (
+
+            <>
+
+            {material.estoqueMinimo && material.saldo <= material.estoqueMinimo && (
+              <div className="text-red-600 font-semibold mt-2">
+                ⚠ Estoque baixo
+              </div>
+            )}
+
+            <div className="flex gap-3 mt-3">
+
+              <input
+                type="number"
+                placeholder="Qtd"
+                value={quantidades[material.id] || ""}
+                onChange={(e)=>
+                  setQuantidades(prev=>({
+                    ...prev,
+                    [material.id]: Number(e.target.value)
+                  }))
+                }
+                className="border p-2 w-24 rounded"
+              />
+
+              <button
+                onClick={()=>entrada(material)}
+                className="bg-green-600 text-white px-4 rounded"
+              >
+                Entrada
+              </button>
+
+              <button
+                onClick={()=>saida(material)}
+                className="bg-orange-500 text-white px-4 rounded"
+              >
+                Saída
+              </button>
+
             </div>
+
+            <div className="flex gap-2 items-center mt-3">
+
+              <input
+                type="number"
+                placeholder="Estoque mínimo"
+                value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
+                onChange={(e)=>
+                  setMinimos(prev=>({
+                    ...prev,
+                    [material.id]: Number(e.target.value)
+                  }))
+                }
+                className="border p-2 w-32 rounded"
+              />
+
+              <button
+                onClick={()=>salvarMinimo(material)}
+                className="bg-blue-600 text-white px-3 py-1 rounded"
+              >
+                Salvar mínimo
+              </button>
+
+            </div>
+
+            </>
+
           )}
-
-          <div className="flex gap-3 mb-3">
-
-            <input
-              type="number"
-              placeholder="Qtd"
-              value={quantidades[material.id] || ""}
-              onChange={(e)=>
-                setQuantidades(prev=>({
-                  ...prev,
-                  [material.id]: Number(e.target.value)
-                }))
-              }
-              className="border p-2 w-24 rounded"
-            />
-
-            <button
-              onClick={()=>entrada(material)}
-              className="bg-green-600 text-white px-4 rounded"
-            >
-              Entrada
-            </button>
-
-            <button
-              onClick={()=>saida(material)}
-              className="bg-orange-500 text-white px-4 rounded"
-            >
-              Saída
-            </button>
-
-          </div>
-
-          <div className="flex gap-2 items-center">
-
-            <input
-              type="number"
-              placeholder="Estoque mínimo"
-              value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
-              onChange={(e)=>
-                setMinimos(prev=>({
-                  ...prev,
-                  [material.id]: Number(e.target.value)
-                }))
-              }
-              className="border p-2 w-32 rounded"
-            />
-
-            <button
-              onClick={()=>salvarMinimo(material)}
-              className="bg-blue-600 text-white px-3 py-1 rounded"
-            >
-              Salvar mínimo
-            </button>
-
-          </div>
 
         </div>
 
-      ))}
+        )
+
+      })}
 
     </div>
 
