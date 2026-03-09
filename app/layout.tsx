@@ -46,7 +46,6 @@ export default function RootLayout({
 
   if (loading) return null;
 
-  // 🔓 liberar login e criar conta
   if (
     !user &&
     pathname !== "/login" &&
@@ -56,7 +55,6 @@ export default function RootLayout({
     return null;
   }
 
-  // 🔓 páginas públicas sem menu
   if (pathname === "/login" || pathname === "/criar-conta") {
     return (
       <html lang="pt-br">
@@ -78,32 +76,32 @@ export default function RootLayout({
 
             <nav style={{ marginTop: 10 }}>
 
-              <MenuLink href="/dashboard">
-                Dashboard
-              </MenuLink>
-
               <MenuLink href="/dashboard/obras">
                 Obras
-              </MenuLink>
-
-              <MenuLink href="/dashboard/cadastrar-material">
-                Cadastrar Material
-              </MenuLink>
-
-              <MenuLink href="/estoque-geral">
-                Estoque Geral
               </MenuLink>
 
               <MenuLink href="/buscar-material">
                 Buscar Material
               </MenuLink>
 
+              <MenuLink href="/dashboard/cadastrar-material">
+                Cadastrar Material
+              </MenuLink>
+
+              <MenuLink href="/retirada-material">
+                Retirada de Material
+              </MenuLink>
+
               <MenuLink href="/movimentacoes">
                 Movimentações
               </MenuLink>
 
-              <MenuLink href="/retirada-material">
-                Retirada Material
+              <MenuLink href="/estoque-geral">
+                Estoque Geral
+              </MenuLink>
+
+              <MenuLink href="/dashboard">
+                Dashboard
               </MenuLink>
 
               <MenuLink href="/relatorios">
