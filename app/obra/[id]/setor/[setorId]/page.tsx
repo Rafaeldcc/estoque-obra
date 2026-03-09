@@ -10,7 +10,9 @@ import {
   getDoc
 } from "firebase/firestore";
 
-import { db, auth } from "@/lib/firebase";
+import { db, auth, storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
 import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
@@ -21,6 +23,7 @@ interface Material {
   saldo: number;
   unidade: string;
   estoqueMinimo?: number;
+  foto?: string;
 }
 
 interface Obra {
@@ -83,7 +86,8 @@ export default function ControleEstoque() {
         nome:data.nome,
         saldo:data.saldo ?? 0,
         unidade:data.unidade ?? "",
-        estoqueMinimo:data.estoqueMinimo ?? 0
+        estoqueMinimo:data.estoqueMinimo ?? 0,
+        foto:data.foto ?? ""
       });
 
     });
@@ -126,6 +130,27 @@ export default function ControleEstoque() {
 
   }
 
+  async function uploadFoto(e:any, material:Material){
+
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const storageRef = ref(storage,`materiais/${material.id}`);
+
+    await uploadBytes(storageRef,file);
+
+    const url = await getDownloadURL(storageRef);
+
+    await updateDoc(
+      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+      { foto:url }
+    );
+
+    mostrarMensagem("Foto atualizada");
+
+    carregarMateriais();
+  }
+
   async function salvarMinimo(material:Material){
 
     const minimo = minimos[material.id];
@@ -153,28 +178,6 @@ export default function ControleEstoque() {
       doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
       { saldo:novoSaldo }
     );
-
-    const user = auth.currentUser;
-
-    await registrarMovimentacao({
-
-      materialId: material.id,
-      materialNome: material.nome,
-
-      tipo: "entrada",
-      quantidade: qtd,
-
-      obraId: obraId,
-      obraNome: "",
-
-      destino: "uso",
-
-      usuarioId: user?.uid || "",
-      usuarioNome: user?.email || "",
-
-      empresaId: empresaId
-
-    });
 
     mostrarMensagem("Entrada realizada com sucesso");
 
@@ -261,6 +264,7 @@ export default function ControleEstoque() {
           <thead className="bg-gray-100">
 
             <tr>
+              <th className="p-3 text-left">Foto</th>
               <th className="p-3 text-left">Material</th>
               <th className="p-3 text-center">Saldo</th>
               <th className="p-3 text-center">Ação</th>
@@ -281,6 +285,15 @@ export default function ControleEstoque() {
                 )}
               >
 
+                <td className="p-3">
+                  {material.foto && (
+                    <img
+                      src={material.foto}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  )}
+                </td>
+
                 <td className="p-3 font-medium">
                   {material.nome}
                 </td>
@@ -299,9 +312,15 @@ export default function ControleEstoque() {
 
                 <tr className="bg-gray-50">
 
-                  <td colSpan={3} className="p-4">
+                  <td colSpan={4} className="p-4">
 
                     <div className="flex flex-wrap gap-3">
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e)=>uploadFoto(e,material)}
+                      />
 
                       <input
                         type="number"
