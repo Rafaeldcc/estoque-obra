@@ -37,8 +37,6 @@ export default function RetiradaMaterial() {
   const [tipoMov,setTipoMov] = useState<{[key:string]:string}>({});
   const [obraDestino,setObraDestino] = useState<{[key:string]:string}>({});
 
-
-
   useEffect(()=>{
 
     const user = auth.currentUser;
@@ -48,8 +46,6 @@ export default function RetiradaMaterial() {
 
   },[]);
 
-
-
   useEffect(()=>{
 
     if(empresaId){
@@ -58,8 +54,6 @@ export default function RetiradaMaterial() {
 
   },[empresaId]);
 
-
-
   useEffect(()=>{
 
     if(obraSelecionada){
@@ -67,8 +61,6 @@ export default function RetiradaMaterial() {
     }
 
   },[obraSelecionada]);
-
-
 
   async function carregarUsuario(uid:string){
 
@@ -82,8 +74,6 @@ export default function RetiradaMaterial() {
     }
 
   }
-
-
 
   async function carregarObras(){
 
@@ -102,8 +92,6 @@ export default function RetiradaMaterial() {
     );
 
   }
-
-
 
   async function carregarMateriais(obraId:string){
 
@@ -146,8 +134,6 @@ export default function RetiradaMaterial() {
 
   }
 
-
-
   async function retirar(material:Material){
 
     const qtd = quantidades[material.id];
@@ -177,8 +163,6 @@ export default function RetiradaMaterial() {
       saldo: increment(-qtd)
     });
 
-
-
     if(tipo === "transferencia"){
 
       const destinoId = obraDestino[material.id];
@@ -188,7 +172,6 @@ export default function RetiradaMaterial() {
         return;
       }
 
-      // pegar setor origem
       const setorOrigemRef = doc(
         db,
         "obras",
@@ -200,7 +183,6 @@ export default function RetiradaMaterial() {
       const setorOrigemSnap = await getDoc(setorOrigemRef);
       const nomeSetor = setorOrigemSnap.data()?.nome || "Sem nome";
 
-      // procurar setor destino
       const setoresDestinoSnap = await getDocs(
         collection(db,"obras",destinoId,"setores")
       );
@@ -213,7 +195,6 @@ export default function RetiradaMaterial() {
         }
       });
 
-      // criar setor se não existir
       if(!setorDestinoId){
 
         const novoSetor = await addDoc(
@@ -264,15 +245,11 @@ export default function RetiradaMaterial() {
 
     }
 
-
-
     const obraNome =
       obras.find((o) => o.id === obraSelecionada)?.nome || "";
 
     const obraDestinoNome =
       obras.find((o) => o.id === obraDestino[material.id])?.nome || "";
-
-
 
     await registrarMovimentacao({
 
@@ -305,132 +282,126 @@ export default function RetiradaMaterial() {
 
   }
 
-
-
   return(
 
-    <div style={{maxWidth:900,margin:"40px auto"}}>
+    <div className="max-w-5xl mx-auto mt-10">
 
-      <h2>Retirada de Material</h2>
+      <div className="bg-white shadow-xl rounded-2xl p-8">
 
-      <select
-        style={{width:"100%",padding:10}}
-        onChange={(e)=>setObraSelecionada(e.target.value)}
-      >
+        <h2 className="text-2xl font-bold mb-6 text-center">
+          Retirada de Material
+        </h2>
 
-        <option value="">Selecionar obra</option>
-
-        {obras.map(obra=>(
-          <option key={obra.id} value={obra.id}>
-            {obra.nome}
-          </option>
-        ))}
-
-      </select>
-
-
-
-      {materiais.map(material=>{
-
-        const tipo = tipoMov[material.id] || "uso";
-
-        return(
-
-        <div
-          key={material.id}
-          style={{
-            border:"1px solid #ccc",
-            padding:15,
-            marginTop:20,
-            borderRadius:8
-          }}
+        <select
+          className="w-full border rounded-lg p-3 mb-6"
+          onChange={(e)=>setObraSelecionada(e.target.value)}
         >
 
-          <b>{material.nome}</b>
+          <option value="">Selecionar obra</option>
 
-          <span style={{float:"right"}}>
-            Saldo: {material.saldo} {material.unidade}
-          </span>
+          {obras.map(obra=>(
+            <option key={obra.id} value={obra.id}>
+              {obra.nome}
+            </option>
+          ))}
 
-          <div style={{marginTop:10}}>
+        </select>
 
-            <input
-              type="number"
-              placeholder="Quantidade"
-              value={quantidades[material.id] || ""}
-              onChange={(e)=>
-                setQuantidades(prev=>({
-                  ...prev,
-                  [material.id]: Number(e.target.value)
-                }))
-              }
-              style={{width:100}}
-            />
+        {materiais.map(material=>{
 
-            <select
-              value={tipo}
-              onChange={(e)=>
-                setTipoMov(prev=>({
-                  ...prev,
-                  [material.id]: e.target.value
-                }))
-              }
-              style={{marginLeft:10}}
-            >
+          const tipo = tipoMov[material.id] || "uso";
 
-              <option value="uso">Uso na obra</option>
-              <option value="transferencia">Transferência</option>
-              <option value="descarte">Descarte</option>
+          return(
 
-            </select>
+          <div
+            key={material.id}
+            className="border rounded-xl p-5 mb-4 shadow-sm"
+          >
 
-            {tipo === "transferencia" && (
+            <div className="flex justify-between items-center">
+
+              <b className="text-lg">{material.nome}</b>
+
+              <span className="text-gray-500 text-sm">
+                Saldo: {material.saldo} {material.unidade}
+              </span>
+
+            </div>
+
+            <div className="flex flex-wrap gap-3 mt-4 items-center">
+
+              <input
+                type="number"
+                placeholder="Quantidade"
+                value={quantidades[material.id] || ""}
+                onChange={(e)=>
+                  setQuantidades(prev=>({
+                    ...prev,
+                    [material.id]: Number(e.target.value)
+                  }))
+                }
+                className="border rounded-lg p-2 w-28"
+              />
 
               <select
-                style={{marginLeft:10}}
+                value={tipo}
                 onChange={(e)=>
-                  setObraDestino(prev=>({
+                  setTipoMov(prev=>({
                     ...prev,
                     [material.id]: e.target.value
                   }))
                 }
+                className="border rounded-lg p-2"
               >
 
-                <option value="">Obra destino</option>
-
-                {obras
-                  .filter(o => o.id !== obraSelecionada)
-                  .map(o=>(
-                  <option key={o.id} value={o.id}>
-                    {o.nome}
-                  </option>
-                ))}
+                <option value="uso">Uso na obra</option>
+                <option value="transferencia">Transferência</option>
+                <option value="descarte">Descarte</option>
 
               </select>
 
-            )}
+              {tipo === "transferencia" && (
 
-            <button
-              onClick={()=>retirar(material)}
-              style={{
-                marginLeft:10,
-                background:"#dc2626",
-                color:"white",
-                padding:"6px 12px",
-                border:"none",
-                borderRadius:4
-              }}
-            >
-              Confirmar
-            </button>
+                <select
+                  className="border rounded-lg p-2"
+                  onChange={(e)=>
+                    setObraDestino(prev=>({
+                      ...prev,
+                      [material.id]: e.target.value
+                    }))
+                  }
+                >
+
+                  <option value="">Obra destino</option>
+
+                  {obras
+                    .filter(o => o.id !== obraSelecionada)
+                    .map(o=>(
+                    <option key={o.id} value={o.id}>
+                      {o.nome}
+                    </option>
+                  ))}
+
+                </select>
+
+              )}
+
+              <button
+                onClick={()=>retirar(material)}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+              >
+                Confirmar
+              </button>
+
+            </div>
 
           </div>
 
-        </div>
+          )
 
-        )
+        })}
 
-      })}
+      </div>
 
     </div>
 
