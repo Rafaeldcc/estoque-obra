@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import {
   collection,
   getDocs,
   updateDoc,
   deleteDoc,
-  doc,
-  getDoc
+  doc
 } from "firebase/firestore";
 
 import {
@@ -16,7 +15,7 @@ import {
   getDownloadURL
 } from "firebase/storage";
 
-import { db, auth, storage } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 
@@ -120,7 +119,7 @@ export default function ControleEstoque() {
 
       const storageRef = ref(
         storage,
-        `materiais/${material.id}-${Date.now()}`
+        `materiais/${obraId}/${material.id}-${Date.now()}`
       );
 
       await uploadBytes(storageRef,file);
@@ -251,58 +250,44 @@ export default function ControleEstoque() {
       <table className="w-full border rounded-xl overflow-hidden">
 
         <thead className="bg-gray-100">
-
           <tr>
             <th className="p-3">Foto</th>
             <th className="p-3 text-left">Material</th>
             <th className="p-3 text-center">Saldo</th>
             <th className="p-3 text-center">Ação</th>
           </tr>
-
         </thead>
 
         <tbody>
 
           {filtrados.map(material => (
 
-            <>
+            <Fragment key={material.id}>
 
             <tr
-              key={material.id}
               className="border-t hover:bg-gray-50 cursor-pointer"
               onClick={()=>setMaterialSelecionado(
                 materialSelecionado === material.id ? null : material.id
               )}
             >
 
-              <td className="p-3">
+              <td className="p-3 text-center">
 
-                <div className="flex flex-col items-center gap-2">
+                {material.foto ? (
 
-                  {material.foto && (
+                  <img
+                    src={material.foto}
+                    alt={material.nome}
+                    className="w-12 h-12 object-cover rounded mx-auto"
+                  />
 
-                    <img
-                      src={material.foto}
-                      alt={material.nome}
-                      className="w-16 h-16 object-cover rounded border"
-                    />
+                ) : (
 
-                  )}
+                  <span className="text-gray-400 text-sm">
+                    Sem foto
+                  </span>
 
-                  <label className="text-xs bg-gray-200 px-2 py-1 rounded cursor-pointer">
-
-                    {material.foto ? "Trocar foto" : "Adicionar foto"}
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e)=>uploadFoto(e,material)}
-                    />
-
-                  </label>
-
-                </div>
+                )}
 
               </td>
 
@@ -324,89 +309,139 @@ export default function ControleEstoque() {
 
               <tr className="bg-gray-50">
 
-                <td colSpan={4} className="p-4">
+                <td colSpan={4} className="p-6">
 
-                  <div className="flex gap-3 flex-wrap">
+                  <div className="flex gap-6 flex-wrap">
 
-                    <input
-                      type="number"
-                      placeholder="Qtd"
-                      className="border p-2 w-24 rounded"
-                      value={quantidades[material.id] ?? ""}
-                      onChange={(e)=>
-                        setQuantidades({
-                          ...quantidades,
-                          [material.id]:Number(e.target.value)
-                        })
-                      }
-                    />
+                    <div>
 
-                    <button
-                      onClick={()=>entrada(material)}
-                      className="bg-green-600 text-white px-4 py-2 rounded"
-                    >
-                      Entrada
-                    </button>
+                      {material.foto && (
 
-                    <select
-                      value={destinos[material.id] ?? ""}
-                      onChange={(e)=>
-                        setDestinos({
-                          ...destinos,
-                          [material.id]:e.target.value
-                        })
-                      }
-                      className="border p-2 rounded"
-                    >
-                      <option value="">Obra destino</option>
+                        <img
+                          src={material.foto}
+                          className="w-40 h-40 object-cover rounded border"
+                        />
 
-                      {obras.map(obra=>(
+                      )}
 
-                        <option key={obra.id} value={obra.id}>
-                          {obra.nome}
-                        </option>
+                      <label className="block mt-3 text-sm bg-gray-200 px-3 py-1 rounded cursor-pointer w-fit">
 
-                      ))}
+                        Trocar foto
 
-                    </select>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e)=>uploadFoto(e,material)}
+                        />
 
-                    <button
-                      onClick={()=>transferir(material)}
-                      className="bg-purple-600 text-white px-4 py-2 rounded"
-                    >
-                      Transferir
-                    </button>
+                      </label>
 
-                    <input
-                      type="number"
-                      placeholder="Estoque mínimo"
-                      value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
-                      onChange={(e)=>
-                        setMinimos({
-                          ...minimos,
-                          [material.id]:Number(e.target.value)
-                        })
-                      }
-                      className="border p-2 w-32 rounded"
-                    />
+                    </div>
 
-                    <button
-                      onClick={()=>salvarMinimo(material)}
-                      className="bg-blue-600 text-white px-4 py-2 rounded"
-                    >
-                      Salvar mínimo
-                    </button>
+                    <div className="flex flex-col gap-3">
 
-                    {role === "admin" && (
+                      <div className="font-semibold text-lg">
+                        {material.nome}
+                      </div>
 
-                      <button
-                        onClick={()=>excluir(material.id)}
-                        className="text-red-600 font-semibold"
-                      >
-                        Excluir
-                      </button>
+                      <div>
+                        Saldo atual:
+                        <strong className="ml-2">
+                          {material.saldo} {material.unidade}
+                        </strong>
+                      </div>
 
-                    )}
+                      <div className="flex gap-3 flex-wrap">
+
+                        <input
+                          type="number"
+                          placeholder="Qtd"
+                          className="border p-2 w-24 rounded"
+                          value={quantidades[material.id] ?? ""}
+                          onChange={(e)=>
+                            setQuantidades({
+                              ...quantidades,
+                              [material.id]:Number(e.target.value)
+                            })
+                          }
+                        />
+
+                        <button
+                          onClick={()=>entrada(material)}
+                          className="bg-green-600 text-white px-4 py-2 rounded"
+                        >
+                          Entrada
+                        </button>
+
+                        <select
+                          value={destinos[material.id] ?? ""}
+                          onChange={(e)=>
+                            setDestinos({
+                              ...destinos,
+                              [material.id]:e.target.value
+                            })
+                          }
+                          className="border p-2 rounded"
+                        >
+
+                          <option value="">Obra destino</option>
+
+                          {obras.map(obra=>(
+
+                            <option key={obra.id} value={obra.id}>
+                              {obra.nome}
+                            </option>
+
+                          ))}
+
+                        </select>
+
+                        <button
+                          onClick={()=>transferir(material)}
+                          className="bg-purple-600 text-white px-4 py-2 rounded"
+                        >
+                          Transferir
+                        </button>
+
+                      </div>
+
+                      <div className="flex gap-3 items-center">
+
+                        <input
+                          type="number"
+                          placeholder="Estoque mínimo"
+                          value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
+                          onChange={(e)=>
+                            setMinimos({
+                              ...minimos,
+                              [material.id]:Number(e.target.value)
+                            })
+                          }
+                          className="border p-2 w-32 rounded"
+                        />
+
+                        <button
+                          onClick={()=>salvarMinimo(material)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded"
+                        >
+                          Salvar mínimo
+                        </button>
+
+                        {role === "admin" && (
+
+                          <button
+                            onClick={()=>excluir(material.id)}
+                            className="text-red-600 font-semibold"
+                          >
+                            Excluir
+                          </button>
+
+                        )}
+
+                      </div>
+
+                    </div>
 
                   </div>
 
@@ -416,7 +451,7 @@ export default function ControleEstoque() {
 
             )}
 
-            </>
+            </Fragment>
 
           ))}
 
