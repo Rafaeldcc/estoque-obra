@@ -31,6 +31,9 @@ export default function RetiradaMaterial() {
   const [obras,setObras] = useState<any[]>([]);
   const [obraSelecionada,setObraSelecionada] = useState("");
 
+  const [setores,setSetores] = useState<any[]>([]);
+  const [setorSelecionado,setSetorSelecionado] = useState("");
+
   const [materiais,setMateriais] = useState<Material[]>([]);
 
   const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
@@ -53,14 +56,6 @@ export default function RetiradaMaterial() {
     }
 
   },[empresaId]);
-
-  useEffect(()=>{
-
-    if(obraSelecionada){
-      carregarMateriais(obraSelecionada);
-    }
-
-  },[obraSelecionada]);
 
   async function carregarUsuario(uid:string){
 
@@ -93,42 +88,49 @@ export default function RetiradaMaterial() {
 
   }
 
-  async function carregarMateriais(obraId:string){
+  async function carregarSetores(obraId:string){
 
-    const setoresSnap = await getDocs(
+    const snap = await getDocs(
       collection(db,"obras",obraId,"setores")
+    );
+
+    setSetores(
+      snap.docs.map(doc=>({
+        id:doc.id,
+        ...doc.data()
+      }))
+    );
+
+  }
+
+  async function carregarMateriais(obraId:string,setorId:string){
+
+    const materiaisSnap = await getDocs(
+      collection(
+        db,
+        "obras",
+        obraId,
+        "setores",
+        setorId,
+        "materiais"
+      )
     );
 
     let lista:Material[] = [];
 
-    for(const setorDoc of setoresSnap.docs){
+    materiaisSnap.docs.forEach(docSnap=>{
 
-      const materiaisSnap = await getDocs(
-        collection(
-          db,
-          "obras",
-          obraId,
-          "setores",
-          setorDoc.id,
-          "materiais"
-        )
-      );
+      const data = docSnap.data();
 
-      materiaisSnap.docs.forEach(docSnap=>{
-
-        const data = docSnap.data();
-
-        lista.push({
-          id:docSnap.id,
-          nome:data.nome,
-          saldo:data.saldo || 0,
-          unidade:data.unidade || "",
-          setorId:setorDoc.id
-        });
-
+      lista.push({
+        id:docSnap.id,
+        nome:data.nome,
+        saldo:data.saldo || 0,
+        unidade:data.unidade || "",
+        setorId:setorId
       });
 
-    }
+    });
 
     setMateriais(lista);
 
@@ -278,7 +280,7 @@ export default function RetiradaMaterial() {
 
     });
 
-    carregarMateriais(obraSelecionada);
+    carregarMateriais(obraSelecionada,setorSelecionado);
 
   }
 
@@ -292,9 +294,17 @@ export default function RetiradaMaterial() {
           Retirada de Material
         </h2>
 
+        {/* OBRA */}
+
         <select
-          className="w-full border rounded-lg p-3 mb-6"
-          onChange={(e)=>setObraSelecionada(e.target.value)}
+          className="w-full border rounded-lg p-3 mb-4"
+          onChange={(e)=>{
+            const obraId = e.target.value
+            setObraSelecionada(obraId)
+            setSetorSelecionado("")
+            setMateriais([])
+            carregarSetores(obraId)
+          }}
         >
 
           <option value="">Selecionar obra</option>
@@ -306,6 +316,31 @@ export default function RetiradaMaterial() {
           ))}
 
         </select>
+
+        {/* SETOR */}
+
+        {setores.length > 0 && (
+
+        <select
+          className="w-full border rounded-lg p-3 mb-6"
+          onChange={(e)=>{
+            const setorId = e.target.value
+            setSetorSelecionado(setorId)
+            carregarMateriais(obraSelecionada,setorId)
+          }}
+        >
+
+          <option value="">Selecionar setor</option>
+
+          {setores.map(setor=>(
+            <option key={setor.id} value={setor.id}>
+              {setor.nome}
+            </option>
+          ))}
+
+        </select>
+
+        )}
 
         {materiais.map(material=>{
 
