@@ -277,45 +277,49 @@ export default function ControleEstoque() {
         className="border p-3 rounded mb-6 w-full"
       />
 
-      <table className="w-full border rounded-xl overflow-hidden">
+      <div className="max-h-[65vh] overflow-y-auto border rounded-xl shadow-inner">
 
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="p-3 text-left">Material</th>
-            <th className="p-3 text-center">Saldo</th>
-            <th className="p-3 text-center">Ação</th>
-          </tr>
-        </thead>
+      <table className="w-full">
 
-        <tbody>
+      <thead className="bg-gray-100 sticky top-0">
+      <tr>
+      <th className="p-3 text-left">Material</th>
+      <th className="p-3 text-center">Saldo</th>
+      <th className="p-3 text-center">Ação</th>
+      </tr>
+      </thead>
 
-          {filtrados.map(material => (
+      <tbody>
 
-            <tr
-              key={material.id}
-              className="border-t hover:bg-gray-50 cursor-pointer"
-              onClick={()=>setMaterialSelecionado(material)}
-            >
+      {filtrados.map(material => (
 
-              <td className="p-3 font-medium">
-                {material.nome}
-              </td>
+      <tr
+      key={material.id}
+      className="border-t hover:bg-gray-50 cursor-pointer"
+      onClick={()=>setMaterialSelecionado(material)}
+      >
 
-              <td className="p-3 text-center font-bold">
-                {material.saldo} {material.unidade}
-              </td>
+      <td className="p-3 font-medium">
+      {material.nome}
+      </td>
 
-              <td className="p-3 text-center">
-                Abrir
-              </td>
+      <td className="p-3 text-center font-bold">
+      {material.saldo} {material.unidade}
+      </td>
 
-            </tr>
+      <td className="p-3 text-center">
+      Abrir
+      </td>
 
-          ))}
+      </tr>
 
-        </tbody>
+      ))}
+
+      </tbody>
 
       </table>
+
+      </div>
 
       </>
 
