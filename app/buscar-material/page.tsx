@@ -105,19 +105,26 @@ export default function BuscarMaterial() {
 
       const nomeNormalizado = normalizarTexto(m.nome);
 
-      // 🔎 AGORA BUSCA APENAS PELO INÍCIO DO MATERIAL
-      return nomeNormalizado.startsWith(buscaNormalizada) && m.saldo > 0;
+      const palavras = nomeNormalizado.split(" ");
+
+      const encontrou = palavras.some((p) =>
+        p.startsWith(buscaNormalizada)
+      );
+
+      return encontrou && m.saldo > 0;
 
     });
 
-    // remover duplicados
     const mapa = new Map<string, Material>();
 
     filtrados.forEach((item) => {
+
       const chave = normalizarTexto(item.nome);
+
       if (!mapa.has(chave)) {
         mapa.set(chave, item);
       }
+
     });
 
     const unicos = Array.from(mapa.values());
@@ -126,7 +133,7 @@ export default function BuscarMaterial() {
       a.nome.localeCompare(b.nome, "pt-BR")
     );
 
-    setSugestoes(unicos.slice(0, 10));
+    setSugestoes(unicos.slice(0, 12));
 
   }
 
@@ -153,7 +160,7 @@ export default function BuscarMaterial() {
       </h1>
 
       <input
-        placeholder="Digite o nome do material..."
+        placeholder="Digite nome, número ou tipo..."
         value={busca}
         onChange={(e) => pesquisar(e.target.value)}
         className="w-full p-3 border rounded"
@@ -161,7 +168,7 @@ export default function BuscarMaterial() {
 
       {sugestoes.length > 0 && (
 
-        <div className="mt-2 border rounded bg-white shadow max-h-[400px] overflow-y-auto">
+        <div className="mt-2 border rounded bg-white shadow max-h-[420px] overflow-y-auto">
 
           {sugestoes.map((mat, index) => (
 
