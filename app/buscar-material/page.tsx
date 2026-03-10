@@ -107,8 +107,8 @@ export default function BuscarMaterial() {
 
       const palavras = nomeNormalizado.split(" ");
 
-      const encontrou = palavras.some((p) =>
-        p.startsWith(buscaNormalizada)
+      const encontrou = palavras.some((palavra) =>
+        palavra.startsWith(buscaNormalizada)
       );
 
       return encontrou && m.saldo > 0;
