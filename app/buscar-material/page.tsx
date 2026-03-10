@@ -101,11 +101,20 @@ export default function BuscarMaterial() {
 
     const buscaNormalizada = normalizarTexto(valor);
 
-    const filtrados = materiais.filter((m) =>
-      normalizarTexto(m.nome).includes(buscaNormalizada) && m.saldo > 0
-    );
+    const filtrados = materiais.filter((m) => {
 
-    // remover duplicados
+      const nomeNormalizado = normalizarTexto(m.nome);
+
+      const palavras = nomeNormalizado.split(" ");
+
+      const começaCom = palavras.some((p) =>
+        p.startsWith(buscaNormalizada)
+      );
+
+      return começaCom && m.saldo > 0;
+
+    });
+
     const mapa = new Map<string, Material>();
 
     filtrados.forEach((item) => {
@@ -156,7 +165,7 @@ export default function BuscarMaterial() {
 
       {sugestoes.length > 0 && (
 
-        <div className="mt-2 border rounded bg-white shadow">
+        <div className="mt-2 border rounded bg-white shadow max-h-[400px] overflow-y-auto">
 
           {sugestoes.map((mat, index) => (
 
