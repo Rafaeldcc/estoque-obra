@@ -286,160 +286,164 @@ export default function RetiradaMaterial() {
 
   return(
 
-    <div className="max-w-5xl mx-auto mt-10">
+<div className="max-w-5xl mx-auto mt-10">
 
-      <div className="bg-white shadow-xl rounded-2xl p-8">
+<div className="bg-white shadow-xl rounded-2xl p-8">
 
-        <h2 className="text-2xl font-bold mb-6 text-center">
-          Retirada de Material
-        </h2>
+<h2 className="text-2xl font-bold mb-6 text-center">
+Retirada de Material
+</h2>
 
-        {/* OBRA */}
+{/* OBRA */}
 
-        <select
-          className="w-full border rounded-lg p-3 mb-4"
-          onChange={(e)=>{
-            const obraId = e.target.value
-            setObraSelecionada(obraId)
-            setSetorSelecionado("")
-            setMateriais([])
-            carregarSetores(obraId)
-          }}
-        >
+<select
+className="w-full border rounded-lg p-3 mb-4"
+onChange={(e)=>{
+const obraId = e.target.value
+setObraSelecionada(obraId)
+setSetorSelecionado("")
+setMateriais([])
+carregarSetores(obraId)
+}}
+>
 
-          <option value="">Selecionar obra</option>
+<option value="">Selecionar obra</option>
 
-          {obras.map(obra=>(
-            <option key={obra.id} value={obra.id}>
-              {obra.nome}
-            </option>
-          ))}
+{obras.map(obra=>(
+<option key={obra.id} value={obra.id}>
+{obra.nome}
+</option>
+))}
 
-        </select>
+</select>
 
-        {/* SETOR */}
+{/* SETOR */}
 
-        {setores.length > 0 && (
+{setores.length > 0 && (
 
-        <select
-          className="w-full border rounded-lg p-3 mb-6"
-          onChange={(e)=>{
-            const setorId = e.target.value
-            setSetorSelecionado(setorId)
-            carregarMateriais(obraSelecionada,setorId)
-          }}
-        >
+<select
+className="w-full border rounded-lg p-3 mb-6"
+onChange={(e)=>{
+const setorId = e.target.value
+setSetorSelecionado(setorId)
+carregarMateriais(obraSelecionada,setorId)
+}}
+>
 
-          <option value="">Selecionar setor</option>
+<option value="">Selecionar setor</option>
 
-          {setores.map(setor=>(
-            <option key={setor.id} value={setor.id}>
-              {setor.nome}
-            </option>
-          ))}
+{setores.map(setor=>(
+<option key={setor.id} value={setor.id}>
+{setor.nome}
+</option>
+))}
 
-        </select>
+</select>
 
-        )}
+)}
 
-        {materiais.map(material=>{
+{/* LISTA COM SCROLL */}
 
-          const tipo = tipoMov[material.id] || "uso";
+<div className="max-h-[60vh] overflow-y-auto pr-2">
 
-          return(
+{materiais.map(material=>{
 
-          <div
-            key={material.id}
-            className="border rounded-xl p-5 mb-4 shadow-sm"
-          >
+const tipo = tipoMov[material.id] || "uso";
 
-            <div className="flex justify-between items-center">
+return(
 
-              <b className="text-lg">{material.nome}</b>
+<div
+key={material.id}
+className="border rounded-xl p-5 mb-4 shadow-sm"
+>
 
-              <span className="text-gray-500 text-sm">
-                Saldo: {material.saldo} {material.unidade}
-              </span>
+<div className="flex justify-between items-center">
 
-            </div>
+<b className="text-lg">{material.nome}</b>
 
-            <div className="flex flex-wrap gap-3 mt-4 items-center">
+<span className="text-gray-500 text-sm">
+Saldo: {material.saldo} {material.unidade}
+</span>
 
-              <input
-                type="number"
-                placeholder="Quantidade"
-                value={quantidades[material.id] || ""}
-                onChange={(e)=>
-                  setQuantidades(prev=>({
-                    ...prev,
-                    [material.id]: Number(e.target.value)
-                  }))
-                }
-                className="border rounded-lg p-2 w-28"
-              />
+</div>
 
-              <select
-                value={tipo}
-                onChange={(e)=>
-                  setTipoMov(prev=>({
-                    ...prev,
-                    [material.id]: e.target.value
-                  }))
-                }
-                className="border rounded-lg p-2"
-              >
+<div className="flex flex-wrap gap-3 mt-4 items-center">
 
-                <option value="uso">Uso na obra</option>
-                <option value="transferencia">Transferência</option>
-                <option value="descarte">Descarte</option>
-
-              </select>
-
-              {tipo === "transferencia" && (
-
-                <select
-                  className="border rounded-lg p-2"
-                  onChange={(e)=>
-                    setObraDestino(prev=>({
-                      ...prev,
-                      [material.id]: e.target.value
-                    }))
-                  }
-                >
-
-                  <option value="">Obra destino</option>
-
-                  {obras
-                    .filter(o => o.id !== obraSelecionada)
-                    .map(o=>(
-                    <option key={o.id} value={o.id}>
-                      {o.nome}
-                    </option>
-                  ))}
-
-                </select>
-
-              )}
-
-              <button
-                onClick={()=>retirar(material)}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
-              >
-                Confirmar
-              </button>
-
-            </div>
-
-          </div>
-
-          )
-
-        })}
-
-      </div>
-
-    </div>
-
-  );
-
+<input
+type="number"
+placeholder="Quantidade"
+value={quantidades[material.id] || ""}
+onChange={(e)=>
+setQuantidades(prev=>({
+...prev,
+[material.id]: Number(e.target.value)
+}))
 }
+className="border rounded-lg p-2 w-28"
+/>
+
+<select
+value={tipo}
+onChange={(e)=>
+setTipoMov(prev=>({
+...prev,
+[material.id]: e.target.value
+}))
+}
+className="border rounded-lg p-2"
+>
+
+<option value="uso">Uso na obra</option>
+<option value="transferencia">Transferência</option>
+<option value="descarte">Descarte</option>
+
+</select>
+
+{tipo === "transferencia" && (
+
+<select
+className="border rounded-lg p-2"
+onChange={(e)=>
+setObraDestino(prev=>({
+...prev,
+[material.id]: e.target.value
+}))
+}
+>
+
+<option value="">Obra destino</option>
+
+{obras
+.filter(o => o.id !== obraSelecionada)
+.map(o=>(
+<option key={o.id} value={o.id}>
+{o.nome}
+</option>
+))}
+
+</select>
+
+)}
+
+<button
+onClick={()=>retirar(material)}
+className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+>
+Confirmar
+</button>
+
+</div>
+
+</div>
+
+)
+
+})}
+
+</div>
+
+</div>
+
+</div>
+
+)
