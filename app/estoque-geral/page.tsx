@@ -258,9 +258,9 @@ export default function EstoqueGeral() {
         {setorSelecionado}
       </h1>
 
-      <div className="overflow-x-auto">
+      <div className="max-h-[70vh] overflow-auto border rounded-lg">
 
-        <table className="w-full border rounded-lg overflow-hidden">
+        <table className="w-full">
 
           <thead className="bg-gray-100">
 
