@@ -105,13 +105,8 @@ export default function BuscarMaterial() {
 
       const nomeNormalizado = normalizarTexto(m.nome);
 
-      const palavras = nomeNormalizado.split(" ");
-
-      const encontrou = palavras.some((palavra) =>
-        palavra.startsWith(buscaNormalizada)
-      );
-
-      return encontrou && m.saldo > 0;
+      // 🔎 BUSCA APENAS PELO INÍCIO DO MATERIAL
+      return nomeNormalizado.startsWith(buscaNormalizada) && m.saldo > 0;
 
     });
 
@@ -160,7 +155,7 @@ export default function BuscarMaterial() {
       </h1>
 
       <input
-        placeholder="Digite nome, número ou tipo..."
+        placeholder="Digite o nome do material..."
         value={busca}
         onChange={(e) => pesquisar(e.target.value)}
         className="w-full p-3 border rounded"
