@@ -303,8 +303,23 @@ export default function ControleEstoque() {
       {material.nome}
       </td>
 
-      <td className="p-3 text-center font-bold">
+      <td
+      className={`p-3 text-center font-bold flex justify-center gap-2
+      ${
+      material.saldo === 0
+      ? "text-red-600"
+      : material.estoqueMinimo && material.saldo <= material.estoqueMinimo
+      ? "text-yellow-600"
+      : ""
+      }`}
+      >
+
       {material.saldo} {material.unidade}
+
+      {material.saldo === 0 && "🔴"}
+
+      {material.estoqueMinimo && material.saldo <= material.estoqueMinimo && material.saldo !== 0 && "🟡"}
+
       </td>
 
       <td className="p-3 text-center">
