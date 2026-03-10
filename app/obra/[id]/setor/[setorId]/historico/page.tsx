@@ -191,11 +191,23 @@ export default function ControleSetor() {
 
   }
 
-  const materiaisFiltrados = materiais.filter(m =>
-    m.nome.toLowerCase().includes(
-      busca.toLowerCase()
+  const materiaisFiltrados = materiais
+    .filter(m =>
+      m.nome.toLowerCase().includes(busca.toLowerCase())
     )
-  );
+    .sort((a,b)=>{
+
+      const buscaLower = busca.toLowerCase();
+
+      const aComeca = a.nome.toLowerCase().startsWith(buscaLower);
+      const bComeca = b.nome.toLowerCase().startsWith(buscaLower);
+
+      if(aComeca && !bComeca) return -1;
+      if(!aComeca && bComeca) return 1;
+
+      return a.nome.localeCompare(b.nome);
+
+    });
 
   return(
 
@@ -212,7 +224,7 @@ export default function ControleSetor() {
         className="border p-2 rounded w-full"
       />
 
-      <div className="bg-white rounded shadow">
+      <div className="bg-white rounded shadow max-h-[70vh] overflow-y-auto">
 
         {materiaisFiltrados.map(material=>{
 
