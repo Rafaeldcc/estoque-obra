@@ -319,9 +319,30 @@ export default function CadastrarMaterial() {
 
     const nomeNormalizado = normalizarTexto(nomeMaterial);
 
-    const existe = materiaisExistentes.some(
-      (m) => normalizarTexto(m) === nomeNormalizado
+    const materiaisRef = collection(
+      db,
+      "obras",
+      obraId,
+      "setores",
+      setorId,
+      "materiais"
     );
+
+    const snap = await getDocs(materiaisRef);
+
+    let existe = false;
+
+    snap.forEach((doc) => {
+
+      const data = doc.data();
+
+      if (
+        normalizarTexto(data.nome) === nomeNormalizado
+      ) {
+        existe = true;
+     }
+
+    });
 
     if (existe) {
       alert("Este material já existe neste setor.");
