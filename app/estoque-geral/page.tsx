@@ -244,8 +244,8 @@ export default function EstoqueGeral() {
   const materiais = tabela
     .filter(l => l.setor === setorSelecionado)
     .filter(l =>
-      l.material.toLowerCase().includes(busca.toLowerCase())
-    );
+      l.material.toLowerCase().startsWith(busca.toLowerCase())
+  );
 
 
 
