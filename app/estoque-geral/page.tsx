@@ -33,6 +33,9 @@ export default function EstoqueGeral() {
   const [loading, setLoading] = useState(true);
   const [setorSelecionado, setSetorSelecionado] = useState<string | null>(null);
 
+  // 🔎 NOVA BUSCA
+  const [busca, setBusca] = useState("");
+
   useEffect(() => {
 
     if (!user) return;
@@ -107,8 +110,6 @@ export default function EstoqueGeral() {
         for (const setor of setoresSnap.docs) {
 
           const setorData = setor.data();
-
-          // 🔧 CORREÇÃO PRINCIPAL
           const setorNome = setorData.nome || setor.id;
 
           const materiaisSnap = await getDocs(
@@ -239,7 +240,12 @@ export default function EstoqueGeral() {
 
 
 
-  const materiais = tabela.filter(l => l.setor === setorSelecionado);
+  // 🔎 FILTRO COM BUSCA
+  const materiais = tabela
+    .filter(l => l.setor === setorSelecionado)
+    .filter(l =>
+      l.material.toLowerCase().includes(busca.toLowerCase())
+    );
 
 
 
@@ -254,9 +260,18 @@ export default function EstoqueGeral() {
         ← Voltar
       </button>
 
-      <h1 className="text-3xl font-bold mb-8">
+      <h1 className="text-3xl font-bold mb-6">
         {setorSelecionado}
       </h1>
+
+      {/* 🔎 CAMPO DE BUSCA */}
+
+      <input
+        placeholder="Buscar material..."
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+        className="border p-2 rounded w-full mb-6"
+      />
 
       <div className="max-h-[70vh] overflow-auto border rounded-lg">
 
