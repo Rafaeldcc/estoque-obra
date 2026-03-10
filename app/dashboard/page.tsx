@@ -405,9 +405,17 @@ function Lista({ titulo, dados }: any) {
 
             <span>{m.material}</span>
 
-            <span className="text-red-600">
-              Saldo: {m.saldo}
-            </span>
+            <span
+              className={
+                m.saldo === 0
+                  ? "text-red-700 font-bold"
+                  : m.saldo <= m.minimo
+                  ? "text-red-600 font-semibold"
+                  : "text-green-600"
+              } 
+            >
+  Saldo: {m.saldo}
+</span>
 
           </div>
 
@@ -445,7 +453,17 @@ function ListaSimples({ titulo, dados }: any) {
 
         <div key={i} className="flex justify-between border-b py-2">
 
-          <span>{m.material}</span>
+          <span
+            className={
+              m.saldo === 0
+                ? "text-red-700 font-bold"
+                : m.saldo <= m.minimo
+                ? "text-red-600 font-semibold"
+                : ""
+            }
+          >
+            {m.material}
+          </span>
 
           <span className="text-blue-600 font-bold">
             {m.quantidade}
