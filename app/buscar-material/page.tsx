@@ -105,16 +105,12 @@ export default function BuscarMaterial() {
 
       const nomeNormalizado = normalizarTexto(m.nome);
 
-      const palavras = nomeNormalizado.split(" ");
-
-      const começaCom = palavras.some((p) =>
-        p.startsWith(buscaNormalizada)
-      );
-
-      return começaCom && m.saldo > 0;
+      // 🔎 AGORA BUSCA APENAS PELO INÍCIO DO MATERIAL
+      return nomeNormalizado.startsWith(buscaNormalizada) && m.saldo > 0;
 
     });
 
+    // remover duplicados
     const mapa = new Map<string, Material>();
 
     filtrados.forEach((item) => {
