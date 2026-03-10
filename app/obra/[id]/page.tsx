@@ -7,8 +7,7 @@ import {
   addDoc,
   deleteDoc,
   doc,
-  getDocs,
-  getDoc
+  getDocs
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
@@ -21,7 +20,7 @@ export default function Setores() {
   const params = useParams();
   const obraId = params.id as string;
 
-  const { user, role } = useAuth();
+  const { role } = useAuth();
 
   const [setores, setSetores] = useState<any[]>([]);
   const [novoSetor, setNovoSetor] = useState("");
@@ -29,6 +28,9 @@ export default function Setores() {
   const [todosSetores, setTodosSetores] = useState<string[]>([]);
   const [sugestoes, setSugestoes] = useState<string[]>([]);
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+
+  // 🔎 NOVA BUSCA
+  const [busca, setBusca] = useState("");
 
   /* CARREGAR SETORES DA OBRA */
 
@@ -60,6 +62,7 @@ export default function Setores() {
     return () => unsubscribe();
 
   }, [obraId]);
+
 
 
   /* CARREGAR SETORES DE TODAS AS OBRAS */
@@ -211,6 +214,12 @@ export default function Setores() {
   }
 
 
+  // 🔎 FILTRO DE BUSCA
+  const setoresFiltrados = setores.filter((setor) =>
+    setor.nome.toLowerCase().includes(busca.toLowerCase())
+  );
+
+
   return (
 
     <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -218,6 +227,17 @@ export default function Setores() {
       <h1 className="text-2xl font-bold">
         Setores
       </h1>
+
+
+      {/* 🔎 BUSCA */}
+
+      <input
+        placeholder="Buscar setor..."
+        value={busca}
+        onChange={(e) => setBusca(e.target.value)}
+        className="border p-2 rounded w-full"
+      />
+
 
       <div className="relative flex gap-2">
 
@@ -264,7 +284,8 @@ export default function Setores() {
 
       </div>
 
-      {setores.map((setor) => (
+
+      {setoresFiltrados.map((setor) => (
 
         <div
           key={setor.id}
