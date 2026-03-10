@@ -243,8 +243,19 @@ export default function ControleEstoque() {
 
   }
 
+  function normalizar(texto:string){
+
+    return texto
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase();
+
+  }
+
   const filtrados = materiais.filter(m =>
-    m.nome.toLowerCase().includes(busca.toLowerCase())
+    normalizar(m.nome).startsWith(
+      normalizar(busca)
+    )
   );
 
   return(
