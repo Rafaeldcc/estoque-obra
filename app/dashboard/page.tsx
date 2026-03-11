@@ -1,5 +1,7 @@
 "use client";
 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useEffect, useState } from "react";
 import {
   collection,
@@ -324,7 +326,7 @@ export default function Dashboard() {
       )}
 
       {visao === "usados" && (
-        <ListaSimples titulo="🔥 Materiais mais usados" dados={materiaisUsados} />
+        <MateriaisUsadosMes empresaId={user?.empresaId} />
       )}
 
     </div>
@@ -441,40 +443,162 @@ function Lista({ titulo, dados }: any) {
 }
 
 
-function ListaSimples({ titulo, dados }: any) {
+function MateriaisUsadosMes({ empresaId }: any) {
 
-  return (
+  const [mes,setMes] = useState(new Date().getMonth()+1)
+  const [dados,setDados] = useState<any[]>([])
+
+  useEffect(()=>{
+    if(!empresaId) return
+    carregar()
+  },[mes,empresaId])
+
+  async function carregar(){
+
+    const q = query(
+      collection(db,"movimentacoes"),
+      where("empresaId","==",empresaId)
+    )
+
+    const snap = await getDocs(q)
+
+    let mapa:any = {}
+
+    snap.forEach((docMov)=>{
+
+      const data = docMov.data()
+
+      if(data.tipo !== "saida") return
+
+      const dataMov = data.criadoEm?.toDate?.()
+
+      if(!dataMov) return
+
+      const mesMov = dataMov.getMonth()+1
+
+      if(mesMov !== mes) return
+
+      const chave = data.materialNome + "-" + data.obraNome
+
+      if(!mapa[chave]){
+
+        mapa[chave] = {
+          material:data.materialNome,
+          obra:data.obraNome,
+          quantidade:0
+        }
+
+      }
+
+      mapa[chave].quantidade += Number(data.quantidade || 0)
+
+    })
+
+    const lista = Object.values(mapa)
+
+    lista.sort((a:any,b:any)=>b.quantidade-a.quantidade)
+
+    setDados(lista)
+
+  }
+  function gerarPDF(){
+
+    const doc = new jsPDF()
+
+    doc.text("Materiais mais usados no mês",14,15)
+
+    autoTable(doc,{
+      startY:20,
+      head:[["Material","Quantidade","Obra"]],
+      body:dados.map((d:any)=>[
+        d.material,
+        d.quantidade,
+        d.obra
+      ])
+    })
+
+    doc.save("materiais-mais-usados.pdf")
+
+  }
+
+  return(
 
     <div className="bg-white p-6 rounded-xl shadow">
 
-      <h2 className="text-xl font-bold mb-4">{titulo}</h2>
+      <div className="flex justify-between mb-4">
 
-      {dados.map((m: any, i: number) => (
+        <h2 className="text-xl font-bold">
+          🔥 Materiais mais usados
+        </h2>
 
-        <div key={i} className="flex justify-between border-b py-2">
+        <select
+          value={mes}
+          onChange={(e)=>setMes(Number(e.target.value))}
+          className="border p-2 rounded"
+        >
 
-          <span
-            className={
-              m.saldo === 0
-                ? "text-red-700 font-bold"
-                : m.saldo <= m.minimo
-                ? "text-red-600 font-semibold"
-                : ""
-            }
-          >
-            {m.material}
-          </span>
+          <option value={1}>Janeiro</option>
+          <option value={2}>Fevereiro</option>
+          <option value={3}>Março</option>
+          <option value={4}>Abril</option>
+          <option value={5}>Maio</option>
+          <option value={6}>Junho</option>
+          <option value={7}>Julho</option>
+          <option value={8}>Agosto</option>
+          <option value={9}>Setembro</option>
+          <option value={10}>Outubro</option>
+          <option value={11}>Novembro</option>
+          <option value={12}>Dezembro</option>
 
-          <span className="text-blue-600 font-bold">
-            {m.quantidade}
-          </span>
+        </select>
 
-        </div>
+      </div>
 
-      ))}
+      <table className="w-full">
+
+        <thead>
+
+          <tr className="border-b">
+
+            <th className="text-left p-2">Material</th>
+            <th className="text-center p-2">Quantidade</th>
+            <th className="text-left p-2">Obra</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          {dados.map((item:any,i:number)=>(
+
+            <tr key={i} className="border-b">
+
+              <td className="p-2">{item.material}</td>
+
+              <td className="p-2 text-center font-bold text-blue-600">
+                {item.quantidade}
+              </td>
+
+              <td className="p-2">{item.obra}</td>
+
+            </tr>
+
+          ))}
+
+        </tbody>
+
+      </table>
+
+      <button
+        onClick={gerarPDF}
+        className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+      >
+        📄 Gerar PDF
+      </button>
 
     </div>
 
-  );
+  )
 
 }
