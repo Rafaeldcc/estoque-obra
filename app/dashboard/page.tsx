@@ -326,7 +326,7 @@ export default function Dashboard() {
       )}
 
       {visao === "usados" && (
-        <MateriaisUsadosMes empresaId={user?.empresaId} />
+        <MateriaisUsadosMes />
       )}
 
     </div>
@@ -443,15 +443,40 @@ function Lista({ titulo, dados }: any) {
 }
 
 
-function MateriaisUsadosMes({ empresaId }: any) {
+function MateriaisUsadosMes() {
 
+  const { user } = useAuth()
+
+  const [empresaId,setEmpresaId] = useState("")
   const [mes,setMes] = useState(new Date().getMonth()+1)
   const [dados,setDados] = useState<any[]>([])
+
+  useEffect(()=>{
+
+    async function carregarEmpresa(){
+
+      if(!user) return
+
+      const snap = await getDoc(doc(db,"usuarios",user.uid))
+
+      if(!snap.exists()) return
+
+      const data = snap.data()
+
+      setEmpresaId(data?.empresaId)
+
+    }
+
+    carregarEmpresa()
+
+  },[user])
+
 
   useEffect(()=>{
     if(!empresaId) return
     carregar()
   },[mes,empresaId])
+
 
   async function carregar(){
 
@@ -501,6 +526,8 @@ function MateriaisUsadosMes({ empresaId }: any) {
     setDados(lista)
 
   }
+
+
   function gerarPDF(){
 
     const doc = new jsPDF()
@@ -520,6 +547,7 @@ function MateriaisUsadosMes({ empresaId }: any) {
     doc.save("materiais-mais-usados.pdf")
 
   }
+
 
   return(
 
