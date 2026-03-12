@@ -1,5 +1,6 @@
 "use client";
 
+import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useEffect, useState } from "react";
 import {
   collection,
@@ -141,6 +142,44 @@ export default function ControleEstoque() {
 
   }
 
+  async function registrarHistorico(
+    material: Material,
+    tipo: "entrada" | "saida" | "transferencia",
+    quantidade: number,
+    destino?: string
+  ){
+
+    try{
+
+      await registrarMovimentacao({
+
+        materialId: material.id,
+        materialNome: material.nome,
+
+        tipo: tipo,
+
+        quantidade: quantidade,
+
+        obraId: obraId,
+        obraNome: obras.find(o => o.id === obraId)?.nome || "",
+
+        destino: destino || "uso",
+
+        usuarioId: "",
+        usuarioNome: "",
+
+        empresaId: ""
+
+      });
+
+    }catch(error){
+
+      console.error("Erro ao registrar histórico",error);
+
+    }
+
+  }
+
   async function uploadFoto(e:any, material:Material){
 
     const file = e.target.files[0];
@@ -205,14 +244,14 @@ export default function ControleEstoque() {
 
       carregarMateriais();
 
-    }catch(error){
+  }catch(error){
 
-      console.error(error);
-      alert("Erro ao salvar estoque mínimo");
-
-    }
+    console.error(error);
+    alert("Erro ao salvar estoque mínimo");
 
   }
+
+}
 
   async function entrada(material:Material){
 
@@ -226,7 +265,55 @@ export default function ControleEstoque() {
       { saldo:novoSaldo }
     );
 
+    await registrarHistorico(material,"entrada",qtd);
+
     mostrarMensagem("Entrada realizada");
+
+    carregarMateriais();
+
+  }
+
+  async function usarNaObra(material:Material){
+
+    const qtd = Number(quantidades[material.id] ?? 0);
+
+    if(!qtd) return alert("Digite a quantidade");
+
+    if(qtd > material.saldo) return alert("Saldo insuficiente");
+
+    const novoSaldo = material.saldo - qtd;
+
+    await updateDoc(
+      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+      { saldo:novoSaldo }
+    );
+
+    await registrarHistorico(material,"saida",qtd,"uso");
+
+    mostrarMensagem("Material usado na obra");
+
+    carregarMateriais();
+
+  }
+
+  async function descartarMaterial(material:Material){
+
+    const qtd = Number(quantidades[material.id] ?? 0);
+
+    if(!qtd) return alert("Digite a quantidade");
+
+    if(qtd > material.saldo) return alert("Saldo insuficiente");
+
+    const novoSaldo = material.saldo - qtd;
+
+    await updateDoc(
+      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+      { saldo:novoSaldo }
+    );
+
+    await registrarHistorico(material,"saida",qtd,"descarte");
+
+    mostrarMensagem("Material descartado");
 
     carregarMateriais();
 
@@ -246,6 +333,8 @@ export default function ControleEstoque() {
       doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
       { saldo:novoSaldo }
     );
+
+    await registrarHistorico(material,"transferencia",qtd,destinoObra);
 
     mostrarMensagem("Transferência realizada");
 
@@ -426,6 +515,13 @@ export default function ControleEstoque() {
 
             <div className="flex gap-3 flex-wrap">
 
+              <button
+              onClick={()=>descartarMaterial(materialSelecionado)}
+              className="bg-red-600 text-white px-4 py-2 rounded"
+              >
+              Descarte
+              </button>
+
               <input
                 type="number"
                 placeholder="Qtd"
@@ -500,6 +596,13 @@ export default function ControleEstoque() {
                 className="bg-blue-600 text-white px-4 py-2 rounded"
               >
                 Salvar mínimo
+              </button>
+
+              <button
+                onClick={()=>usarNaObra(materialSelecionado)}
+                className="bg-orange-600 text-white px-4 py-2 rounded"
+              >
+              Usado na obra
               </button>
 
               {role === "admin" && (
