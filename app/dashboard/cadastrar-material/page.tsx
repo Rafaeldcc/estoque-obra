@@ -392,19 +392,6 @@ export default function CadastrarMaterial() {
 
       });
 
-        materialId,
-        materialNome: nomeMaterial.trim(),
-        tipo: "entrada",
-        quantidade,
-        obraId,
-        obraNome:
-          obras.find((o) => o.id === obraId)?.nome || "",
-        usuarioId: user.uid,
-        usuarioNome: user.email || "",
-        empresaId: empresaId || ""
-
-      });
-
       setMensagem("Material salvo com sucesso!");
 
       setTimeout(() => {
