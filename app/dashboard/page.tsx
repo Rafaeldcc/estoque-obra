@@ -450,6 +450,7 @@ function MateriaisUsadosMes() {
   const [empresaId,setEmpresaId] = useState("")
   const [mes,setMes] = useState(new Date().getMonth()+1)
   const [dados,setDados] = useState<any[]>([])
+  const [obraSelecionada,setObraSelecionada] = useState<string | null>(null)
 
   useEffect(()=>{
 
@@ -530,14 +531,18 @@ function MateriaisUsadosMes() {
 
   function gerarPDF(){
 
+    const listaPDF = obraSelecionada
+      ? dados.filter((d:any)=>d.obra === obraSelecionada)
+      : dados
+
     const doc = new jsPDF()
 
-    doc.text("Materiais mais usados no mês",14,15)
+    doc.text("Materiais mais usados",14,15)
 
     autoTable(doc,{
       startY:20,
       head:[["Material","Quantidade","Obra"]],
-      body:dados.map((d:any)=>[
+      body:listaPDF.map((d:any)=>[
         d.material,
         d.quantidade,
         d.obra
@@ -547,6 +552,9 @@ function MateriaisUsadosMes() {
     doc.save("materiais-mais-usados.pdf")
 
   }
+
+
+  const obras = [...new Set(dados.map((d:any)=>d.obra))]
 
 
   return(
@@ -582,41 +590,104 @@ function MateriaisUsadosMes() {
 
       </div>
 
-      <table className="w-full">
 
-        <thead>
+      {/* LISTA DE OBRAS */}
 
-          <tr className="border-b">
+      {!obraSelecionada && (
 
-            <th className="text-left p-2">Material</th>
-            <th className="text-center p-2">Quantidade</th>
-            <th className="text-left p-2">Obra</th>
+        <div>
 
-          </tr>
+          <h3 className="font-semibold mb-4">
+            Obras com consumo
+          </h3>
 
-        </thead>
+          {obras.map((obra:any,i:number)=>{
 
-        <tbody>
+            const total = dados
+              .filter((d:any)=>d.obra === obra)
+              .reduce((acc:any,item:any)=>acc+item.quantidade,0)
 
-          {dados.map((item:any,i:number)=>(
+            return(
 
-            <tr key={i} className="border-b">
+              <div
+                key={i}
+                onClick={()=>setObraSelecionada(obra)}
+                className="border-b py-3 cursor-pointer hover:bg-gray-100 flex justify-between"
+              >
 
-              <td className="p-2">{item.material}</td>
+                <span>{obra}</span>
 
-              <td className="p-2 text-center font-bold text-blue-600">
-                {item.quantidade}
-              </td>
+                <span className="font-bold text-blue-600">
+                  {total}
+                </span>
 
-              <td className="p-2">{item.obra}</td>
+              </div>
 
-            </tr>
+            )
 
-          ))}
+          })}
 
-        </tbody>
+        </div>
 
-      </table>
+      )}
+
+
+
+      {/* LISTA DE MATERIAIS DA OBRA */}
+
+      {obraSelecionada && (
+
+        <div>
+
+          <button
+            onClick={()=>setObraSelecionada(null)}
+            className="mb-4 bg-gray-200 px-3 py-1 rounded"
+          >
+            ← Voltar
+          </button>
+
+          <h3 className="font-semibold mb-4">
+            Materiais usados — {obraSelecionada}
+          </h3>
+
+          <table className="w-full">
+
+            <thead>
+
+              <tr className="border-b">
+
+                <th className="text-left p-2">Material</th>
+                <th className="text-center p-2">Quantidade</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {dados
+              .filter((d:any)=>d.obra === obraSelecionada)
+              .map((item:any,i:number)=>(
+
+                <tr key={i} className="border-b">
+
+                  <td className="p-2">{item.material}</td>
+
+                  <td className="p-2 text-center font-bold text-blue-600">
+                    {item.quantidade}
+                  </td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      )}
 
       <button
         onClick={gerarPDF}
