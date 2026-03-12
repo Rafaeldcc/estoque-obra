@@ -12,6 +12,9 @@ type MovimentacaoProps = {
   obraId: string;
   obraNome: string;
 
+  setorId?: string;
+  setorNome?: string;
+
   destino?: "uso" | "transferencia";
 
   obraDestino?: string | null;
