@@ -143,10 +143,11 @@ export default function ControleEstoque() {
   }
 
   async function registrarHistorico(
-    material: Material,
-    tipo: "entrada" | "saida" | "transferencia",
-    quantidade: number,
-    destino?: string
+  material: Material,
+  tipo: "entrada" | "saida" | "transferencia",
+  quantidade: number,
+  destino?: "uso" | "transferencia",
+  obraDestino?: string
   ){
 
     try{
@@ -334,7 +335,7 @@ export default function ControleEstoque() {
       { saldo:novoSaldo }
     );
 
-    await registrarHistorico(material,"transferencia",qtd,destinoObra);
+    await registrarHistorico(material,"transferencia",qtd,"transferencia");
 
     mostrarMensagem("Transferência realizada");
 
