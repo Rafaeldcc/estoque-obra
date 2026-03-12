@@ -45,7 +45,7 @@ export async function registrarMovimentacao(data: MovimentacaoProps) {
 
       empresaId: data.empresaId,
 
-      createdAt: serverTimestamp()
+      criadoEm: serverTimestamp()
     };
 
     await addDoc(
