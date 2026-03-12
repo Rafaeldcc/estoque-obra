@@ -26,7 +26,6 @@ type MovimentacaoProps = {
 };
 
 export async function registrarMovimentacao(data: MovimentacaoProps) {
-
   try {
 
     const movimentacao = {
@@ -38,6 +37,9 @@ export async function registrarMovimentacao(data: MovimentacaoProps) {
 
       obraId: data.obraId,
       obraNome: data.obraNome,
+
+      setorId: data.setorId ?? null,
+      setorNome: data.setorNome ?? null,
 
       destino: data.destino ?? "uso",
 
@@ -62,5 +64,4 @@ export async function registrarMovimentacao(data: MovimentacaoProps) {
     throw error;
 
   }
-
 }
