@@ -19,10 +19,10 @@ type MovimentacaoProps = {
 
   obraDestino?: string | null;
 
-  usuarioId: string;
-  usuarioNome: string;
+  usuarioId?: string;
+  usuarioNome?: string;
 
-  empresaId: string;
+  empresaId?: string;
 };
 
 export async function registrarMovimentacao(data: MovimentacaoProps) {
@@ -43,10 +43,10 @@ export async function registrarMovimentacao(data: MovimentacaoProps) {
 
       obraDestino: data.obraDestino ?? null,
 
-      usuarioId: data.usuarioId,
-      usuarioNome: data.usuarioNome,
+      usuarioId: data.usuarioId ?? "",
+      usuarioNome: data.usuarioNome ?? "",
 
-      empresaId: data.empresaId,
+      empresaId: data.empresaId ?? "",
 
       criadoEm: serverTimestamp()
     };
