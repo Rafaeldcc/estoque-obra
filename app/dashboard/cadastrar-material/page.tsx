@@ -374,6 +374,26 @@ export default function CadastrarMaterial() {
 
         materialId,
         materialNome: nomeMaterial.trim(),
+
+        tipo: "entrada",
+
+        quantidade,
+
+        obraId,
+        obraNome: obras.find((o) => o.id === obraId)?.nome || "",
+
+        setorId,
+        setorNome: setores.find((s) => s.id === setorId)?.nome || "",
+
+        usuarioId: user.uid,
+        usuarioNome: user.email || "",
+
+        empresaId: empresaId!
+
+      });
+
+        materialId,
+        materialNome: nomeMaterial.trim(),
         tipo: "entrada",
         quantidade,
         obraId,
