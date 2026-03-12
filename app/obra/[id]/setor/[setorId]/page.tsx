@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { registrarMovimentacao } from "@/lib/movimentacoes";
 import {
   collection,
   getDocs,
@@ -188,6 +189,44 @@ export default function ControleEstoque() {
       alert("Digite o estoque mínimo");
       return;
     }
+
+    async function registrarHistorico(
+  material:Material,
+  tipo:"entrada"|"saida"|"transferencia",
+  quantidade:number,
+  destino?:string
+){
+
+  try{
+
+    await registrarMovimentacao({
+
+      materialId: material.id,
+      materialNome: material.nome,
+
+      tipo: tipo,
+
+      quantidade: quantidade,
+
+      obraId: obraId,
+      obraNome: obras.find(o=>o.id===obraId)?.nome || "",
+
+      destino: destino || "uso",
+
+      usuarioId: "",
+      usuarioNome: "",
+
+      empresaId: ""
+
+    });
+
+  }catch(error){
+
+    console.error("Erro ao registrar histórico",error);
+
+  }
+
+}
 
     try{
 
