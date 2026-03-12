@@ -16,7 +16,7 @@ import {
 } from "firebase/storage";
 
 import { db, storage } from "@/lib/firebase";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 
 interface Material {
@@ -38,8 +38,12 @@ export default function ControleEstoque() {
   const { role } = useAuth();
 
   const params = useParams();
+  const searchParams = useSearchParams();
+
   const obraId = params.id as string;
   const setorId = params.setorId as string;
+
+  const materialHighlight = searchParams.get("material");
 
   const [materiais,setMateriais] = useState<Material[]>([]);
   const [obras,setObras] = useState<Obra[]>([]);
@@ -54,6 +58,33 @@ export default function ControleEstoque() {
     carregarMateriais();
     carregarObras();
   },[]);
+
+  useEffect(()=>{
+
+    if(!materialHighlight || materiais.length === 0) return;
+
+    setTimeout(()=>{
+
+      const el = document.getElementById(`material-${materialHighlight}`);
+
+      if(el){
+
+        el.scrollIntoView({
+          behavior:"smooth",
+          block:"center"
+        });
+
+        el.classList.add("bg-yellow-100");
+
+        setTimeout(()=>{
+          el.classList.remove("bg-yellow-100");
+        },4000);
+
+      }
+
+    },500);
+
+  },[materiais]);
 
   async function carregarMateriais(){
 
@@ -294,6 +325,7 @@ export default function ControleEstoque() {
       {filtrados.map(material => (
 
       <tr
+      id={`material-${material.id}`}
       key={material.id}
       className="border-t hover:bg-gray-50 cursor-pointer"
       onClick={()=>setMaterialSelecionado(material)}

@@ -140,7 +140,7 @@ export default function BuscarMaterial() {
   function abrirMaterial(material: Material) {
 
     router.push(
-      `/obra/${material.obraId}/setor/${material.setorId}`
+      `/obra/${material.obraId}/setor/${material.setorId}?material=${material.id}`
     );
 
   }
