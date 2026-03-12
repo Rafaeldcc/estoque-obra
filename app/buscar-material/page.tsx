@@ -6,11 +6,14 @@ import { collection, getDocs } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 type Material = {
+  id: string;
   nome: string;
   obra: string;
   setor: string;
   saldo: number;
   unidade: string;
+  obraId: string;
+  setorId: string;
 };
 
 export default function BuscarMaterial() {
@@ -62,18 +65,21 @@ export default function BuscarMaterial() {
           )
         );
 
-        materiaisSnap.forEach((doc) => {
+        materiaisSnap.forEach((docSnap) => {
 
-          const data = doc.data();
+          const data = docSnap.data();
 
           if (!data?.nome) return;
 
           lista.push({
+            id: docSnap.id,
             nome: data.nome,
             saldo: data.saldo ?? 0,
             unidade: data.unidade ?? "un",
             obra: obraNome,
             setor: setorNome,
+            obraId: obra.id,
+            setorId: setor.id
           });
 
         });
@@ -105,7 +111,6 @@ export default function BuscarMaterial() {
 
       const nomeNormalizado = normalizarTexto(m.nome);
 
-      // 🔎 BUSCA APENAS PELO INÍCIO DO MATERIAL
       return nomeNormalizado.startsWith(buscaNormalizada) && m.saldo > 0;
 
     });
@@ -134,15 +139,9 @@ export default function BuscarMaterial() {
 
   function abrirMaterial(material: Material) {
 
-    const listaMateriais = materiais
-      .filter((m) =>
-        normalizarTexto(m.nome) === normalizarTexto(material.nome)
-      )
-      .filter((m) => m.saldo > 0);
-
-    const data = encodeURIComponent(JSON.stringify(listaMateriais));
-
-    router.push(`/material?data=${data}`);
+    router.push(
+      `/obra/${material.obraId}/setor/${material.setorId}`
+    );
 
   }
 
@@ -179,7 +178,7 @@ export default function BuscarMaterial() {
 
               <div className="text-xs text-gray-500">
 
-                {mat.setor} • {mat.obra}  
+                {mat.setor} • {mat.obra}
                 • Estoque: {mat.saldo} {mat.unidade}
 
               </div>
