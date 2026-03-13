@@ -167,84 +167,44 @@ export default function RetiradaMaterial() {
 
       const destinoId = obraDestino[material.id];
 
-      if(!destinoId){
-        alert("Selecione obra destino");
-        return;
-      }
-
-    }
-
-    // 🔹 ATUALIZA SALDO DA OBRA ATUAL
-    await updateDoc(materialRef,{
-      saldo: increment(-qtd)
-    });
-
-    // 🔹 SE FOR TRANSFERÊNCIA
-    if(tipo === "transferencia"){
-
-      const destinoId = obraDestino[material.id];
-
-      // pegar setores da obra destino
-      let setorDestinoId = "";
-
-      // pegar setores da obra destino
-      const setoresDestinoSnap = await getDocs(
-        collection(db,"obras",destinoId,"setores")
-      );
-
-      // se existir setor usa o primeiro
-      if(setoresDestinoSnap.docs.length > 0){
-
-        // tenta encontrar setor com mesmo nome
-        for(const setorDoc of setoresDestinoSnap.docs){
-          if(setorDoc.data().nome === setores.find(s => s.id === material.setorId)?.nome){
-            setorDestinoId = setorDoc.id;
-          }       
-        }
-
-        // se não encontrar, usa o primeiro
-        if(!setorDestinoId && setoresDestinoSnap.docs.length > 0){
-          setorDestinoId = setoresDestinoSnap.docs[0].id;
-      }
-
-      }else{
-
-        // cria setor automaticamente se não existir
-        const nomeSetorOrigem =
-          setores.find(s => s.id === material.setorId)?.nome || "Geral";
-
-        const novoSetor = await addDoc(
-          collection(db,"obras",destinoId,"setores"),
-        {
-          nome: nomeSetorOrigem
-        }
-      );
-
-setorDestinoId = novoSetor.id;
-
-      setorDestinoId = novoSetor.id;
-
-      } 
-
-      const materiaisDestinoRef = collection(
+      // verificar se setor existe na obra destino
+      const setorDestinoRef = doc(
         db,
         "obras",
         destinoId,
         "setores",
-        setorDestinoId,
-        "materiais"
+        material.setorId
       );
 
+      const setorSnap = await getDoc(setorDestinoRef);
+
+      // se setor não existir -> criar
+      if(!setorSnap.exists()){
+
+        const setorOrigemSnap = await getDoc(
+          doc(db,"obras",obraSelecionada,"setores",material.setorId)
+        );
+
+        const nomeSetor = setorOrigemSnap.data()?.nome || "Setor";
+
+        await setDoc(setorDestinoRef,{
+          nome: nomeSetor
+        });
+
+      }
+
+      // referência do material destino
       const materialDestinoRef = doc(
         db,
         "obras",
         destinoId,
         "setores",
-        setorDestinoId,
+        material.setorId,
         "materiais",
         material.id
       );
 
+      // adicionar material na obra destino
       await updateDoc(materialDestinoRef,{
         nome: material.nome,
         saldo: increment(qtd),
