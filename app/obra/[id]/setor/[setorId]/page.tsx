@@ -696,8 +696,6 @@ export default function ControleEstoque() {
 
         </div>
 
-      </div>
-
       )}
 
       {mensagem && (
