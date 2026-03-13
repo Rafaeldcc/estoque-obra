@@ -96,7 +96,13 @@ export default function MovimentacoesPage() {
           id:doc.id,
           ...doc.data()
         }))
-        .filter((mov:any)=>mov.empresaId === empresaId) as Movimentacao[];
+        .filter((mov:any)=>{
+
+          if(!mov.empresaId) return false;
+
+          return mov.empresaId === empresaId;
+
+        }) as Movimentacao[];
 
       setMovimentacoes(lista);
 
@@ -227,6 +233,10 @@ export default function MovimentacoesPage() {
 
             {mov.tipo === "saida" && mov.destino === "uso" && (
               <div>Usado na obra</div>
+            )}
+
+            {mov.tipo === "saida" && mov.destino === "descarte" && (
+              <div>Material descartado</div>
             )}
 
             <div>
