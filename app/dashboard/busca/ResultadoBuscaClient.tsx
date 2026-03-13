@@ -85,7 +85,7 @@ export default function ResultadoBuscaClient() {
 
             const nomeMaterial = normalizar(data.nome);
 
-            if(!nomeMaterial.includes(buscaNormalizada)) return;
+            if(!nomeMaterial.startsWith(buscaNormalizada) && !buscaNormalizada.includes(nomeMaterial)) return;
 
             const saldo = data.saldo || 0;
 
