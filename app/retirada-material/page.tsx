@@ -239,10 +239,40 @@ export default function RetiradaMaterial() {
 
       if(!existe){
 
-        await addDoc(materiaisDestinoRef,{
-          nome: material.nome,
-          saldo: qtd,
-          unidade: material.unidade
+        await updateDoc(
+          doc(
+            db,
+            "obras",
+            destinoId,
+            "setores",
+            setorDestinoId,
+            "materiais",
+            material.id
+          ),
+          {
+            nome: material.nome,
+            saldo: increment(qtd),
+            unidade: material.unidade
+          }
+        ).catch(async () => {
+
+          await setDoc(
+            doc(
+              db,
+              "obras",
+              destinoId,
+              "setores",
+              setorDestinoId,
+              "materiais",
+              material.id
+            ),
+            {
+              nome: material.nome,
+              saldo: qtd,
+              unidade: material.unidade
+            }
+          );
+
         });
 
       }
