@@ -14,6 +14,7 @@ import {
   getDoc,
   query,
   where,
+  setDoc
 } from "firebase/firestore";
 
 type Material = {
@@ -275,6 +276,7 @@ export default function RetiradaMaterial() {
 
         });
 
+      }
 
     // 🔹 REGISTRAR MOVIMENTAÇÃO
     const obraNome =
