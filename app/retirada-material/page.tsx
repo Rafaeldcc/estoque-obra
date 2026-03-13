@@ -195,7 +195,17 @@ export default function RetiradaMaterial() {
       // se existir setor usa o primeiro
       if(setoresDestinoSnap.docs.length > 0){
 
-        setorDestinoId = setoresDestinoSnap.docs[0].id;
+        // tenta encontrar setor com mesmo nome
+        for(const setorDoc of setoresDestinoSnap.docs){
+          if(setorDoc.data().nome === setores.find(s => s.id === material.setorId)?.nome){
+            setorDestinoId = setorDoc.id;
+          }       
+        }
+
+        // se não encontrar, usa o primeiro
+        if(!setorDestinoId && setoresDestinoSnap.docs.length > 0){
+          setorDestinoId = setoresDestinoSnap.docs[0].id;
+      }
 
       }else{
 
