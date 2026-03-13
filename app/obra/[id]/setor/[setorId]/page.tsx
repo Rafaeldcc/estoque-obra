@@ -3,17 +3,17 @@
 import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useEffect, useState } from "react";
 import {
-  collection,
-  getDocs,
-  updateDoc,
-  deleteDoc,
-  doc
+collection,
+getDocs,
+updateDoc,
+deleteDoc,
+doc
 } from "firebase/firestore";
 
 import {
-  ref,
-  uploadBytes,
-  getDownloadURL
+ref,
+uploadBytes,
+getDownloadURL
 } from "firebase/storage";
 
 import { db, storage } from "@/lib/firebase";
@@ -21,444 +21,419 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 
 interface Material {
-  id: string;
-  nome: string;
-  saldo: number;
-  unidade: string;
-  estoqueMinimo?: number;
-  foto?: string;
+id: string;
+nome: string;
+saldo: number;
+unidade: string;
+estoqueMinimo?: number;
+foto?: string;
 }
 
 interface Obra {
-  id: string;
-  nome: string;
+id: string;
+nome: string;
 }
 
-export default function ControleEstoque() {
+export default function ControleEstoque(){
 
-  const { role } = useAuth();
-  const router = useRouter();
-  const params = useParams();
-  const searchParams = useSearchParams();
+const { role } = useAuth();
+const router = useRouter();
+const params = useParams();
+const searchParams = useSearchParams();
 
-  const obraId = params.id as string;
-  const setorId = params.setorId as string;
+const obraId = params.id as string;
+const setorId = params.setorId as string;
 
-  const materialHighlight = searchParams.get("material");
+const materialHighlight = searchParams.get("material");
 
-  const [materiais,setMateriais] = useState<Material[]>([]);
-  const [obras,setObras] = useState<Obra[]>([]);
-  const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
-  const [destinos,setDestinos] = useState<{[key:string]:string}>({});
-  const [minimos,setMinimos] = useState<{[key:string]:number}>({});
-  const [busca,setBusca] = useState("");
-  const [materialSelecionado,setMaterialSelecionado] = useState<Material | null>(null);
-  const [mensagem,setMensagem] = useState("");
+const [materiais,setMateriais] = useState<Material[]>([]);
+const [obras,setObras] = useState<Obra[]>([]);
+const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
+const [destinos,setDestinos] = useState<{[key:string]:string}>({});
+const [tipoMov,setTipoMov] = useState<{[key:string]:string}>({});
+const [busca,setBusca] = useState("");
+const [materialSelecionado,setMaterialSelecionado] = useState<Material | null>(null);
+const [mensagem,setMensagem] = useState("");
 
-  useEffect(()=>{
-    carregarMateriais();
-    carregarObras();
-  },[]);
+useEffect(()=>{
+carregarMateriais();
+carregarObras();
+},[]);
 
-  async function carregarMateriais(){
+async function carregarMateriais(){
 
-    const snapshot = await getDocs(
-      collection(db,"obras",obraId,"setores",setorId,"materiais")
-    );
+const snapshot = await getDocs(
+collection(db,"obras",obraId,"setores",setorId,"materiais")
+);
 
-    const lista:Material[] = [];
+const lista:Material[] = [];
 
-    snapshot.forEach((docSnap)=>{
+snapshot.forEach((docSnap)=>{
 
-      const data = docSnap.data();
+const data = docSnap.data();
 
-      lista.push({
-        id:docSnap.id,
-        nome:data.nome,
-        saldo:data.saldo ?? 0,
-        unidade:data.unidade ?? "",
-        estoqueMinimo:data.estoqueMinimo ?? 0,
-        foto:data.foto ?? ""
-      });
+lista.push({
+id:docSnap.id,
+nome:data.nome,
+saldo:data.saldo ?? 0,
+unidade:data.unidade ?? "",
+estoqueMinimo:data.estoqueMinimo ?? 0,
+foto:data.foto ?? ""
+});
 
-    });
+});
 
-    lista.sort((a,b)=>a.nome.localeCompare(b.nome));
+lista.sort((a,b)=>a.nome.localeCompare(b.nome));
 
-    setMateriais(lista);
+setMateriais(lista);
 
-  }
+}
 
-  async function carregarObras(){
+async function carregarObras(){
 
-    const snapshot = await getDocs(collection(db,"obras"));
+const snapshot = await getDocs(collection(db,"obras"));
 
-    const lista:Obra[] = [];
+const lista:Obra[] = [];
 
-    snapshot.forEach((docSnap)=>{
+snapshot.forEach((docSnap)=>{
 
-      lista.push({
-        id:docSnap.id,
-        nome:docSnap.data().nome
-      });
+lista.push({
+id:docSnap.id,
+nome:docSnap.data().nome
+});
 
-    });
+});
 
-    setObras(lista.filter((o)=>o.id !== obraId));
+setObras(lista.filter((o)=>o.id !== obraId));
 
-  }
+}
 
-  function mostrarMensagem(texto:string){
+function mostrarMensagem(texto:string){
 
-    setMensagem(texto);
-    setTimeout(()=>setMensagem(""),3000);
+setMensagem(texto);
+setTimeout(()=>setMensagem(""),3000);
 
-  }
+}
 
-  async function registrarHistorico(
-    material: Material,
-    tipo: "entrada" | "saida" | "transferencia",
-    quantidade: number,
-    destino?: "uso" | "transferencia" | "descarte",
-    obraDestino?: string
-  ){
+async function registrarHistorico(
+material: Material,
+tipo: "entrada" | "saida" | "transferencia",
+quantidade: number,
+destino?: "uso" | "transferencia" | "descarte",
+obraDestino?: string
+){
 
-    try{
+await registrarMovimentacao({
 
-      await registrarMovimentacao({
+materialId: material.id,
+materialNome: material.nome,
 
-        materialId: material.id,
-        materialNome: material.nome,
+tipo: tipo,
+quantidade: quantidade,
 
-        tipo: tipo,
-        quantidade: quantidade,
+obraId: obraId,
+obraNome: "",
 
-        obraId: obraId,
-        obraNome: obras.find(o => o.id === obraId)?.nome || "",
+destino: destino || "uso",
+obraDestino: obraDestino ?? null,
 
-        destino: destino || "uso",
-        obraDestino: obraDestino ?? null,
+usuarioId: "",
+usuarioNome: "",
+empresaId: ""
 
-        usuarioId: "",
-        usuarioNome: "",
-        empresaId: ""
+});
 
-      });
+}
 
-    }catch(error){
+async function uploadFoto(e:any, material:Material){
 
-      console.error("Erro ao registrar histórico",error);
+const file = e.target.files[0];
+if(!file) return;
 
-    }
+const storageRef = ref(
+storage,
+`materiais/${obraId}/${material.id}-${Date.now()}`
+);
 
-  }
+await uploadBytes(storageRef,file);
 
-  async function uploadFoto(e:any, material:Material){
+const url = await getDownloadURL(storageRef);
 
-    const file = e.target.files[0];
-    if(!file) return;
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+{ foto:url }
+);
 
-    const storageRef = ref(
-      storage,
-      `materiais/${obraId}/${material.id}-${Date.now()}`
-    );
+mostrarMensagem("Foto salva com sucesso");
 
-    await uploadBytes(storageRef,file);
+carregarMateriais();
 
-    const url = await getDownloadURL(storageRef);
+}
 
-    await updateDoc(
-      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
-      { foto:url }
-    );
+async function entrada(material:Material){
 
-    mostrarMensagem("Foto salva com sucesso");
+const qtd = Number(quantidades[material.id] ?? 0);
 
-    carregarMateriais();
+const novoSaldo = material.saldo + qtd;
 
-  }
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+{ saldo:novoSaldo }
+);
 
-  async function salvarMinimo(material:Material){
+await registrarHistorico(material,"entrada",qtd);
 
-    const minimo = Number(minimos[material.id]);
+mostrarMensagem("Entrada realizada");
 
-    await updateDoc(
-      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
-      { estoqueMinimo:minimo }
-    );
+carregarMateriais();
 
-    mostrarMensagem("Estoque mínimo atualizado");
+}
 
-    carregarMateriais();
+async function usarNaObra(material:Material){
 
-  }
+const qtd = Number(quantidades[material.id] ?? 0);
 
-  async function entrada(material:Material){
+const novoSaldo = material.saldo - qtd;
 
-    const qtd = Number(quantidades[material.id] ?? 0);
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+{ saldo:novoSaldo }
+);
 
-    const novoSaldo = material.saldo + qtd;
+await registrarHistorico(material,"saida",qtd,"uso");
 
-    await updateDoc(
-      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
-      { saldo:novoSaldo }
-    );
+mostrarMensagem("Material usado na obra");
 
-    await registrarHistorico(material,"entrada",qtd);
+carregarMateriais();
 
-    mostrarMensagem("Entrada realizada");
+}
 
-    carregarMateriais();
+async function descartarMaterial(material:Material){
 
-  }
+const qtd = Number(quantidades[material.id] ?? 0);
 
-  async function usarNaObra(material:Material){
+const novoSaldo = material.saldo - qtd;
 
-    const qtd = Number(quantidades[material.id] ?? 0);
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+{ saldo:novoSaldo }
+);
 
-    const novoSaldo = material.saldo - qtd;
+await registrarHistorico(material,"saida",qtd,"descarte");
 
-    await updateDoc(
-      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
-      { saldo:novoSaldo }
-    );
+mostrarMensagem("Material descartado");
 
-    await registrarHistorico(material,"saida",qtd,"uso");
+carregarMateriais();
 
-    mostrarMensagem("Material usado na obra");
+}
 
-    carregarMateriais();
+async function transferir(material:Material){
 
-  }
+const qtd = Number(quantidades[material.id] ?? 0);
+const destinoObra = destinos[material.id];
 
-  async function descartarMaterial(material:Material){
+if(!destinoObra){
+alert("Selecione a obra destino");
+return;
+}
 
-    const qtd = Number(quantidades[material.id] ?? 0);
+const novoSaldo = material.saldo - qtd;
 
-    const novoSaldo = material.saldo - qtd;
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+{ saldo:novoSaldo }
+);
 
-    await updateDoc(
-      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
-      { saldo:novoSaldo }
-    );
+await registrarHistorico(material,"transferencia",qtd,"transferencia",destinoObra);
 
-    await registrarHistorico(material,"saida",qtd,"descarte");
+mostrarMensagem("Transferência realizada");
 
-    mostrarMensagem("Material descartado");
+carregarMateriais();
 
-    carregarMateriais();
+}
 
-  }
+return(
 
-  async function transferir(material:Material){
+<div className="max-w-6xl mx-auto p-8">
 
-    const qtd = Number(quantidades[material.id] ?? 0);
-    const destinoObra = destinos[material.id];
+<button
+onClick={() => router.push(`/obra/${obraId}`)}
+className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded mb-6"
+>
+← Voltar
+</button>
 
-    const novoSaldo = material.saldo - qtd;
+<h1 className="text-3xl font-bold mb-6">
+Controle de Estoque
+</h1>
 
-    await updateDoc(
-      doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
-      { saldo:novoSaldo }
-    );
+{!materialSelecionado && (
 
-    await registrarHistorico(material,"transferencia",qtd,"transferencia",destinoObra);
+<>
 
-    mostrarMensagem("Transferência realizada");
+<input
+placeholder="Buscar material..."
+value={busca}
+onChange={(e)=>setBusca(e.target.value)}
+className="border p-3 rounded mb-6 w-full"
+/>
 
-    carregarMateriais();
+<table className="w-full border">
 
-  }
+<thead className="bg-gray-100">
+<tr>
+<th className="p-3 text-left">Material</th>
+<th className="p-3 text-center">Saldo</th>
+</tr>
+</thead>
 
-  async function excluir(materialId:string){
+<tbody>
 
-    if(role !== "admin"){
-      alert("Apenas administradores podem excluir materiais.");
-      return;
-    }
+{materiais.map(material => (
 
-    await deleteDoc(
-      doc(db,"obras",obraId,"setores",setorId,"materiais",materialId)
-    );
+<tr
+key={material.id}
+className="border-t hover:bg-gray-50 cursor-pointer"
+onClick={()=>setMaterialSelecionado(material)}
+>
 
-    mostrarMensagem("Material excluído");
+<td className="p-3">{material.nome}</td>
 
-    setMaterialSelecionado(null);
+<td className="p-3 text-center font-bold">
+{material.saldo} {material.unidade}
+</td>
 
-    carregarMateriais();
+</tr>
 
-  }
+))}
 
-  function normalizar(texto:string){
+</tbody>
 
-    return texto
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g,"")
-      .toLowerCase();
+</table>
 
-  }
+</>
 
-  const filtrados = materiais.filter(m =>
-    normalizar(m.nome).startsWith(
-      normalizar(busca)
-    )
-  );
+)}
 
-  return(
+{materialSelecionado && (
 
-    <div className="max-w-6xl mx-auto p-8">
+<div className="bg-gray-50 border rounded-xl p-8">
 
-      <button
-        onClick={() => router.push(`/obra/${obraId}`)}
-        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded mb-6"
-      >
-        ← Voltar
-      </button>
+<button
+onClick={()=>setMaterialSelecionado(null)}
+className="mb-6 text-blue-600 font-semibold"
+>
+← Voltar
+</button>
 
-      <h1 className="text-3xl font-bold mb-6">
-        Controle de Estoque
-      </h1>
+<h2 className="text-xl font-bold mb-2">
+{materialSelecionado.nome}
+</h2>
 
-      {!materialSelecionado && (
+<p className="mb-4">
+Saldo atual: <strong>{materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
+</p>
 
-      <>
+<input
+type="file"
+accept="image/*"
+onChange={(e)=>uploadFoto(e,materialSelecionado)}
+className="mb-4"
+/>
 
-      <input
-        placeholder="Buscar material..."
-        value={busca}
-        onChange={(e)=>setBusca(e.target.value)}
-        className="border p-3 rounded mb-6 w-full"
-      />
+<div className="flex gap-3 flex-wrap items-center">
 
-      <table className="w-full border">
+<input
+type="number"
+placeholder="Quantidade"
+className="border p-2 w-28 rounded"
+onChange={(e)=>
+setQuantidades({
+...quantidades,
+[materialSelecionado.id]:Number(e.target.value)
+})
+}
+/>
 
-      <thead className="bg-gray-100">
-      <tr>
-      <th className="p-3 text-left">Material</th>
-      <th className="p-3 text-center">Saldo</th>
-      </tr>
-      </thead>
+<select
+className="border p-2 rounded"
+onChange={(e)=>
+setTipoMov({
+...tipoMov,
+[materialSelecionado.id]:e.target.value
+})
+}
+>
 
-      <tbody>
+<option value="uso">Uso na obra</option>
+<option value="transferencia">Transferência</option>
+<option value="descarte">Descarte</option>
 
-      {filtrados.map(material => (
+</select>
 
-      <tr
-      key={material.id}
-      className="border-t hover:bg-gray-50 cursor-pointer"
-      onClick={()=>setMaterialSelecionado(material)}
-      >
+{tipoMov[materialSelecionado.id] === "transferencia" && (
 
-      <td className="p-3">{material.nome}</td>
+<select
+className="border p-2 rounded"
+onChange={(e)=>
+setDestinos({
+...destinos,
+[materialSelecionado.id]:e.target.value
+})
+}
+>
 
-      <td className="p-3 text-center font-bold">
-      {material.saldo} {material.unidade}
-      </td>
+<option value="">Obra destino</option>
 
-      </tr>
+{obras.map(o=>(
+<option key={o.id} value={o.id}>
+{o.nome}
+</option>
+))}
 
-      ))}
+</select>
 
-      </tbody>
+)}
 
-      </table>
+<button
+onClick={()=>{
 
-      </>
+const tipo = tipoMov[materialSelecionado.id];
 
-      )}
+if(tipo === "transferencia"){
+transferir(materialSelecionado)
+}
 
-      {materialSelecionado && (
+if(tipo === "uso"){
+usarNaObra(materialSelecionado)
+}
 
-      <div className="bg-gray-50 border rounded-xl p-8">
+if(tipo === "descarte"){
+descartarMaterial(materialSelecionado)
+}
 
-        <button
-          onClick={()=>setMaterialSelecionado(null)}
-          className="mb-6 text-blue-600 font-semibold"
-        >
-          ← Voltar
-        </button>
+}}
+className="bg-red-600 text-white px-4 py-2 rounded"
+>
+Confirmar
+</button>
 
-        <h2 className="text-xl font-bold mb-2">
-          {materialSelecionado.nome}
-        </h2>
+</div>
 
-        <p className="mb-4">
-          Saldo atual: <strong>{materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
-        </p>
+</div>
 
-        <div className="flex gap-3 flex-wrap items-center">
+)}
 
-        <input
-        type="number"
-        placeholder="Quantidade"
-        className="border p-2 w-28 rounded"
-        onChange={(e)=>
-        setQuantidades({
-        ...quantidades,
-        [materialSelecionado.id]:Number(e.target.value)
-        })
-        }
-        />
+{mensagem && (
 
-        <select
-        className="border p-2 rounded"
-        onChange={(e)=>
-        setDestinos({
-        ...destinos,
-        tipo:e.target.value
-        })
-        }
-        >
+<div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded-xl shadow-xl">
+{mensagem}
+</div>
 
-        <option value="uso">Uso na obra</option>
-        <option value="transferencia">Transferência</option>
-        <option value="descarte">Descarte</option>
+)}
 
-        </select>
+</div>
 
-        <select
-        className="border p-2 rounded"
-        onChange={(e)=>
-        setDestinos({
-        ...destinos,
-        [materialSelecionado.id]:e.target.value
-        })
-        }
-        >
-
-        <option value="">Obra destino</option>
-
-        {obras.map(o=>(
-        <option key={o.id} value={o.id}>
-        {o.nome}
-        </option>
-        ))}
-
-        </select>
-
-        <button
-        onClick={()=>transferir(materialSelecionado)}
-        className="bg-red-600 text-white px-4 py-2 rounded"
-        >
-        Confirmar
-        </button>
-
-        </div>
-
-      </div>
-
-      )}
-
-      {mensagem && (
-
-        <div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded-xl shadow-xl">
-          {mensagem}
-        </div>
-
-      )}
-
-    </div>
-
-  );
+);
 
 }
