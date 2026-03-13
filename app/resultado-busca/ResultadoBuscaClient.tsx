@@ -99,7 +99,7 @@ export default function ResultadoBuscaClient() {
               mapaMateriais.set(data.nome,{
                 nome:data.nome,
                 foto:data.foto || "",
-                estoqueMinimo:data.estoqueMinimo || 0,
+                estoqueMinimo:data.estoqueMinimo ?? 0,
                 locais:[],
                 total:0
               });
@@ -216,7 +216,7 @@ className="flex justify-between border-b pb-2"
 Total disponível: {item.total}
 </div>
 
-{item.estoqueMinimo > 0 && item.total <= item.estoqueMinimo && (
+{item.estoqueMinimo && item.total <= item.estoqueMinimo && (
 
 <div className="bg-red-500 text-white px-3 py-1 rounded text-sm">
 ⚠ Estoque baixo
