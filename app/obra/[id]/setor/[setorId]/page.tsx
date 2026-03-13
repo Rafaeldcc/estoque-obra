@@ -386,64 +386,33 @@ export default function ControleEstoque() {
           Saldo atual: <strong>{materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
         </p>
 
-        <div className="flex gap-3 flex-wrap items-center">
+        <div className="flex gap-3 flex-wrap">
 
-        <input
-        type="number"
-        placeholder="Quantidade"
-        className="border p-2 w-28 rounded"
-        onChange={(e)=>
-        setQuantidades({
-        ...quantidades,
-        [materialSelecionado.id]:Number(e.target.value)
-        })
-        }
-        />
+          <input
+            type="number"
+            placeholder="Qtd"
+            className="border p-2 w-24 rounded"
+            onChange={(e)=>
+              setQuantidades({
+                ...quantidades,
+                [materialSelecionado.id]:Number(e.target.value)
+              })
+            }
+          />
 
-        <select
-        className="border p-2 rounded"
-        onChange={(e)=>
-        setDestinos({
-        ...destinos,
-        tipo:e.target.value
-        })
-        }
-        >
+          <button onClick={()=>entrada(materialSelecionado)} className="bg-green-600 text-white px-4 py-2 rounded">
+            Entrada
+          </button>
 
-        <option value="uso">Uso na obra</option>
-        <option value="transferencia">Transferência</option>
-        <option value="descarte">Descarte</option>
+          <button onClick={()=>usarNaObra(materialSelecionado)} className="bg-orange-600 text-white px-4 py-2 rounded">
+            Usado na obra
+          </button>
 
-        </select>
+          <button onClick={()=>descartarMaterial(materialSelecionado)} className="bg-red-600 text-white px-4 py-2 rounded">
+            Descarte
+          </button>
 
-        <select
-        className="border p-2 rounded"
-        onChange={(e)=>
-        setDestinos({
-        ...destinos,
-        [materialSelecionado.id]:e.target.value
-        })
-        }
-        >
-
-        <option value="">Obra destino</option>
-
-        {obras.map(o=>(
-        <option key={o.id} value={o.id}>
-        {o.nome}
-        </option>
-        ))}
-
-        </select>
-
-        <button
-        onClick={()=>transferir(materialSelecionado)}
-        className="bg-red-600 text-white px-4 py-2 rounded"
-        >
-        Confirmar
-</button>
-
-</div>
+        </div>
 
       </div>
 
