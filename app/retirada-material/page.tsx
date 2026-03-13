@@ -254,61 +254,6 @@ export default function RetiradaMaterial() {
 
       });
 
-      let existe = false;
-
-      for(const docSnap of snap.docs){
-
-        if(docSnap.data().nome === material.nome){
-
-          await updateDoc(docSnap.ref,{
-            saldo: increment(qtd)
-          });
-
-          existe = true;
-
-        }
-
-      }
-
-      if(!existe){
-
-        await updateDoc(
-          doc(
-            db,
-            "obras",
-            destinoId,
-            "setores",
-            setorDestinoId,
-            "materiais",
-            material.id
-          ),
-          {
-            nome: material.nome,
-            saldo: increment(qtd),
-            unidade: material.unidade
-          }
-        ).catch(async () => {
-
-          await setDoc(
-            doc(
-              db,
-              "obras",
-              destinoId,
-              "setores",
-              setorDestinoId,
-              "materiais",
-              material.id
-            ),
-            {
-              nome: material.nome,
-              saldo: qtd,
-              unidade: material.unidade
-            }
-          );
-
-        });
-
-      }
     }
     // 🔹 REGISTRAR MOVIMENTAÇÃO
     const obraNome =
