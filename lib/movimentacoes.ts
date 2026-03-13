@@ -49,6 +49,10 @@ export async function registrarMovimentacao(data: MovimentacaoProps) {
 
       empresaId: data.empresaId ?? "",
 
+      // 🔥 importante para o histórico funcionar
+      createdAt: serverTimestamp(),
+
+      // mantém seu campo antigo também
       criadoEm: serverTimestamp()
     };
 
