@@ -15,6 +15,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/useAuth";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Obra {
   id: string;
@@ -24,6 +25,7 @@ interface Obra {
 export default function ObrasPage() {
 
   const { user, role, loading } = useAuth();
+  const router = useRouter();
 
   const [obras, setObras] = useState<Obra[]>([]);
   const [nomeObra, setNomeObra] = useState("");
@@ -179,6 +181,14 @@ export default function ObrasPage() {
   return (
 
     <div className="max-w-6xl mx-auto p-6 space-y-8">
+
+      {/* BOTÃO VOLTAR */}
+      <button
+        onClick={() => router.push("/dashboard")}
+        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+      >
+        ← Voltar
+      </button>
 
       <h1 className="text-3xl font-bold">
         Gestão de Obras
