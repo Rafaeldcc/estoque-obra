@@ -180,86 +180,35 @@ export default function RetiradaMaterial() {
     });
 
     // 🔹 SE FOR TRANSFERÊNCIA
-    if(tipo === "transferencia"){
+if(tipo === "transferencia"){
 
-      const destinoId = obraDestino[material.id];
+  const destinoId = obraDestino[material.id];
 
-      // pegar setores da obra destino
-      let setorDestinoId = "";
+  const materialDestinoRef = doc(
+    db,
+    "obras",
+    destinoId,
+    "setores",
+    material.setorId,
+    "materiais",
+    material.id
+  );
 
-      // pegar setores da obra destino
-      const setoresDestinoSnap = await getDocs(
-        collection(db,"obras",destinoId,"setores")
-      );
+  await updateDoc(materialDestinoRef,{
+    nome: material.nome,
+    saldo: increment(qtd),
+    unidade: material.unidade
+  }).catch(async () => {
 
-      // se existir setor usa o primeiro
-      if(setoresDestinoSnap.docs.length > 0){
+    await setDoc(materialDestinoRef,{
+      nome: material.nome,
+      saldo: qtd,
+      unidade: material.unidade
+    });
 
-        // tenta encontrar setor com mesmo nome
-        for(const setorDoc of setoresDestinoSnap.docs){
-          if(setorDoc.data().nome === setores.find(s => s.id === material.setorId)?.nome){
-            setorDestinoId = setorDoc.id;
-          }       
-        }
+  });
 
-        // se não encontrar, usa o primeiro
-        if(!setorDestinoId && setoresDestinoSnap.docs.length > 0){
-          setorDestinoId = setoresDestinoSnap.docs[0].id;
-      }
-
-      }else{
-
-        // cria setor automaticamente se não existir
-        const nomeSetorOrigem =
-          setores.find(s => s.id === material.setorId)?.nome || "Geral";
-
-        const novoSetor = await addDoc(
-          collection(db,"obras",destinoId,"setores"),
-        {
-          nome: nomeSetorOrigem
-        }
-      );
-
-setorDestinoId = novoSetor.id;
-
-      setorDestinoId = novoSetor.id;
-
-      } 
-
-      const materiaisDestinoRef = collection(
-        db,
-        "obras",
-        destinoId,
-        "setores",
-        setorDestinoId,
-        "materiais"
-      );
-
-      const materialDestinoRef = doc(
-        db,
-        "obras",
-        destinoId,
-        "setores",
-        setorDestinoId,
-        "materiais",
-        material.id
-      );
-
-      await updateDoc(materialDestinoRef,{
-        nome: material.nome,
-        saldo: increment(qtd),
-        unidade: material.unidade
-      }).catch(async () => {
-
-        await setDoc(materialDestinoRef,{
-          nome: material.nome,
-          saldo: qtd,
-          unidade: material.unidade
-        });
-
-      });
-
-    }
+}
     // 🔹 REGISTRAR MOVIMENTAÇÃO
     const obraNome =
       obras.find((o) => o.id === obraSelecionada)?.nome || "";
