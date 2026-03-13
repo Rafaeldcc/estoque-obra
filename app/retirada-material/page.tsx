@@ -275,9 +275,6 @@ export default function RetiradaMaterial() {
 
         });
 
-      }
-
-    }
 
     // 🔹 REGISTRAR MOVIMENTAÇÃO
     const obraNome =
