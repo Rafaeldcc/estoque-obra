@@ -10,7 +10,6 @@ import {
   doc,
   updateDoc,
   increment,
-  addDoc,
   getDoc,
   query,
   where,
@@ -137,6 +136,61 @@ export default function RetiradaMaterial() {
 
   }
 
+  // =========================
+  // NOVA FUNÇÃO DE ENTRADA
+  // =========================
+
+  async function entrada(material:Material){
+
+    const qtd = quantidades[material.id];
+
+    if(!qtd || qtd <= 0){
+      alert("Quantidade inválida");
+      return;
+    }
+
+    const materialRef = doc(
+      db,
+      "obras",
+      obraSelecionada,
+      "setores",
+      material.setorId,
+      "materiais",
+      material.id
+    );
+
+    await updateDoc(materialRef,{
+      saldo: increment(qtd)
+    });
+
+    const obraNome =
+      obras.find((o)=>o.id === obraSelecionada)?.nome || "";
+
+    await registrarMovimentacao({
+
+      materialId: material.id,
+      materialNome: material.nome,
+
+      tipo: "entrada",
+      quantidade: qtd,
+
+      obraId: obraSelecionada,
+      obraNome: obraNome,
+
+      destino: "entrada",
+      obraDestino: null,
+
+      usuarioId: auth.currentUser?.uid || "",
+      usuarioNome: auth.currentUser?.email || "",
+
+      empresaId: empresaId || ""
+
+    });
+
+    carregarMateriais(obraSelecionada,setorSelecionado);
+
+  }
+
   async function retirar(material:Material){
 
     const qtd = quantidades[material.id];
@@ -162,12 +216,14 @@ export default function RetiradaMaterial() {
       material.id
     );
 
-    // 🔹 VALIDAÇÃO DA TRANSFERÊNCIA
+    await updateDoc(materialRef,{
+      saldo: increment(-qtd)
+    });
+
     if(tipo === "transferencia"){
 
       const destinoId = obraDestino[material.id];
 
-      // verificar se setor existe na obra destino
       const setorDestinoRef = doc(
         db,
         "obras",
@@ -178,7 +234,6 @@ export default function RetiradaMaterial() {
 
       const setorSnap = await getDoc(setorDestinoRef);
 
-      // se setor não existir -> criar
       if(!setorSnap.exists()){
 
         const setorOrigemSnap = await getDoc(
@@ -193,7 +248,6 @@ export default function RetiradaMaterial() {
 
       }
 
-      // referência do material destino
       const materialDestinoRef = doc(
         db,
         "obras",
@@ -204,7 +258,6 @@ export default function RetiradaMaterial() {
         material.id
       );
 
-      // adicionar material na obra destino
       await updateDoc(materialDestinoRef,{
         nome: material.nome,
         saldo: increment(qtd),
@@ -220,7 +273,7 @@ export default function RetiradaMaterial() {
       });
 
     }
-    // 🔹 REGISTRAR MOVIMENTAÇÃO
+
     const obraNome =
       obras.find((o) => o.id === obraSelecionada)?.nome || "";
 
@@ -272,8 +325,6 @@ export default function RetiradaMaterial() {
 Retirada de Material
 </h2>
 
-{/* OBRA */}
-
 <select
 className="w-full border rounded-lg p-3 mb-4"
 onChange={(e)=>{
@@ -294,8 +345,6 @@ carregarSetores(obraId)
 ))}
 
 </select>
-
-{/* SETOR */}
 
 {setores.length > 0 && (
 
@@ -319,8 +368,6 @@ carregarMateriais(obraSelecionada,setorId)
 </select>
 
 )}
-
-{/* LISTA COM SCROLL */}
 
 <div className="max-h-[60vh] overflow-y-auto pr-2">
 
@@ -403,12 +450,23 @@ setObraDestino(prev=>({
 
 )}
 
+<div className="flex gap-2">
+
 <button
 onClick={()=>retirar(material)}
 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
 >
 Confirmar
 </button>
+
+<button
+onClick={()=>entrada(material)}
+className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+>
+Entrada
+</button>
+
+</div>
 
 </div>
 
