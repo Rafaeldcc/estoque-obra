@@ -210,12 +210,17 @@ export default function RetiradaMaterial() {
       }else{
 
         // cria setor automaticamente se não existir
+        const nomeSetorOrigem =
+          setores.find(s => s.id === material.setorId)?.nome || "Geral";
+
         const novoSetor = await addDoc(
           collection(db,"obras",destinoId,"setores"),
-          {
-            nome: "Almoxarifado"
-          }
+        {
+          nome: nomeSetorOrigem
+        }
       );
+
+setorDestinoId = novoSetor.id;
 
       setorDestinoId = novoSetor.id;
 
