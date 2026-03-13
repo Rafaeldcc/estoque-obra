@@ -230,7 +230,29 @@ export default function RetiradaMaterial() {
         "materiais"
       );
 
-      const snap = await getDocs(materiaisDestinoRef);
+      const materialDestinoRef = doc(
+        db,
+        "obras",
+        destinoId,
+        "setores",
+        setorDestinoId,
+        "materiais",
+        material.id
+      );
+
+      await updateDoc(materialDestinoRef,{
+        nome: material.nome,
+        saldo: increment(qtd),
+        unidade: material.unidade
+      }).catch(async () => {
+
+        await setDoc(materialDestinoRef,{
+          nome: material.nome,
+          saldo: qtd,
+          unidade: material.unidade
+        });
+
+      });
 
       let existe = false;
 
