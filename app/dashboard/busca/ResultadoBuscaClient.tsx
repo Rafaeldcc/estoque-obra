@@ -13,39 +13,47 @@ interface Resultado {
 }
 
 export default function ResultadoBuscaClient() {
+
   const searchParams = useSearchParams();
   const materialBusca =
-    searchParams.get("material")?.toLowerCase() || "";
+    searchParams.get("material")?.toLowerCase().trim() || "";
 
-  const [resultados, setResultados] = useState<Resultado[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [resultados,setResultados] = useState<Resultado[]>([]);
+  const [total,setTotal] = useState(0);
+  const [loading,setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!materialBusca) return;
+  useEffect(()=>{
+
+    if(!materialBusca) return;
+
     buscar();
-  }, [materialBusca]);
 
-  async function buscar() {
+  },[materialBusca]);
+
+  async function buscar(){
+
     setLoading(true);
     setResultados([]);
     setTotal(0);
 
-    try {
-      const obrasSnap = await getDocs(collection(db, "obras"));
+    try{
 
-      let listaTemp: Resultado[] = [];
+      const obrasSnap = await getDocs(collection(db,"obras"));
+
+      let listaTemp:Resultado[] = [];
       let somaTemp = 0;
 
-      for (const obraDoc of obrasSnap.docs) {
+      for(const obraDoc of obrasSnap.docs){
+
         const obraId = obraDoc.id;
         const obraNome = obraDoc.data().nome || "";
 
         const setoresSnap = await getDocs(
-          collection(db, "obras", obraId, "setores")
+          collection(db,"obras",obraId,"setores")
         );
 
-        for (const setorDoc of setoresSnap.docs) {
+        for(const setorDoc of setoresSnap.docs){
+
           const setorId = setorDoc.id;
           const setorNome = setorDoc.data().nome || "";
 
@@ -60,81 +68,107 @@ export default function ResultadoBuscaClient() {
             )
           );
 
-          materiaisSnap.forEach((doc) => {
-            const data = doc.data();
+          materiaisSnap.forEach(docSnap=>{
 
-            if (
+            const data = docSnap.data();
+
+            if(
               data.nome &&
-              data.nome.toLowerCase() === materialBusca
-            ) {
+              data.nome.toLowerCase().includes(materialBusca)
+            ){
+
               const saldo = data.saldo || 0;
 
               listaTemp.push({
-                nome: data.nome,
+
+                nome:data.nome,
                 saldo,
                 obraNome,
-                setorNome,
+                setorNome
+
               });
 
               somaTemp += saldo;
+
             }
+
           });
+
         }
+
       }
 
       setResultados(listaTemp);
       setTotal(somaTemp);
-    } catch (error) {
-      console.error("Erro na busca:", error);
+
+    }
+    catch(error){
+
+      console.error("Erro na busca:",error);
+
     }
 
     setLoading(false);
+
   }
 
-  return (
-    <div className="max-w-5xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">
-        Resultado da Busca
-      </h1>
+  return(
 
-      <div className="bg-blue-600 text-white p-4 rounded-lg mb-6">
-        <p className="text-lg font-semibold">
-          Total Geral: {total}
-        </p>
-      </div>
+<div className="max-w-5xl mx-auto p-6">
 
-      {loading && (
-        <p className="text-gray-500">Buscando...</p>
-      )}
+<h1 className="text-2xl font-bold mb-6">
+Resultado da Busca
+</h1>
 
-      {!loading && resultados.length === 0 && (
-        <p className="text-gray-500">
-          Nenhum material encontrado.
-        </p>
-      )}
+<div className="bg-blue-600 text-white p-4 rounded-lg mb-6">
+<p className="text-lg font-semibold">
+Total Geral: {total}
+</p>
+</div>
 
-      {resultados.map((item, index) => (
-        <div
-          key={index}
-          className="p-5 border rounded-lg mb-4 bg-white shadow"
-        >
-          <p>
-            <strong>Material:</strong> {item.nome}
-          </p>
+{loading && (
+<p className="text-gray-500">
+Buscando...
+</p>
+)}
 
-          <p>
-            <strong>Quantidade:</strong> {item.saldo}
-          </p>
+{!loading && resultados.length === 0 && (
 
-          <p>
-            <strong>Obra:</strong> {item.obraNome}
-          </p>
+<p className="text-gray-500">
+Nenhum material encontrado.
+</p>
 
-          <p>
-            <strong>Setor:</strong> {item.setorNome}
-          </p>
-        </div>
-      ))}
-    </div>
+)}
+
+{resultados.map((item,index)=>(
+
+<div
+key={index}
+className="p-5 border rounded-lg mb-4 bg-white shadow"
+>
+
+<p>
+<strong>Material:</strong> {item.nome}
+</p>
+
+<p>
+<strong>Quantidade:</strong> {item.saldo}
+</p>
+
+<p>
+<strong>Obra:</strong> {item.obraNome}
+</p>
+
+<p>
+<strong>Setor:</strong> {item.setorNome}
+</p>
+
+</div>
+
+))}
+
+</div>
+
   );
+
 }
