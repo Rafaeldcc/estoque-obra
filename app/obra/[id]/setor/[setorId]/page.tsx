@@ -265,31 +265,6 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {saldo:increment(-qtd)}
 )
 
-material.saldo -= qtd
-setMateriais([...materiais])
-
-const setorDestinoRef = doc(
-db,
-"obras",
-destinoObra,
-"setores",
-setorId
-)
-
-const setorSnap = await getDoc(setorDestinoRef)
-
-if(!setorSnap.exists()){
-
-const setorOrigem = await getDoc(
-doc(db,"obras",obraId,"setores",setorId)
-)
-
-await setDoc(setorDestinoRef,{
-nome:setorOrigem.data()?.nome || "Setor"
-})
-
-}
-
 const materialDestinoRef = doc(
 db,
 "obras",
