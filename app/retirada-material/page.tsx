@@ -177,7 +177,7 @@ export default function RetiradaMaterial() {
       obraId: obraSelecionada,
       obraNome: obraNome,
 
-      destino: "entrada",
+      destino: "uso",
       obraDestino: null,
 
       usuarioId: auth.currentUser?.uid || "",
