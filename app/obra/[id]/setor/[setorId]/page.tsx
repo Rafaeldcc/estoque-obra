@@ -106,6 +106,24 @@ mostrarMensagem("Foto salva com sucesso")
 
 }
 
+async function removerFoto(material:Material){
+
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+{foto:""}
+)
+
+await carregarMateriais()
+
+setMaterialSelecionado({
+...material,
+foto:""
+})
+
+mostrarMensagem("Foto removida")
+
+}
+
 function normalizar(texto:string){
 
 return texto
@@ -145,7 +163,7 @@ onChange={(e)=>setBusca(e.target.value)}
 className="border p-3 rounded mb-6 w-full"
 />
 
-<table className="w-full border">
+<table className="w-full border rounded-xl overflow-hidden">
 
 <thead className="bg-gray-100">
 <tr>
@@ -195,11 +213,11 @@ className="w-10 h-10 object-cover rounded"
 
 {materialSelecionado && (
 
-<div className="bg-gray-50 border rounded-xl p-8">
+<div className="bg-white border rounded-xl p-8 shadow-md">
 
 <button
 onClick={()=>setMaterialSelecionado(null)}
-className="mb-6 text-blue-600"
+className="mb-6 text-blue-600 font-semibold"
 >
 ← Voltar
 </button>
@@ -208,26 +226,58 @@ className="mb-6 text-blue-600"
 {materialSelecionado.nome}
 </h2>
 
-<p className="mb-4">
+<p className="mb-4 text-lg">
 Quantidade atual:
 <strong> {materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
 </p>
 
-{materialSelecionado.foto && (
+{/* FOTO */}
+
+{materialSelecionado.foto ? (
+
+<div className="mb-6">
 
 <img
 src={materialSelecionado.foto}
-className="w-40 mb-4 rounded shadow"
+className="w-64 rounded shadow"
 />
 
-)}
+<div className="flex gap-3 mt-4">
 
+<label className="bg-blue-600 text-white px-4 py-2 rounded cursor-pointer">
+Trocar foto
 <input
 type="file"
 accept="image/*"
 onChange={(e)=>uploadFoto(e,materialSelecionado)}
-className="mb-4"
+className="hidden"
 />
+</label>
+
+<button
+onClick={()=>removerFoto(materialSelecionado)}
+className="bg-red-600 text-white px-4 py-2 rounded"
+>
+Excluir foto
+</button>
+
+</div>
+
+</div>
+
+) : (
+
+<label className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer inline-block">
+Adicionar foto
+<input
+type="file"
+accept="image/*"
+onChange={(e)=>uploadFoto(e,materialSelecionado)}
+className="hidden"
+/>
+</label>
+
+)}
 
 </div>
 
