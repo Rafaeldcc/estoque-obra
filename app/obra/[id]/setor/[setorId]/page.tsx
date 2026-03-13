@@ -95,7 +95,14 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {foto:url}
 )
 
-mostrarMensagem("Foto salva")
+await carregarMateriais()
+
+setMaterialSelecionado({
+...material,
+foto:url
+})
+
+mostrarMensagem("Foto salva com sucesso")
 
 }
 
@@ -157,7 +164,18 @@ className="border-t hover:bg-gray-50 cursor-pointer"
 onClick={()=>setMaterialSelecionado(material)}
 >
 
-<td className="p-3">{material.nome}</td>
+<td className="p-3 flex items-center gap-3">
+
+{material.foto && (
+<img
+src={material.foto}
+className="w-10 h-10 object-cover rounded"
+/>
+)}
+
+{material.nome}
+
+</td>
 
 <td className="p-3 text-center font-bold">
 {material.saldo} {material.unidade}
@@ -194,6 +212,15 @@ className="mb-6 text-blue-600"
 Quantidade atual:
 <strong> {materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
 </p>
+
+{materialSelecionado.foto && (
+
+<img
+src={materialSelecionado.foto}
+className="w-40 mb-4 rounded shadow"
+/>
+
+)}
 
 <input
 type="file"
