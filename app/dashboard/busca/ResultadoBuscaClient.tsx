@@ -72,10 +72,17 @@ export default function ResultadoBuscaClient() {
 
             const data = docSnap.data();
 
-            if(
-              data.nome &&
-              data.nome.toLowerCase().includes(materialBusca)
-            ){
+            const nomeMaterial = data.nome
+              ?.normalize("NFD")
+              .replace(/[\u0300-\u036f]/g,"")
+              .toLowerCase();
+
+            const buscaNormalizada = materialBusca
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g,"")
+              .toLowerCase();
+
+            if(nomeMaterial?.includes(buscaNormalizada)){
 
               const saldo = data.saldo || 0;
 
