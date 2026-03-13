@@ -175,7 +175,7 @@ className="w-16 h-16 object-cover rounded border"
 {item.nome}
 </h2>
 
-{item.estoqueMinimo > 0 && (
+{item.estoqueMinimo && item.estoqueMinimo > 0 && (
 
 <p className="text-sm text-gray-500">
 Estoque mínimo: {item.estoqueMinimo}
