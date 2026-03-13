@@ -20,7 +20,10 @@ interface Resultado {
 export default function ResultadoBuscaClient() {
 
   const searchParams = useSearchParams();
-  const materialBusca = searchParams.get("material")?.trim() || "";
+
+  const materialBusca = decodeURIComponent(
+    searchParams.get("material") || ""
+  ).trim();
 
   const [resultados,setResultados] = useState<Resultado[]>([]);
   const [loading,setLoading] = useState(false);
