@@ -17,7 +17,7 @@ import {
 } from "firebase/storage";
 
 import { db, storage } from "@/lib/firebase";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 
 interface Material {
@@ -37,7 +37,7 @@ interface Obra {
 export default function ControleEstoque() {
 
   const { role } = useAuth();
-
+  const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
 
@@ -307,6 +307,13 @@ export default function ControleEstoque() {
   return(
 
     <div className="max-w-6xl mx-auto p-8">
+
+      <button
+        onClick={() => router.push(`/obra/${obraId}`)}
+        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded mb-6"
+      >
+        ← Voltar
+      </button>
 
       <h1 className="text-3xl font-bold mb-6">
         Controle de Estoque
