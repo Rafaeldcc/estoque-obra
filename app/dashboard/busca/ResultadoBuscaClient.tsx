@@ -15,8 +15,9 @@ interface Resultado {
 export default function ResultadoBuscaClient() {
 
   const searchParams = useSearchParams();
+
   const materialBusca =
-    searchParams.get("material")?.toLowerCase().trim() || "";
+    searchParams.get("material")?.trim() || "";
 
   const [resultados,setResultados] = useState<Resultado[]>([]);
   const [total,setTotal] = useState(0);
@@ -30,6 +31,16 @@ export default function ResultadoBuscaClient() {
 
   },[materialBusca]);
 
+  function normalizar(texto:string){
+
+    return texto
+      ?.normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase()
+      .trim();
+
+  }
+
   async function buscar(){
 
     setLoading(true);
@@ -42,6 +53,8 @@ export default function ResultadoBuscaClient() {
 
       let listaTemp:Resultado[] = [];
       let somaTemp = 0;
+
+      const buscaNormalizada = normalizar(materialBusca);
 
       for(const obraDoc of obrasSnap.docs){
 
@@ -72,27 +85,19 @@ export default function ResultadoBuscaClient() {
 
             const data = docSnap.data();
 
-            const nomeMaterial = data.nome
-              ?.normalize("NFD")
-              .replace(/[\u0300-\u036f]/g,"")
-              .toLowerCase();
+            if(!data?.nome) return;
 
-            const buscaNormalizada = materialBusca
-              .normalize("NFD")
-              .replace(/[\u0300-\u036f]/g,"")
-              .toLowerCase();
+            const nomeMaterial = normalizar(data.nome);
 
-            if(nomeMaterial?.includes(buscaNormalizada)){
+            if(nomeMaterial.includes(buscaNormalizada)){
 
               const saldo = data.saldo || 0;
 
               listaTemp.push({
-
                 nome:data.nome,
                 saldo,
                 obraNome,
                 setorNome
-
               });
 
               somaTemp += saldo;
