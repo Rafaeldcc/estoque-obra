@@ -143,11 +143,11 @@ export default function ControleEstoque() {
   }
 
   async function registrarHistorico(
-  material: Material,
-  tipo: "entrada" | "saida" | "transferencia",
-  quantidade: number,
-  destino?: "uso" | "transferencia",
-  obraDestino?: string
+    material: Material,
+    tipo: "entrada" | "saida" | "transferencia",
+    quantidade: number,
+    destino?: "uso" | "transferencia" | "descarte"
+    obraDestino?: string
   ){
 
     try{
@@ -165,6 +165,8 @@ export default function ControleEstoque() {
         obraNome: obras.find(o => o.id === obraId)?.nome || "",
 
         destino: destino || "uso",
+
+        obraDestino: obraDestino ?? null,
 
         usuarioId: "",
         usuarioNome: "",
