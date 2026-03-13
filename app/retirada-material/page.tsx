@@ -183,12 +183,33 @@ export default function RetiradaMaterial() {
 
       const destinoId = obraDestino[material.id];
 
+      // pegar setores da obra destino
+      const setoresDestinoSnap = await getDocs(
+        collection(db,"obras",destinoId,"setores")
+      );
+
+      let setorDestinoId = "";
+
+      // tenta encontrar setor com mesmo nome
+      for(const setorDoc of setoresDestinoSnap.docs){
+
+        if(setorDoc.id === material.setorId){
+          setorDestinoId = setorDoc.id;
+        }
+
+      }
+
+      // se não encontrou setor igual, usa o primeiro setor
+      if(!setorDestinoId && setoresDestinoSnap.docs.length > 0){
+        setorDestinoId = setoresDestinoSnap.docs[0].id;
+      }
+
       const materiaisDestinoRef = collection(
         db,
         "obras",
         destinoId,
         "setores",
-        material.setorId,
+        setorDestinoId,
         "materiais"
       );
 
@@ -213,9 +234,9 @@ export default function RetiradaMaterial() {
       if(!existe){
 
         await addDoc(materiaisDestinoRef,{
-          nome:material.nome,
-          saldo:qtd,
-          unidade:material.unidade
+          nome: material.nome,
+          saldo: qtd,
+          unidade: material.unidade
         });
 
       }
