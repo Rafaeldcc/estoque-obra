@@ -20,7 +20,7 @@ type Movimentacao = {
   quantidade: number;
   obraNome: string;
   obraDestino?: string | null;
-  destino?: "uso" | "transferencia";
+  destino?: "uso" | "transferencia" | "descarte";
   usuarioNome: string;
   createdAt?: any;
   criadoEm?: any;
