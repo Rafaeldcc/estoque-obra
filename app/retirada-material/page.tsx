@@ -188,20 +188,11 @@ export default function RetiradaMaterial() {
         collection(db,"obras",destinoId,"setores")
       );
 
-      let setorDestinoId = "";
+      const setorDestinoId = setoresDestinoSnap.docs[0]?.id;
 
-      // tenta encontrar setor com mesmo nome
-      for(const setorDoc of setoresDestinoSnap.docs){
-
-        if(setorDoc.id === material.setorId){
-          setorDestinoId = setorDoc.id;
-        }
-
-      }
-
-      // se não encontrou setor igual, usa o primeiro setor
-      if(!setorDestinoId && setoresDestinoSnap.docs.length > 0){
-        setorDestinoId = setoresDestinoSnap.docs[0].id;
+      if(!setorDestinoId){
+        alert("A obra destino não possui setor.");
+        return;
       }
 
       const materiaisDestinoRef = collection(
