@@ -156,7 +156,7 @@ obraNome:"",
 setorId:setorId,
 setorNome:"",
 
-destino:"entrada",
+destino:"uso",
 obraDestino:null,
 
 usuarioId:auth.currentUser?.uid || "",
