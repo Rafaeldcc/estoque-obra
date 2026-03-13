@@ -277,7 +277,7 @@ export default function RetiradaMaterial() {
         });
 
       }
-
+    }
     // 🔹 REGISTRAR MOVIMENTAÇÃO
     const obraNome =
       obras.find((o) => o.id === obraSelecionada)?.nome || "";
