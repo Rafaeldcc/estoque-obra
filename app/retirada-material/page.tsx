@@ -184,16 +184,31 @@ export default function RetiradaMaterial() {
       const destinoId = obraDestino[material.id];
 
       // pegar setores da obra destino
+      let setorDestinoId = "";
+
+      // pegar setores da obra destino
       const setoresDestinoSnap = await getDocs(
         collection(db,"obras",destinoId,"setores")
       );
 
-      const setorDestinoId = setoresDestinoSnap.docs[0]?.id;
+      // se existir setor usa o primeiro
+      if(setoresDestinoSnap.docs.length > 0){
 
-      if(!setorDestinoId){
-        alert("A obra destino não possui setor.");
-        return;
-      }
+        setorDestinoId = setoresDestinoSnap.docs[0].id;
+
+      }else{
+
+        // cria setor automaticamente se não existir
+        const novoSetor = await addDoc(
+          collection(db,"obras",destinoId,"setores"),
+          {
+            nome: "Almoxarifado"
+          }
+      );
+
+      setorDestinoId = novoSetor.id;
+
+      } 
 
       const materiaisDestinoRef = collection(
         db,
