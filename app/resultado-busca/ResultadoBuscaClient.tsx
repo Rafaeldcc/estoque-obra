@@ -13,6 +13,8 @@ interface Localizacao {
 
 interface Resultado {
   nome: string;
+  foto?: string;
+  estoqueMinimo?: number;
   locais: Localizacao[];
   total: number;
 }
@@ -85,7 +87,10 @@ export default function ResultadoBuscaClient() {
 
             const nomeMaterial = normalizar(data.nome);
 
-            if(!nomeMaterial.startsWith(buscaNormalizada) && !buscaNormalizada.includes(nomeMaterial)) return;
+            if(
+              !nomeMaterial.startsWith(buscaNormalizada) &&
+              !buscaNormalizada.includes(nomeMaterial)
+            ) return;
 
             const saldo = data.saldo || 0;
 
@@ -93,6 +98,8 @@ export default function ResultadoBuscaClient() {
 
               mapaMateriais.set(data.nome,{
                 nome:data.nome,
+                foto:data.foto || "",
+                estoqueMinimo:data.estoqueMinimo || 0,
                 locais:[],
                 total:0
               });
@@ -144,16 +151,41 @@ Nenhum material encontrado
 </p>
 )}
 
-{resultados.map((item,index)=>(
+{resultados.map((item)=>(
 
 <div
-key={index}
+key={item.nome}
 className="bg-white border rounded-xl shadow p-6 mb-6"
 >
 
-<h2 className="text-xl font-bold mb-3">
+<div className="flex items-center gap-4 mb-4">
+
+{item.foto && (
+
+<img
+src={item.foto}
+className="w-16 h-16 object-cover rounded border"
+/>
+
+)}
+
+<div>
+
+<h2 className="text-xl font-bold">
 {item.nome}
 </h2>
+
+{item.estoqueMinimo > 0 && (
+
+<p className="text-sm text-gray-500">
+Estoque mínimo: {item.estoqueMinimo}
+</p>
+
+)}
+
+</div>
+
+</div>
 
 <div className="space-y-2">
 
@@ -178,9 +210,19 @@ className="flex justify-between border-b pb-2"
 
 </div>
 
-<div className="mt-4 text-right font-bold text-blue-600">
+<div className="mt-4 flex justify-between items-center">
 
-Total: {item.total}
+<div className="font-bold text-blue-600">
+Total disponível: {item.total}
+</div>
+
+{item.estoqueMinimo > 0 && item.total <= item.estoqueMinimo && (
+
+<div className="bg-red-500 text-white px-3 py-1 rounded text-sm">
+⚠ Estoque baixo
+</div>
+
+)}
 
 </div>
 
