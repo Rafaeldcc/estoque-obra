@@ -15,8 +15,8 @@ type MovimentacaoProps = {
   setorId?: string;
   setorNome?: string;
 
-  destino?: "uso" | "transferencia" | "descarte",
-  obraDestino?: string;
+  destino?: "uso" | "transferencia" | "descarte";
+  obraDestino?: string | null;
 
   usuarioId?: string;
   usuarioNome?: string;

@@ -146,7 +146,7 @@ export default function ControleEstoque() {
     material: Material,
     tipo: "entrada" | "saida" | "transferencia",
     quantidade: number,
-    destino?: "uso" | "transferencia" | "descarte"
+    destino?: "uso" | "transferencia" | "descarte",
     obraDestino?: string
   ){
 
