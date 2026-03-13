@@ -7,18 +7,19 @@ import {
   addDoc,
   deleteDoc,
   doc,
-  getDocs,
-  getDoc
+  getDocs
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 
 export default function Setores() {
 
   const params = useParams();
+  const router = useRouter();
+
   const obraId = params.id as string;
 
   const { user, role } = useAuth();
@@ -214,6 +215,14 @@ export default function Setores() {
   return (
 
     <div className="max-w-4xl mx-auto p-6 space-y-6">
+
+      {/* BOTÃO VOLTAR */}
+      <button
+        onClick={() => router.push("/dashboard/obras")}
+        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
+      >
+        ← Voltar
+      </button>
 
       <h1 className="text-2xl font-bold">
         Setores
