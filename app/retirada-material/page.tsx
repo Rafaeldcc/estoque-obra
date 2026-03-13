@@ -161,10 +161,7 @@ export default function RetiradaMaterial() {
       material.id
     );
 
-    await updateDoc(materialRef,{
-      saldo: increment(-qtd)
-    });
-
+    // 🔹 VALIDAÇÃO DA TRANSFERÊNCIA
     if(tipo === "transferencia"){
 
       const destinoId = obraDestino[material.id];
@@ -174,46 +171,24 @@ export default function RetiradaMaterial() {
         return;
       }
 
-      const setorOrigemRef = doc(
-        db,
-        "obras",
-        obraSelecionada,
-        "setores",
-        material.setorId
-      );
+    }
 
-      const setorOrigemSnap = await getDoc(setorOrigemRef);
-      const nomeSetor = setorOrigemSnap.data()?.nome || "Sem nome";
+    // 🔹 ATUALIZA SALDO DA OBRA ATUAL
+    await updateDoc(materialRef,{
+      saldo: increment(-qtd)
+    });
 
-      const setoresDestinoSnap = await getDocs(
-        collection(db,"obras",destinoId,"setores")
-      );
+    // 🔹 SE FOR TRANSFERÊNCIA
+    if(tipo === "transferencia"){
 
-      let setorDestinoId:string | null = null;
-
-      setoresDestinoSnap.forEach((setor)=>{
-        if(setor.data().nome === nomeSetor){
-          setorDestinoId = setor.id;
-        }
-      });
-
-      if(!setorDestinoId){
-
-        const novoSetor = await addDoc(
-          collection(db,"obras",destinoId,"setores"),
-          {nome:nomeSetor}
-        );
-
-        setorDestinoId = novoSetor.id;
-
-      }
+      const destinoId = obraDestino[material.id];
 
       const materiaisDestinoRef = collection(
         db,
         "obras",
         destinoId,
         "setores",
-        setorDestinoId,
+        material.setorId,
         "materiais"
       );
 
@@ -247,11 +222,12 @@ export default function RetiradaMaterial() {
 
     }
 
+    // 🔹 REGISTRAR MOVIMENTAÇÃO
     const obraNome =
       obras.find((o) => o.id === obraSelecionada)?.nome || "";
 
     const obraDestinoNome =
-      obras.find((o) => o.id === obraDestino[material.id])?.nome || "";
+      obras.find((o) => o.id === obraDestino[material.id])?.nome || null;
 
     await registrarMovimentacao({
 
@@ -266,12 +242,16 @@ export default function RetiradaMaterial() {
       obraNome: obraNome,
 
       destino:
-        tipo === "transferencia" ? "transferencia" : "uso",
+        tipo === "transferencia"
+          ? "transferencia"
+          : tipo === "descarte"
+          ? "descarte"
+          : "uso",
 
       obraDestino:
         tipo === "transferencia"
           ? obraDestinoNome
-          : "",
+          : null,
 
       usuarioId: auth.currentUser?.uid || "",
       usuarioNome: auth.currentUser?.email || "",
