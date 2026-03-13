@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import jsPDF from "jspdf";
@@ -9,6 +9,8 @@ import jsPDF from "jspdf";
 export default function RelatorioObra() {
 
   const params = useParams();
+  const router = useRouter();
+
   const obraId = params.obraId as string;
 
   const [obraNome,setObraNome] = useState("");
@@ -141,6 +143,14 @@ export default function RelatorioObra() {
   return(
 
     <div className="p-10">
+
+      {/* BOTÃO VOLTAR */}
+      <button
+        onClick={() => router.push(`/obra/${obraId}`)}
+        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded mb-6"
+      >
+        ← Voltar
+      </button>
 
       <h1 className="text-3xl font-bold mb-4">
         Relatório Geral da Obra
