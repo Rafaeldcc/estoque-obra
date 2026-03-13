@@ -7,7 +7,6 @@ import {
 collection,
 getDocs,
 updateDoc,
-deleteDoc,
 doc,
 getDoc,
 setDoc,
@@ -20,9 +19,8 @@ uploadBytes,
 getDownloadURL
 } from "firebase/storage";
 
-import { db, storage } from "@/lib/firebase";
+import { db, storage, auth } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/lib/useAuth";
 
 interface Material {
 id:string
@@ -39,7 +37,6 @@ nome:string
 
 export default function ControleEstoque(){
 
-const {role} = useAuth()
 const router = useRouter()
 const params = useParams()
 
@@ -106,10 +103,8 @@ setObras(lista.filter(o=>o.id!==obraId))
 }
 
 function mostrarMensagem(texto:string){
-
 setMensagem(texto)
 setTimeout(()=>setMensagem(""),3000)
-
 }
 
 async function uploadFoto(e:any,material:Material){
@@ -132,7 +127,6 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 )
 
 mostrarMensagem("Foto salva")
-carregarMateriais()
 
 }
 
@@ -147,6 +141,30 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 
 material.saldo += qtd
 setMateriais([...materiais])
+
+await registrarMovimentacao({
+
+materialId:material.id,
+materialNome:material.nome,
+
+tipo:"entrada",
+quantidade:qtd,
+
+obraId:obraId,
+obraNome:"",
+
+setorId:setorId,
+setorNome:"",
+
+destino:"entrada",
+obraDestino:null,
+
+usuarioId:auth.currentUser?.uid || "",
+usuarioNome:auth.currentUser?.email || "",
+
+empresaId:""
+
+})
 
 mostrarMensagem("Material adicionado")
 
@@ -164,7 +182,31 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 material.saldo -= qtd
 setMateriais([...materiais])
 
-mostrarMensagem("Material usado")
+await registrarMovimentacao({
+
+materialId:material.id,
+materialNome:material.nome,
+
+tipo:"saida",
+quantidade:qtd,
+
+obraId:obraId,
+obraNome:"",
+
+setorId:setorId,
+setorNome:"",
+
+destino:"uso",
+obraDestino:null,
+
+usuarioId:auth.currentUser?.uid || "",
+usuarioNome:auth.currentUser?.email || "",
+
+empresaId:""
+
+})
+
+mostrarMensagem("Material usado na obra")
 
 }
 
@@ -180,6 +222,30 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 material.saldo -= qtd
 setMateriais([...materiais])
 
+await registrarMovimentacao({
+
+materialId:material.id,
+materialNome:material.nome,
+
+tipo:"saida",
+quantidade:qtd,
+
+obraId:obraId,
+obraNome:"",
+
+setorId:setorId,
+setorNome:"",
+
+destino:"descarte",
+obraDestino:null,
+
+usuarioId:auth.currentUser?.uid || "",
+usuarioNome:auth.currentUser?.email || "",
+
+empresaId:""
+
+})
+
 mostrarMensagem("Material descartado")
 
 }
@@ -190,7 +256,7 @@ const qtd = Number(quantidades[material.id] ?? 0)
 const destinoObra = destinos[material.id]
 
 if(!destinoObra){
-alert("Selecione obra destino")
+alert("Selecione a obra destino")
 return
 }
 
@@ -248,7 +314,31 @@ unidade:material.unidade
 
 })
 
-mostrarMensagem("Transferido")
+await registrarMovimentacao({
+
+materialId:material.id,
+materialNome:material.nome,
+
+tipo:"transferencia",
+quantidade:qtd,
+
+obraId:obraId,
+obraNome:"",
+
+setorId:setorId,
+setorNome:"",
+
+destino:"transferencia",
+obraDestino:destinoObra,
+
+usuarioId:auth.currentUser?.uid || "",
+usuarioNome:auth.currentUser?.email || "",
+
+empresaId:""
+
+})
+
+mostrarMensagem("Transferência realizada")
 
 }
 
@@ -385,7 +475,7 @@ setTipoMov({
 
 </select>
 
-{tipoMov[materialSelecionado.id] === "transferencia" && (
+{tipoMov[materialSelecionado.id]==="transferencia" && (
 
 <select
 className="border p-2 rounded"
