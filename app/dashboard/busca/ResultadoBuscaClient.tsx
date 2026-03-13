@@ -5,56 +5,50 @@ import { useSearchParams } from "next/navigation";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+interface Localizacao {
+  obra: string;
+  setor: string;
+  saldo: number;
+}
+
 interface Resultado {
   nome: string;
-  saldo: number;
-  obraNome: string;
-  setorNome: string;
+  locais: Localizacao[];
+  total: number;
 }
 
 export default function ResultadoBuscaClient() {
 
   const searchParams = useSearchParams();
-
-  const materialBusca =
-    searchParams.get("material")?.trim() || "";
+  const materialBusca = searchParams.get("material")?.trim() || "";
 
   const [resultados,setResultados] = useState<Resultado[]>([]);
-  const [total,setTotal] = useState(0);
   const [loading,setLoading] = useState(false);
 
   useEffect(()=>{
-
     if(!materialBusca) return;
-
     buscar();
-
   },[materialBusca]);
 
   function normalizar(texto:string){
-
     return texto
       ?.normalize("NFD")
       .replace(/[\u0300-\u036f]/g,"")
       .toLowerCase()
       .trim();
-
   }
 
   async function buscar(){
 
     setLoading(true);
-    setResultados([]);
-    setTotal(0);
+
+    const buscaNormalizada = normalizar(materialBusca);
+
+    const mapaMateriais:Map<string,Resultado> = new Map();
 
     try{
 
       const obrasSnap = await getDocs(collection(db,"obras"));
-
-      let listaTemp:Resultado[] = [];
-      let somaTemp = 0;
-
-      const buscaNormalizada = normalizar(materialBusca);
 
       for(const obraDoc of obrasSnap.docs){
 
@@ -84,25 +78,33 @@ export default function ResultadoBuscaClient() {
           materiaisSnap.forEach(docSnap=>{
 
             const data = docSnap.data();
-
             if(!data?.nome) return;
 
             const nomeMaterial = normalizar(data.nome);
 
-            if(nomeMaterial.includes(buscaNormalizada)){
+            if(!nomeMaterial.includes(buscaNormalizada)) return;
 
-              const saldo = data.saldo || 0;
+            const saldo = data.saldo || 0;
 
-              listaTemp.push({
+            if(!mapaMateriais.has(data.nome)){
+
+              mapaMateriais.set(data.nome,{
                 nome:data.nome,
-                saldo,
-                obraNome,
-                setorNome
+                locais:[],
+                total:0
               });
 
-              somaTemp += saldo;
-
             }
+
+            const item = mapaMateriais.get(data.nome)!;
+
+            item.locais.push({
+              obra:obraNome,
+              setor:setorNome,
+              saldo
+            });
+
+            item.total += saldo;
 
           });
 
@@ -110,14 +112,11 @@ export default function ResultadoBuscaClient() {
 
       }
 
-      setResultados(listaTemp);
-      setTotal(somaTemp);
+      setResultados(Array.from(mapaMateriais.values()));
 
     }
     catch(error){
-
       console.error("Erro na busca:",error);
-
     }
 
     setLoading(false);
@@ -126,54 +125,61 @@ export default function ResultadoBuscaClient() {
 
   return(
 
-<div className="max-w-5xl mx-auto p-6">
+<div className="max-w-6xl mx-auto p-6">
 
 <h1 className="text-2xl font-bold mb-6">
-Resultado da Busca
+🔎 Busca Global de Materiais
 </h1>
 
-<div className="bg-blue-600 text-white p-4 rounded-lg mb-6">
-<p className="text-lg font-semibold">
-Total Geral: {total}
-</p>
-</div>
-
 {loading && (
-<p className="text-gray-500">
-Buscando...
-</p>
+<p className="text-gray-500">Buscando...</p>
 )}
 
 {!loading && resultados.length === 0 && (
-
 <p className="text-gray-500">
-Nenhum material encontrado.
+Nenhum material encontrado
 </p>
-
 )}
 
 {resultados.map((item,index)=>(
 
 <div
 key={index}
-className="p-5 border rounded-lg mb-4 bg-white shadow"
+className="bg-white border rounded-xl shadow p-6 mb-6"
 >
 
-<p>
-<strong>Material:</strong> {item.nome}
-</p>
+<h2 className="text-xl font-bold mb-3">
+{item.nome}
+</h2>
 
-<p>
-<strong>Quantidade:</strong> {item.saldo}
-</p>
+<div className="space-y-2">
 
-<p>
-<strong>Obra:</strong> {item.obraNome}
-</p>
+{item.locais.map((local,i)=>(
 
-<p>
-<strong>Setor:</strong> {item.setorNome}
-</p>
+<div
+key={i}
+className="flex justify-between border-b pb-2"
+>
+
+<span>
+📍 {local.obra} • {local.setor}
+</span>
+
+<span className="font-semibold">
+{local.saldo}
+</span>
+
+</div>
+
+))}
+
+</div>
+
+<div className="mt-4 text-right font-bold text-blue-600">
+
+Total: {item.total}
+
+</div>
 
 </div>
 
