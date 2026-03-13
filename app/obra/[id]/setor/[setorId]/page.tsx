@@ -2,6 +2,7 @@
 
 import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useEffect, useState } from "react";
+
 import {
 collection,
 getDocs,
@@ -31,7 +32,7 @@ unidade:string
 foto?:string
 }
 
-interface Obra {
+interface Obra{
 id:string
 nome:string
 }
@@ -45,11 +46,11 @@ const params = useParams()
 const obraId = params.id as string
 const setorId = params.setorId as string
 
-const [tipoMov,setTipoMov] = useState<{[key:string]:string}>({})
 const [materiais,setMateriais] = useState<Material[]>([])
 const [obras,setObras] = useState<Obra[]>([])
 const [quantidades,setQuantidades] = useState<{[key:string]:number}>({})
 const [destinos,setDestinos] = useState<{[key:string]:string}>({})
+const [tipoMov,setTipoMov] = useState<{[key:string]:string}>({})
 const [busca,setBusca] = useState("")
 const [materialSelecionado,setMaterialSelecionado] = useState<Material | null>(null)
 const [mensagem,setMensagem] = useState("")
@@ -130,7 +131,7 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {foto:url}
 )
 
-mostrarMensagem("Foto salva com sucesso")
+mostrarMensagem("Foto salva")
 carregarMateriais()
 
 }
@@ -144,8 +145,10 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {saldo:increment(qtd)}
 )
 
+material.saldo += qtd
+setMateriais([...materiais])
+
 mostrarMensagem("Material adicionado")
-carregarMateriais()
 
 }
 
@@ -158,8 +161,10 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {saldo:increment(-qtd)}
 )
 
+material.saldo -= qtd
+setMateriais([...materiais])
+
 mostrarMensagem("Material usado")
-carregarMateriais()
 
 }
 
@@ -172,8 +177,10 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {saldo:increment(-qtd)}
 )
 
+material.saldo -= qtd
+setMateriais([...materiais])
+
 mostrarMensagem("Material descartado")
-carregarMateriais()
 
 }
 
@@ -183,7 +190,7 @@ const qtd = Number(quantidades[material.id] ?? 0)
 const destinoObra = destinos[material.id]
 
 if(!destinoObra){
-alert("Selecione a obra destino")
+alert("Selecione obra destino")
 return
 }
 
@@ -191,6 +198,9 @@ await updateDoc(
 doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {saldo:increment(-qtd)}
 )
+
+material.saldo -= qtd
+setMateriais([...materiais])
 
 const setorDestinoRef = doc(
 db,
@@ -238,8 +248,7 @@ unidade:material.unidade
 
 })
 
-mostrarMensagem("Transferência realizada")
-carregarMateriais()
+mostrarMensagem("Transferido")
 
 }
 
@@ -360,6 +369,7 @@ setQuantidades({
 />
 
 <select
+value={tipoMov[materialSelecionado.id] || "uso"}
 className="border p-2 rounded"
 onChange={(e)=>
 setTipoMov({
@@ -375,7 +385,7 @@ setTipoMov({
 
 </select>
 
-{tipoMov[materialSelecionado.id]==="transferencia" && (
+{tipoMov[materialSelecionado.id] === "transferencia" && (
 
 <select
 className="border p-2 rounded"
@@ -402,11 +412,11 @@ setDestinos({
 <button
 onClick={()=>{
 
-const tipo = tipoMov[materialSelecionado.id]
+const tipo = tipoMov[materialSelecionado.id] || "uso"
 
 if(tipo==="transferencia") transferir(materialSelecionado)
-if(tipo==="uso") usarNaObra(materialSelecionado)
-if(tipo==="descarte") descartarMaterial(materialSelecionado)
+else if(tipo==="descarte") descartarMaterial(materialSelecionado)
+else usarNaObra(materialSelecionado)
 
 }}
 className="bg-red-600 text-white px-4 py-2 rounded"
