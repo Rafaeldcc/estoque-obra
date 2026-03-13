@@ -24,6 +24,7 @@ nome:string
 saldo:number
 unidade:string
 foto?:string
+estoqueMinimo?:number
 }
 
 export default function ControleEstoque(){
@@ -60,7 +61,8 @@ id:docSnap.id,
 nome:data.nome,
 saldo:data.saldo ?? 0,
 unidade:data.unidade ?? "",
-foto:data.foto ?? ""
+foto:data.foto ?? "",
+estoqueMinimo:data.estoqueMinimo ?? 0
 })
 
 })
@@ -121,6 +123,21 @@ foto:""
 })
 
 mostrarMensagem("Foto removida")
+
+}
+
+async function salvarEstoqueMinimo(){
+
+if(!materialSelecionado) return
+
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+{estoqueMinimo: materialSelecionado.estoqueMinimo ?? 0}
+)
+
+mostrarMensagem("Estoque mínimo salvo")
+
+await carregarMateriais()
 
 }
 
@@ -226,10 +243,52 @@ className="mb-6 text-blue-600 font-semibold"
 {materialSelecionado.nome}
 </h2>
 
-<p className="mb-4 text-lg">
+<p className="mb-2 text-lg">
 Quantidade atual:
 <strong> {materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
 </p>
+
+{/* ALERTA ESTOQUE BAIXO */}
+
+{materialSelecionado.estoqueMinimo !== undefined &&
+materialSelecionado.saldo <= materialSelecionado.estoqueMinimo && (
+
+<div className="bg-red-500 text-white px-4 py-2 rounded mb-4 inline-block">
+⚠ Estoque baixo
+</div>
+
+)}
+
+{/* ESTOQUE MINIMO */}
+
+<div className="mb-6">
+
+<p className="text-sm text-gray-600 mb-2">
+Estoque mínimo
+</p>
+
+<input
+type="number"
+value={materialSelecionado.estoqueMinimo ?? 0}
+onChange={(e)=>
+setMaterialSelecionado({
+...materialSelecionado,
+estoqueMinimo:Number(e.target.value)
+})
+}
+className="border p-2 rounded w-32"
+/>
+
+<button
+onClick={salvarEstoqueMinimo}
+className="ml-3 bg-blue-600 text-white px-4 py-2 rounded"
+>
+
+Salvar
+
+</button>
+
+</div>
 
 {/* FOTO */}
 
