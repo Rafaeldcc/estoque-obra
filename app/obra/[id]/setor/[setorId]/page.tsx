@@ -180,13 +180,13 @@ onChange={(e)=>setBusca(e.target.value)}
 className="border p-3 rounded mb-6 w-full"
 />
 
-<div className="border rounded-xl overflow-hidden">
+<div className="border rounded-xl overflow-hidden shadow">
 
-<div className="max-h-[500px] overflow-y-auto">
+<div className="max-h-[600px] overflow-y-auto">
 
 <table className="w-full">
 
-<thead className="bg-gray-100">
+<thead className="bg-gray-100 sticky top-0 z-10">
 <tr>
 <th className="p-3 text-left">Material</th>
 <th className="p-3 text-center">Quantidade</th>
@@ -199,7 +199,7 @@ className="border p-3 rounded mb-6 w-full"
 
 <tr
 key={material.id}
-className="border-t hover:bg-gray-50 cursor-pointer"
+className="border-t hover:bg-gray-50 cursor-pointer transition"
 onClick={()=>setMaterialSelecionado(material)}
 >
 
@@ -255,8 +255,6 @@ Quantidade atual:
 <strong> {materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
 </p>
 
-{/* ALERTA ESTOQUE BAIXO */}
-
 {materialSelecionado.estoqueMinimo !== undefined &&
 materialSelecionado.saldo <= materialSelecionado.estoqueMinimo && (
 
@@ -265,8 +263,6 @@ materialSelecionado.saldo <= materialSelecionado.estoqueMinimo && (
 </div>
 
 )}
-
-{/* ESTOQUE MINIMO */}
 
 <div className="mb-6">
 
@@ -296,8 +292,6 @@ Salvar
 </button>
 
 </div>
-
-{/* FOTO */}
 
 {materialSelecionado.foto ? (
 
