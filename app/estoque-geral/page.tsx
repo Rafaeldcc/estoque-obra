@@ -33,18 +33,19 @@ export default function EstoqueGeral() {
   const [loading, setLoading] = useState(true);
   const [setorSelecionado, setSetorSelecionado] = useState<string | null>(null);
 
-  // 🔎 NOVA BUSCA
   const [busca, setBusca] = useState("");
 
   useEffect(() => {
-
     if (!user) return;
-
     carregarUsuario();
-
   }, [user]);
 
-
+  function normalizar(texto: string) {
+    return texto
+      ?.normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
 
   async function carregarUsuario() {
 
@@ -78,8 +79,6 @@ export default function EstoqueGeral() {
     }
 
   }
-
-
 
   async function carregarEstoque(empresaId: string) {
 
@@ -166,8 +165,6 @@ export default function EstoqueGeral() {
 
   }
 
-
-
   if (loading) {
 
     return (
@@ -178,11 +175,7 @@ export default function EstoqueGeral() {
 
   }
 
-
-
   const setores = Array.from(new Set(tabela.map(l => l.setor)));
-
-
 
   if (!setorSelecionado) {
 
@@ -238,16 +231,12 @@ export default function EstoqueGeral() {
 
   }
 
-
-
-  // 🔎 FILTRO COM BUSCA
+  // 🔎 BUSCA INTELIGENTE
   const materiais = tabela
     .filter(l => l.setor === setorSelecionado)
     .filter(l =>
-      l.material.toLowerCase().startsWith(busca.toLowerCase())
-  );
-
-
+      normalizar(l.material).includes(normalizar(busca))
+    );
 
   return (
 
@@ -263,8 +252,6 @@ export default function EstoqueGeral() {
       <h1 className="text-3xl font-bold mb-6">
         {setorSelecionado}
       </h1>
-
-      {/* 🔎 CAMPO DE BUSCA */}
 
       <input
         placeholder="Buscar material..."
