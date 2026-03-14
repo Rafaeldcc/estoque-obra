@@ -560,8 +560,30 @@ export default function CadastrarMaterial() {
         <option value="m">Metro</option>
         <option value="pc">Peça</option>
 
+        <option value="rolo">Rolo</option>
+        <option value="cx">Caixa</option>
+        <option value="barra">Barra</option>
+        <option value="kg">Kg</option>
+        <option value="l">Litro</option>
+        <option value="pct">Pacote</option>
+
+        <option value="nova">➕ Nova unidade</option>
+
       </select>
 
+      {unidade === "nova" && (
+
+      <input
+        placeholder="Digite a nova unidade (ex: bobina)"
+        value={novaUnidade}
+        onChange={(e) => {
+          setNovaUnidade(e.target.value)
+          setUnidade(e.target.value)
+        }}
+       className="w-full p-2 border rounded mt-2"
+      />
+
+      )}
       <button
         onClick={salvarMaterial}
         className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
