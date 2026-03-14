@@ -180,7 +180,11 @@ onChange={(e)=>setBusca(e.target.value)}
 className="border p-3 rounded mb-6 w-full"
 />
 
-<table className="w-full border rounded-xl overflow-hidden">
+<div className="border rounded-xl overflow-hidden">
+
+<div className="max-h-[500px] overflow-y-auto">
+
+<table className="w-full">
 
 <thead className="bg-gray-100">
 <tr>
@@ -223,6 +227,9 @@ className="w-10 h-10 object-cover rounded"
 </tbody>
 
 </table>
+
+</div>
+</div>
 
 </>
 
