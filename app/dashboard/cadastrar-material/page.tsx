@@ -48,6 +48,7 @@ export default function CadastrarMaterial() {
   const [nomeMaterial, setNomeMaterial] = useState("");
   const [quantidade, setQuantidade] = useState(0);
   const [unidade, setUnidade] = useState("un");
+  const [novaUnidade, setNovaUnidade] = useState("");
 
   const [sugestoes, setSugestoes] = useState<string[]>([]);
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
