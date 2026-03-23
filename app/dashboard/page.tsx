@@ -263,30 +263,82 @@ export default function Dashboard() {
 
 
   if (visao === "menu") {
+  return (
+    <div className="max-w-7xl mx-auto p-8">
 
-    return (
+      <h1 className="text-3xl font-bold mb-8">
+        Dashboard {empresa}
+      </h1>
 
-      <div className="max-w-6xl mx-auto p-10">
+      {/* 🔥 GRÁFICOS DIRETO NO DASHBOARD */}
+      <div className="grid md:grid-cols-2 gap-6 mb-8">
 
-        <h1 className="text-3xl font-bold mb-10">
-          Dashboard {empresa}
-        </h1>
+        {/* 📊 ESTOQUE POR OBRA */}
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h2 className="font-semibold mb-4">📊 Estoque por Obra</h2>
 
-        <div className="grid md:grid-cols-2 gap-6">
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={graficoObras}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="obra" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="estoque" fill="#2563eb" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
 
-          <MenuCard titulo="📊 Estoque por Obra" click={() => setVisao("obra")} />
-          <MenuCard titulo="📦 Estoque por Setor" click={() => setVisao("setor")} />
-          <MenuCard titulo="📈 Consumo por Obra" click={() => setVisao("consumo")} />
-          <MenuCard titulo="⚠ Estoque Baixo" click={() => setVisao("baixo")} />
-          <MenuCard titulo="🔥 Materiais Mais Usados" click={() => setVisao("usados")} />
+        {/* 📈 CONSUMO POR OBRA */}
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h2 className="font-semibold mb-4">📈 Consumo por Obra</h2>
 
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={graficoConsumoObras}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="obra" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="consumo" fill="#f97316" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
       </div>
 
-    );
+      {/* 🚨 ESTOQUE BAIXO DIRETO */}
+      <div className="bg-white p-6 rounded-xl shadow mb-8">
+        <h2 className="font-semibold mb-4 text-red-600">
+          ⚠ Estoque Baixo
+        </h2>
 
-  }
+        {estoqueBaixo.length === 0 ? (
+          <p className="text-green-600">Tudo certo no estoque ✅</p>
+        ) : (
+          estoqueBaixo.slice(0, 5).map((item: any, i: number) => (
+            <div key={i} className="flex justify-between border-b py-2">
+              <span>{item.material}</span>
+              <span className="text-red-600 font-bold">
+                {item.saldo}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* 📦 MENU (continua existindo) */}
+      <div className="grid md:grid-cols-3 gap-4">
+
+        <MenuCard titulo="📊 Ver Estoque por Obra" click={() => setVisao("obra")} />
+        <MenuCard titulo="📦 Ver Estoque por Setor" click={() => setVisao("setor")} />
+        <MenuCard titulo="📈 Ver Consumo Detalhado" click={() => setVisao("consumo")} />
+        <MenuCard titulo="⚠ Ver Estoque Baixo" click={() => setVisao("baixo")} />
+        <MenuCard titulo="🔥 Materiais Mais Usados" click={() => setVisao("usados")} />
+
+      </div>
+
+    </div>
+  );
+}
 
 
   return (
