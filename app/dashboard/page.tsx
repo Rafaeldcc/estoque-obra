@@ -1,6 +1,7 @@
 "use client";
 
 import jsPDF from "jspdf";
+import { LabelList } from "recharts";
 import autoTable from "jspdf-autotable";
 import { useEffect, useState } from "react";
 import {
@@ -394,14 +395,14 @@ function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
       <ResponsiveContainer width="100%" height={350}>
 
         <BarChart data={dados}>
-
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey={chaveX} />
+          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+          <XAxis dataKey={chaveX} tick={{ fontSize: 12 }} />
           <YAxis />
           <Tooltip />
-          <Bar dataKey={chaveY} fill={cor} />
-
-        </BarChart>
+          <Bar dataKey={chaveY} fill={cor} radius={[6, 6, 0, 0]}>
+            <LabelList dataKey={chaveY} position="top" />
+          </Bar>
+          </BarChart>
 
       </ResponsiveContainer>
 
@@ -588,7 +589,7 @@ function MateriaisUsadosMes() {
 
   return(
 
-    <div className="bg-white p-6 rounded-xl shadow">
+    <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100">
 
       <div className="flex justify-between mb-4">
 
