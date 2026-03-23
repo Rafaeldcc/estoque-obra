@@ -305,26 +305,6 @@ export default function Dashboard() {
 
       </div>
 
-      {/* 🚨 ESTOQUE BAIXO DIRETO */}
-      <div className="bg-white p-6 rounded-xl shadow mb-8">
-        <h2 className="font-semibold mb-4 text-red-600">
-          ⚠ Estoque Baixo
-        </h2>
-
-        {estoqueBaixo.length === 0 ? (
-          <p className="text-green-600">Tudo certo no estoque ✅</p>
-        ) : (
-          estoqueBaixo.slice(0, 5).map((item: any, i: number) => (
-            <div key={i} className="flex justify-between border-b py-2">
-              <span>{item.material}</span>
-              <span className="text-red-600 font-bold">
-                {item.saldo}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
-
       {/* 📦 MENU (continua existindo) */}
       <div className="grid md:grid-cols-3 gap-4">
 
