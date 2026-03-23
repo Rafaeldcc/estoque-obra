@@ -32,13 +32,9 @@ export default function ObrasPage() {
   const [empresaId, setEmpresaId] = useState<string | null>(null);
 
   useEffect(() => {
-
     if (!user) return;
-
     carregarUsuario();
-
   }, [user]);
-
 
 
   async function carregarUsuario() {
@@ -68,7 +64,6 @@ export default function ObrasPage() {
     }
 
   }
-
 
 
   async function carregarObras(empresaIdParam: string) {
@@ -108,7 +103,6 @@ export default function ObrasPage() {
   }
 
 
-
   async function criarObra() {
 
     if (!nomeObra.trim()) return;
@@ -145,19 +139,56 @@ export default function ObrasPage() {
   }
 
 
-
-  async function excluirObra(id: string) {
+  // 🔥 EXCLUSÃO COMPLETA (CASCATA)
+  async function excluirObra(id: string, nome: string) {
 
     if (role !== "admin") {
       alert("Apenas administrador pode excluir obras.");
       return;
     }
 
-    if (!confirm("Deseja realmente excluir esta obra?")) return;
+    if (!confirm("⚠️ Isso irá apagar TODA a obra, materiais e movimentações. Deseja continuar?")) return;
 
     try {
 
+      // 🔥 1. EXCLUIR SETORES E MATERIAIS
+      const setoresSnap = await getDocs(
+        collection(db, "obras", id, "setores")
+      );
+
+      for (const setor of setoresSnap.docs) {
+
+        const materiaisSnap = await getDocs(
+          collection(db, "obras", id, "setores", setor.id, "materiais")
+        );
+
+        for (const mat of materiaisSnap.docs) {
+          await deleteDoc(mat.ref);
+        }
+
+        await deleteDoc(setor.ref);
+      }
+
+      // 🔥 2. EXCLUIR MOVIMENTAÇÕES
+      const movSnap = await getDocs(collection(db, "movimentacoes"));
+
+      for (const mov of movSnap.docs) {
+
+        const data = mov.data();
+
+        if (
+          data.obraNome === nome ||
+          data.obraDestino === nome
+        ) {
+          await deleteDoc(mov.ref);
+        }
+
+      }
+
+      // 🔥 3. EXCLUIR OBRA
       await deleteDoc(doc(db, "obras", id));
+
+      alert("Obra excluída com sucesso!");
 
       if (empresaId) {
         carregarObras(empresaId);
@@ -173,16 +204,13 @@ export default function ObrasPage() {
   }
 
 
-
   if (loading) return null;
-
 
 
   return (
 
     <div className="max-w-6xl mx-auto p-6 space-y-8">
 
-      {/* BOTÃO VOLTAR */}
       <button
         onClick={() => router.push("/dashboard")}
         className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
@@ -193,7 +221,6 @@ export default function ObrasPage() {
       <h1 className="text-3xl font-bold">
         Gestão de Obras
       </h1>
-
 
 
       {role === "admin" && (
@@ -228,7 +255,6 @@ export default function ObrasPage() {
       )}
 
 
-
       <div className="space-y-4">
 
         <h2 className="font-semibold text-lg">
@@ -252,7 +278,7 @@ export default function ObrasPage() {
             {role === "admin" && (
 
               <button
-                onClick={() => excluirObra(obra.id)}
+                onClick={() => excluirObra(obra.id, obra.nome)}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
               >
                 Excluir
