@@ -305,23 +305,6 @@ export default function Dashboard() {
 
       </div>
 
-      {/* 🔥 MATERIAIS MAIS USADOS */}
-      <div className="bg-white p-6 rounded-xl shadow mb-8">
-        <h2 className="font-semibold mb-4">
-          🔥 Materiais Mais Usados
-        </h2>
-
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={materiaisUsados}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="material" tick={{ fontSize: 10 }} />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="quantidade" fill="#dc2626" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
       {/* 🚨 ESTOQUE BAIXO DIRETO */}
       <div className="bg-white p-6 rounded-xl shadow mb-8">
         <h2 className="font-semibold mb-4 text-red-600">
@@ -345,7 +328,7 @@ export default function Dashboard() {
       {/* 📦 MENU (continua existindo) */}
       <div className="grid md:grid-cols-3 gap-4">
 
-        
+        <MenuCard titulo="⚠ Ver Estoque Baixo" click={() => setVisao("baixo")} />
         <MenuCard titulo="🔥 Materiais Mais Usados" click={() => setVisao("usados")} />
 
       </div>
