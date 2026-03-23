@@ -7,7 +7,8 @@ import {
   query,
   orderBy,
   getDoc,
-  doc
+  doc,
+  deleteDoc
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
@@ -39,22 +40,14 @@ export default function MovimentacoesPage() {
 
 
   useEffect(()=>{
-
     if(!user) return;
-
     carregarUsuario();
-
   },[user]);
 
-
   useEffect(()=>{
-
     if(empresaId){
-
       carregarMovimentacoes();
-
     }
-
   },[empresaId]);
 
 
@@ -65,12 +58,9 @@ export default function MovimentacoesPage() {
     const snap = await getDoc(doc(db,"usuarios",user.uid));
 
     if(snap.exists()){
-
       const data = snap.data();
-
       setRole(data.role);
       setEmpresaId(data.empresaId);
-
     }
 
   }
@@ -97,11 +87,8 @@ export default function MovimentacoesPage() {
           ...doc.data()
         }))
         .filter((mov:any)=>{
-
           if(!mov.empresaId) return false;
-
           return mov.empresaId === empresaId;
-
         }) as Movimentacao[];
 
       setMovimentacoes(lista);
@@ -118,6 +105,30 @@ export default function MovimentacoesPage() {
   }
 
 
+  // 🔥 FUNÇÃO EXCLUIR
+  async function excluirMovimentacao(id: string) {
+
+    const confirmar = confirm("Tem certeza que deseja excluir esta movimentação?");
+
+    if (!confirmar) return;
+
+    try {
+
+      await deleteDoc(doc(db, "movimentacoes", id));
+
+      alert("Movimentação excluída!");
+
+      carregarMovimentacoes();
+
+    } catch (error) {
+
+      console.error("Erro ao excluir:", error);
+      alert("Erro ao excluir movimentação");
+
+    }
+  }
+
+
   function formatarData(mov:Movimentacao){
 
     const data = mov.createdAt || mov.criadoEm;
@@ -125,13 +136,9 @@ export default function MovimentacoesPage() {
     if(!data) return "";
 
     try{
-
       return data.toDate().toLocaleString("pt-BR");
-
     }catch{
-
       return "";
-
     }
 
   }
@@ -140,16 +147,12 @@ export default function MovimentacoesPage() {
   if(loading) return null;
 
 
-  /* BLOQUEIA APENAS SE NÃO TIVER ROLE */
-
   if(!role){
 
     return(
-
       <div className="p-10 text-center text-red-600 font-semibold">
         Usuário sem permissão definida.
       </div>
-
     );
 
   }
@@ -166,14 +169,11 @@ export default function MovimentacoesPage() {
       {carregando && <p>Carregando...</p>}
 
       {!carregando && movimentacoes.length === 0 && (
-
         <p className="text-gray-500">
           Nenhuma movimentação encontrada.
         </p>
-
       )}
 
-      {/* LISTA COM ROLAGEM */}
       <div className="space-y-4 overflow-y-auto flex-1 pr-3">
 
         {movimentacoes.map((mov)=>(
@@ -195,21 +195,33 @@ export default function MovimentacoesPage() {
                 📦 {mov.materialNome}
               </strong>
 
-              <span
-                className={`font-semibold ${
-                  mov.tipo === "entrada"
-                    ? "text-green-600"
-                    : mov.tipo === "transferencia"
-                    ? "text-blue-600"
-                    : "text-red-600"
-                }`}
-              >
+              <div className="flex items-center gap-4">
 
-                {mov.tipo === "entrada" && "🟢 Entrada"}
-                {mov.tipo === "saida" && "🔴 Saída"}
-                {mov.tipo === "transferencia" && "🔵 Transferência"}
+                <span
+                  className={`font-semibold ${
+                    mov.tipo === "entrada"
+                      ? "text-green-600"
+                      : mov.tipo === "transferencia"
+                      ? "text-blue-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {mov.tipo === "entrada" && "🟢 Entrada"}
+                  {mov.tipo === "saida" && "🔴 Saída"}
+                  {mov.tipo === "transferencia" && "🔵 Transferência"}
+                </span>
 
-              </span>
+                {/* 🔥 BOTÃO EXCLUIR */}
+                {role === "admin" && (
+                  <button
+                    onClick={() => excluirMovimentacao(mov.id)}
+                    className="text-red-500 hover:text-red-700 text-sm font-semibold"
+                  >
+                    🗑
+                  </button>
+                )}
+
+              </div>
 
             </div>
 
