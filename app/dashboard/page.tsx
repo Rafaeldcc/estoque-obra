@@ -33,186 +33,81 @@ export default function Dashboard() {
   const [visao, setVisao] = useState("menu");
 
   const [graficoObras, setGraficoObras] = useState<any[]>([]);
-  const [graficoSetores, setGraficoSetores] = useState<any[]>([]);
   const [graficoConsumoObras, setGraficoConsumoObras] = useState<any[]>([]);
-
   const [estoqueBaixo, setEstoqueBaixo] = useState<any[]>([]);
   const [materiaisUsados, setMateriaisUsados] = useState<any[]>([]);
 
   useEffect(() => {
-
     if (!user) return;
-
     carregarIndicadores();
     carregarEmpresa();
-
   }, [user]);
 
-
   async function carregarEmpresa() {
-
     if (!user) return;
-
     const snap = await getDoc(doc(db, "usuarios", user.uid));
-
     if (!snap.exists()) return;
-
-    const data = snap.data();
-
-    setEmpresa(data?.empresa || "Sistema");
-
+    setEmpresa(snap.data()?.empresa || "Sistema");
   }
-
-
-  function gerarListaCompras() {
-
-    if (estoqueBaixo.length === 0) {
-      alert("Nenhum material precisa ser comprado.");
-      return;
-    }
-
-    let texto = "LISTA DE COMPRAS\n\n";
-
-    estoqueBaixo.forEach((item: any) => {
-
-      texto += `Material: ${item.material}\n`;
-      texto += `Saldo atual: ${item.saldo}\n`;
-      texto += `Mínimo necessário: ${item.minimo}\n`;
-      texto += `Comprar: ${item.comprar}\n\n`;
-
-    });
-
-    const blob = new Blob([texto], { type: "text/plain" });
-
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "lista-compras.txt";
-    a.click();
-
-  }
-
 
   async function carregarIndicadores() {
 
-    if (!user) return;
+    const userSnap = await getDoc(doc(db, "usuarios", user!.uid));
+    const empresaId = userSnap.data()?.empresaId;
 
-    const userSnap = await getDoc(doc(db, "usuarios", user.uid));
-
-    if (!userSnap.exists()) return;
-
-    const userData = userSnap.data();
-    const empresaId = userData?.empresaId;
-
-    if (!empresaId) return;
-
-    const obrasQuery = query(
-      collection(db, "obras"),
-      where("empresaId", "==", empresaId)
+    const obrasSnap = await getDocs(
+      query(collection(db, "obras"), where("empresaId", "==", empresaId))
     );
 
-    const obrasSnap = await getDocs(obrasQuery);
-
-    const dadosGraficoObras: any[] = [];
-    const mapaSetores: any = {};
     const mapaMateriais: any = {};
+    const dadosGraficoObras: any[] = [];
 
     for (const obraDoc of obrasSnap.docs) {
 
+      let estoqueObra = 0;
       const obraNome = obraDoc.data().nome;
 
       const setoresSnap = await getDocs(
         collection(db, "obras", obraDoc.id, "setores")
       );
 
-      let estoqueObra = 0;
-
       for (const setorDoc of setoresSnap.docs) {
 
-        const setorNome = setorDoc.data().nome || "Setor";
-
         const materiaisSnap = await getDocs(
-          collection(
-            db,
-            "obras",
-            obraDoc.id,
-            "setores",
-            setorDoc.id,
-            "materiais"
-          )
+          collection(db, "obras", obraDoc.id, "setores", setorDoc.id, "materiais")
         );
 
         materiaisSnap.forEach((docMat) => {
 
           const data = docMat.data();
-
           const saldo = Number(data.saldo ?? 0);
           const minimo = Number(data.estoqueMinimo ?? 0);
-          const materialNome = data.nome ?? "Material";
+          const nome = data.nome ?? "Material";
+
           estoqueObra += saldo;
 
-          if (!mapaSetores[setorNome]) {
-            mapaSetores[setorNome] = 0;
+          if (!mapaMateriais[nome]) {
+            mapaMateriais[nome] = { material: nome, saldo: 0, minimo: minimo };
           }
 
-          mapaSetores[setorNome] += saldo;
-
-          if (!mapaMateriais[materialNome]) {
-
-            mapaMateriais[materialNome] = {
-              material: materialNome,
-              saldo: 0,
-              minimo: minimo ?? 0
-            };
-
-          }
-
-          mapaMateriais[materialNome].saldo += saldo;
-
-          mapaMateriais[materialNome].minimo = Math.max(
-            mapaMateriais[materialNome].minimo,
-            minimo
-        );
+          mapaMateriais[nome].saldo += saldo;
+          mapaMateriais[nome].minimo = Math.max(mapaMateriais[nome].minimo, minimo);
 
         });
-
       }
 
-      dadosGraficoObras.push({
-        obra: obraNome,
-        estoque: estoqueObra,
-      });
-
+      dadosGraficoObras.push({ obra: obraNome, estoque: estoqueObra });
     }
 
-    const dadosSetores = Object.keys(mapaSetores).map((setor) => ({
-      setor,
-      estoque: mapaSetores[setor]
-    }));
-
-
     const materiaisBaixos = Object.values(mapaMateriais)
-      .filter((m: any) => m.minimo > 0 && m.saldo <= m.minimo)
-      .map((m: any) => ({
-        material: m.material,
-        saldo: m.saldo,
-        minimo: m.minimo,
-        comprar: m.minimo - m.saldo
-      }));
-
+      .filter((m: any) => m.minimo > 0 && m.saldo <= m.minimo);
 
     setGraficoObras(dadosGraficoObras);
-    setGraficoSetores(dadosSetores);
     setEstoqueBaixo(materiaisBaixos);
 
-
-    const movQuery = query(
-      collection(db, "movimentacoes"),
-      where("empresaId", "==", empresaId)
+    const movSnap = await getDocs(
+      query(collection(db, "movimentacoes"), where("empresaId", "==", empresaId))
     );
-
-    const movSnap = await getDocs(movQuery);
 
     const consumoMateriais: any = {};
     const consumoObras: any = {};
@@ -227,188 +122,101 @@ export default function Dashboard() {
         const quantidade = Number(data.quantidade || 0);
         const obra = data.obraNome;
 
-        if (!consumoMateriais[material]) consumoMateriais[material] = 0;
-        consumoMateriais[material] += quantidade;
-
-        if (!consumoObras[obra]) consumoObras[obra] = 0;
-        consumoObras[obra] += quantidade;
+        consumoMateriais[material] = (consumoMateriais[material] || 0) + quantidade;
+        consumoObras[obra] = (consumoObras[obra] || 0) + quantidade;
 
       }
 
     });
 
-    const rankingMateriais = Object.keys(consumoMateriais)
-      .map((material) => ({
-        material,
-        quantidade: consumoMateriais[material]
-      }))
-      .sort((a, b) => b.quantidade - a.quantidade)
-      .slice(0, 10);
+    setMateriaisUsados(
+      Object.keys(consumoMateriais)
+        .map((m) => ({ material: m, quantidade: consumoMateriais[m] }))
+        .sort((a, b) => b.quantidade - a.quantidade)
+        .slice(0, 10)
+    );
 
-    setMateriaisUsados(rankingMateriais);
-
-    const rankingObras = Object.keys(consumoObras)
-      .map((obra) => ({
-        obra,
-        consumo: consumoObras[obra]
-      }))
-      .sort((a, b) => b.consumo - a.consumo);
-
-    setGraficoConsumoObras(rankingObras);
+    setGraficoConsumoObras(
+      Object.keys(consumoObras)
+        .map((o) => ({ obra: o, consumo: consumoObras[o] }))
+        .sort((a, b) => b.consumo - a.consumo)
+    );
 
   }
 
-
   if (loading) return null;
 
-
   if (visao === "menu") {
-  return (
-    <div className="max-w-7xl mx-auto p-8">
+    return (
+      <div className="max-w-7xl mx-auto p-8 bg-gray-50 min-h-screen">
 
-      <h1 className="text-3xl font-bold mb-8">
-        Dashboard {empresa}
-      </h1>
+        <h1 className="text-3xl font-bold mb-8">
+          Dashboard {empresa}
+        </h1>
 
-      {/* 🔥 GRÁFICOS PRINCIPAIS */}
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
+        {/* GRÁFICOS */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
 
-        {/* 📊 ESTOQUE POR OBRA */}
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="font-semibold mb-4">📊 Estoque por Obra</h2>
+          <Card titulo="📊 Estoque por Obra">
+            <Grafico dados={graficoObras} chaveX="obra" chaveY="estoque" cor="#2563eb" />
+          </Card>
 
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={graficoObras}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="obra" tick={{ fontSize: 12 }} />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="estoque" fill="#2563eb" />
-            </BarChart>
-          </ResponsiveContainer>
+          <Card titulo="📈 Consumo por Obra">
+            <Grafico dados={graficoConsumoObras} chaveX="obra" chaveY="consumo" cor="#f97316" />
+          </Card>
+
         </div>
 
-        {/* 📈 CONSUMO POR OBRA */}
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="font-semibold mb-4">📈 Consumo por Obra</h2>
+        {/* MATERIAIS MAIS USADOS */}
+        <Card titulo="🔥 Materiais Mais Usados">
+          <Grafico dados={materiaisUsados} chaveX="material" chaveY="quantidade" cor="#dc2626" />
+        </Card>
 
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={graficoConsumoObras}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="obra" tick={{ fontSize: 12 }} />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="consumo" fill="#f97316" />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* ESTOQUE BAIXO */}
+        <div className="bg-white p-6 rounded-2xl shadow-md mt-8">
+          <h2 className="text-lg font-bold mb-4 text-red-600">
+            ⚠ Estoque Baixo
+          </h2>
+
+          {estoqueBaixo.slice(0, 5).map((item: any, i: number) => (
+            <div key={i} className="flex justify-between py-2 border-b hover:bg-red-50 px-2 rounded">
+              <span>{item.material}</span>
+              <span className="text-red-600 font-bold">{item.saldo}</span>
+            </div>
+          ))}
         </div>
 
       </div>
+    );
+  }
 
-      {/* 📦 MENU (continua existindo) */}
-      <div className="grid md:grid-cols-3 gap-4">
-
-        <MenuCard titulo="⚠ Ver Estoque Baixo" click={() => setVisao("baixo")} />
-        <MenuCard titulo="🔥 Materiais Mais Usados" click={() => setVisao("usados")} />
-
-      </div>
-
-    </div>
-  );
-}
-
-
-  return (
-
-    <div className="max-w-7xl mx-auto p-8">
-
-      <button
-        onClick={() => setVisao("menu")}
-        className="mb-6 bg-gray-200 px-4 py-2 rounded"
-      >
-        ← Voltar
-      </button>
-
-      {visao === "obra" && (
-        <Grafico titulo="Estoque por Obra" dados={graficoObras} chaveX="obra" chaveY="estoque" cor="#2563eb" />
-      )}
-
-      {visao === "setor" && (
-        <Grafico titulo="Estoque por Setor" dados={graficoSetores} chaveX="setor" chaveY="estoque" cor="#16a34a" />
-      )}
-
-      {visao === "consumo" && (
-        <Grafico titulo="Consumo de Material por Obra" dados={graficoConsumoObras} chaveX="obra" chaveY="consumo" cor="#f97316" />
-      )}
-
-      {visao === "baixo" && (
-        <>
-          <Lista titulo="⚠ Materiais com estoque baixo" dados={estoqueBaixo} />
-
-          <button
-            onClick={gerarListaCompras}
-            className="mt-6 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow"
-          >
-            📦 Gerar Lista de Compras
-          </button>
-        </>
-      )}
-
-      {visao === "usados" && (
-        <MateriaisUsadosMes />
-      )}
-
-    </div>
-
-  );
-
+  return null;
 }
 
 
 /* COMPONENTES */
 
-function MenuCard({ titulo, click }: any) {
-
+function Card({ titulo, children }: any) {
   return (
-
-    <div
-      onClick={click}
-      className="bg-white p-8 rounded-xl shadow cursor-pointer hover:shadow-xl text-center text-lg font-semibold"
-    >
-      {titulo}
+    <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition border">
+      <h2 className="text-lg font-bold mb-4">{titulo}</h2>
+      {children}
     </div>
-
   );
-
 }
 
-
-function Grafico({ titulo, dados, chaveX, chaveY, cor }: any) {
-
+function Grafico({ dados, chaveX, chaveY, cor }: any) {
   return (
-
-    <div className="bg-white p-6 rounded-xl shadow">
-
-      <h2 className="text-xl font-bold mb-4">{titulo}</h2>
-
-      <ResponsiveContainer width="100%" height={350}>
-
-        <BarChart data={dados}>
-
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey={chaveX} />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey={chaveY} fill={cor} />
-
-        </BarChart>
-
-      </ResponsiveContainer>
-
-    </div>
-
+    <ResponsiveContainer width="100%" height={250}>
+      <BarChart data={dados}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey={chaveX} tick={{ fontSize: 10 }} />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey={chaveY} fill={cor} />
+      </BarChart>
+    </ResponsiveContainer>
   );
-
 }
 
 
