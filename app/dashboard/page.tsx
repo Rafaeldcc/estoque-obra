@@ -270,7 +270,7 @@ export default function Dashboard() {
         Dashboard {empresa}
       </h1>
 
-      {/* 🔥 GRÁFICOS DIRETO NO DASHBOARD */}
+      {/* 🔥 GRÁFICOS PRINCIPAIS */}
       <div className="grid md:grid-cols-2 gap-6 mb-8">
 
         {/* 📊 ESTOQUE POR OBRA */}
@@ -280,7 +280,7 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={graficoObras}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="obra" />
+              <XAxis dataKey="obra" tick={{ fontSize: 12 }} />
               <YAxis />
               <Tooltip />
               <Bar dataKey="estoque" fill="#2563eb" />
@@ -295,7 +295,7 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={graficoConsumoObras}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="obra" />
+              <XAxis dataKey="obra" tick={{ fontSize: 12 }} />
               <YAxis />
               <Tooltip />
               <Bar dataKey="consumo" fill="#f97316" />
@@ -303,6 +303,23 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
+      </div>
+
+      {/* 🔥 MATERIAIS MAIS USADOS */}
+      <div className="bg-white p-6 rounded-xl shadow mb-8">
+        <h2 className="font-semibold mb-4">
+          🔥 Materiais Mais Usados
+        </h2>
+
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={materiaisUsados}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="material" tick={{ fontSize: 10 }} />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="quantidade" fill="#dc2626" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       {/* 🚨 ESTOQUE BAIXO DIRETO */}
