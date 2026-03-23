@@ -330,8 +330,6 @@ export default function Dashboard() {
 
         <MenuCard titulo="📊 Ver Estoque por Obra" click={() => setVisao("obra")} />
         <MenuCard titulo="📦 Ver Estoque por Setor" click={() => setVisao("setor")} />
-        <MenuCard titulo="📈 Ver Consumo Detalhado" click={() => setVisao("consumo")} />
-        <MenuCard titulo="⚠ Ver Estoque Baixo" click={() => setVisao("baixo")} />
         <MenuCard titulo="🔥 Materiais Mais Usados" click={() => setVisao("usados")} />
 
       </div>
