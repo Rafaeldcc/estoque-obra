@@ -1,39 +1,40 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
 import {
-collection,
-getDocs,
-doc,
-updateDoc,
-addDoc,
-deleteDoc,
-getDoc
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  addDoc,
+  deleteDoc,
+  getDoc
 } from "firebase/firestore";
 
 import {
-ref,
-uploadBytes,
-getDownloadURL
+  ref,
+  uploadBytes,
+  getDownloadURL
 } from "firebase/storage";
 
 import { db, storage } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/useAuth"; // ✅ NOVO
 
 interface Material{
-id:string
-nome:string
-saldo:number
-unidade:string
-foto?:string
-estoqueMinimo?:number
+  id:string
+  nome:string
+  saldo:number
+  unidade:string
+  foto?:string
+  estoqueMinimo?:number
 }
 
 export default function ControleEstoque(){
 
 const router = useRouter()
 const params = useParams()
+const { user } = useAuth() // ✅ NOVO
 
 const obraId = params.id as string
 const setorId = params.setorId as string
@@ -100,20 +101,7 @@ setMensagem(texto)
 setTimeout(()=>setMensagem(""),3000)
 }
 
-// 🔥 EXCLUIR
-async function excluirMaterial(material:Material){
-
-if(!confirm(`Excluir ${material.nome}?`)) return
-
-await deleteDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",material.id)
-)
-
-mostrarMensagem("Material excluído")
-carregarMateriais()
-}
-
-// 🔥 SAÍDA + TRANSFERÊNCIA PROFISSIONAL
+// 🔥 SAÍDA + TRANSFERÊNCIA
 async function registrarSaida(){
 
 if(!materialSelecionado) return
@@ -126,6 +114,13 @@ return alert("Estoque insuficiente")
 if(tipoMov === "transferencia" && !obraDestino){
 return alert("Selecione a obra destino")
 }
+
+// 🔥 BUSCAR EMPRESA E OBRA
+const userSnap = await getDoc(doc(db,"usuarios",user.uid))
+const empresaId = userSnap.data()?.empresaId || null
+
+const obraSnap = await getDoc(doc(db,"obras",obraId))
+const obraNome = obraSnap.data()?.nome || "Sem nome"
 
 // 🔻 REMOVE DA ORIGEM
 await updateDoc(
@@ -192,35 +187,46 @@ foto: materialSelecionado.foto || ""
 })
 }
 
-// 🟢 ENTRADA DESTINO (CORRIGIDO)
+// 🟢 ENTRADA DESTINO (COMPLETA)
+const obraDestinoSnap = await getDoc(doc(db,"obras",obraDestino))
+const obraDestinoNome = obraDestinoSnap.data()?.nome || "Sem nome"
+
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"entrada",
 
 obraId: obraDestino,
+obraNome: obraDestinoNome,
+
 obraOrigemId: obraId,
 obraDestinoId: obraDestino,
 
 destino:"transferencia",
-usuarioNome:"Sistema",
+
+empresaId,
+usuarioNome: user?.email || "Sistema",
 criadoEm:new Date()
 })
 
 }
 
-// 🔴 SAÍDA (CORRIGIDO)
+// 🔴 SAÍDA (COMPLETA)
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"saida",
 
 obraId: obraId,
+obraNome: obraNome,
+
 obraOrigemId: obraId,
 obraDestinoId: tipoMov === "transferencia" ? obraDestino : null,
 
 destino: tipoMov,
-usuarioNome:"Sistema",
+
+empresaId,
+usuarioNome: user?.email || "Sistema",
 criadoEm:new Date()
 })
 
@@ -237,6 +243,12 @@ async function registrarEntrada(){
 if(!materialSelecionado) return
 if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
+const userSnap = await getDoc(doc(db,"usuarios",user.uid))
+const empresaId = userSnap.data()?.empresaId || null
+
+const obraSnap = await getDoc(doc(db,"obras",obraId))
+const obraNome = obraSnap.data()?.nome || "Sem nome"
+
 await updateDoc(
 doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 {saldo: materialSelecionado.saldo + quantidade}
@@ -246,8 +258,12 @@ await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"entrada",
+
 obraId,
-usuarioNome:"Sistema",
+obraNome,
+
+empresaId,
+usuarioNome: user?.email || "Sistema",
 criadoEm:new Date()
 })
 
