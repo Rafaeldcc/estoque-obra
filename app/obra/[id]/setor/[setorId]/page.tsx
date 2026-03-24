@@ -7,7 +7,8 @@ collection,
 getDocs,
 doc,
 updateDoc,
-addDoc
+addDoc,
+deleteDoc
 } from "firebase/firestore";
 
 import {
@@ -41,11 +42,9 @@ const [materialSelecionado,setMaterialSelecionado] = useState<Material | null>(n
 const [busca,setBusca] = useState("")
 const [mensagem,setMensagem] = useState("")
 
-// 🔥 MOVIMENTAÇÃO
 const [quantidade,setQuantidade] = useState(0)
 const [tipoMov,setTipoMov] = useState("uso")
 
-// 🔥 NOVO (TRANSFERÊNCIA)
 const [obras,setObras] = useState<any[]>([])
 const [obraDestino,setObraDestino] = useState("")
 
@@ -54,26 +53,21 @@ carregarMateriais()
 carregarObras()
 },[])
 
-// 🔥 BUSCAR OBRAS
+// 🔥 OBRAS
 async function carregarObras(){
-
 const snap = await getDocs(collection(db,"obras"))
 
 const lista:any[] = []
 
 snap.forEach(docSnap=>{
 const data = docSnap.data()
-
-lista.push({
-id:docSnap.id,
-nome:data.nome
-})
+lista.push({ id:docSnap.id, nome:data.nome })
 })
 
 setObras(lista)
-
 }
 
+// 🔥 MATERIAIS
 async function carregarMateriais(){
 
 const snapshot = await getDocs(
@@ -83,7 +77,6 @@ collection(db,"obras",obraId,"setores",setorId,"materiais")
 const lista:Material[] = []
 
 snapshot.forEach(docSnap=>{
-
 const data = docSnap.data()
 
 lista.push({
@@ -94,21 +87,57 @@ unidade:data.unidade ?? "",
 foto:data.foto ?? "",
 estoqueMinimo:data.estoqueMinimo ?? 0
 })
-
 })
 
 lista.sort((a,b)=>a.nome.localeCompare(b.nome))
-
 setMateriais(lista)
-
 }
 
+// 🔥 MENSAGEM
 function mostrarMensagem(texto:string){
 setMensagem(texto)
 setTimeout(()=>setMensagem(""),3000)
 }
 
-// 🔥 SAÍDA
+//////////////////////////////////////////////////
+// 🔥🔥🔥 EXCLUIR MATERIAL (PROFISSIONAL)
+//////////////////////////////////////////////////
+
+async function excluirMaterial(material:Material){
+
+if(!confirm(`Deseja excluir o material "${material.nome}"?`)) return
+
+try{
+
+// 🔥 REMOVE DO FIREBASE
+await deleteDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id)
+)
+
+// 🔥 LOG
+await addDoc(collection(db,"movimentacoes"),{
+materialNome: material.nome,
+tipo:"exclusao",
+obraNome:"Obra atual",
+usuarioNome:"Sistema",
+criadoEm:new Date()
+})
+
+mostrarMensagem("Material excluído com sucesso")
+
+setMaterialSelecionado(null)
+
+await carregarMateriais()
+
+}catch(e){
+console.error(e)
+alert("Erro ao excluir material")
+}
+
+}
+
+//////////////////////////////////////////////////
+
 async function registrarSaida(){
 
 if(!materialSelecionado) return
@@ -118,59 +147,47 @@ if(quantidade > materialSelecionado.saldo){
 return alert("Estoque insuficiente")
 }
 
-// 🔥 VALIDA TRANSFERÊNCIA
 if(tipoMov === "transferencia" && !obraDestino){
 return alert("Selecione a obra de destino")
 }
 
 const novoSaldo = materialSelecionado.saldo - quantidade
 
-// 🔻 REMOVE DA OBRA ATUAL
 await updateDoc(
 doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 {saldo: novoSaldo}
 )
 
-
-// 🔥 TRANSFERÊNCIA REAL
+// 🔥 TRANSFERÊNCIA
 if(tipoMov === "transferencia"){
 
-// 🔍 BUSCAR OBRA DESTINO
-const obrasSnap = await getDocs(collection(db,"obras"))
-
-let obraDestinoId = ""
-
-obrasSnap.forEach(docSnap=>{
-const data = docSnap.data()
-if(data.nome === obraDestino){
-obraDestinoId = docSnap.id
-}
-})
-
-if(!obraDestinoId){
-return alert("Obra destino não encontrada")
-}
-
-
-// 🔍 PEGAR SETORES DA OBRA DESTINO
 const setoresSnap = await getDocs(
-collection(db,"obras",obraDestinoId,"setores")
+collection(db,"obras",obraDestino,"setores")
 )
+
+let setorDestinoId = ""
 
 if(setoresSnap.empty){
-return alert("Obra destino não possui setores")
+
+const novoSetor = await addDoc(
+collection(db,"obras",obraDestino,"setores"),
+{
+nome:"Geral",
+criadoEm:new Date()
 }
-
-// 👉 pega o PRIMEIRO setor (pode melhorar depois)
-const setorDestinoId = setoresSnap.docs[0].id
-
-
-// 🔍 PROCURAR MATERIAL NA OBRA DESTINO
-const materiaisSnap = await getDocs(
-collection(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais")
 )
 
-let materialExiste = false
+setorDestinoId = novoSetor.id
+
+}else{
+setorDestinoId = setoresSnap.docs[0].id
+}
+
+const materiaisSnap = await getDocs(
+collection(db,"obras",obraDestino,"setores",setorDestinoId,"materiais")
+)
+
+let existe = false
 
 for(const docMat of materiaisSnap.docs){
 
@@ -178,24 +195,19 @@ const data = docMat.data()
 
 if(data.nome === materialSelecionado.nome){
 
-// ✅ MATERIAL EXISTE → SOMA
-const saldoAtual = Number(data.saldo || 0)
+await updateDoc(docMat.ref,{
+saldo: (data.saldo || 0) + quantidade
+})
 
-await updateDoc(
-doc(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais",docMat.id),
-{saldo: saldoAtual + quantidade}
-)
-
-materialExiste = true
+existe = true
 break
 }
 }
 
-// ❌ NÃO EXISTE → CRIA
-if(!materialExiste){
+if(!existe){
 
 await addDoc(
-collection(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais"),
+collection(db,"obras",obraDestino,"setores",setorDestinoId,"materiais"),
 {
 nome: materialSelecionado.nome,
 saldo: quantidade,
@@ -209,24 +221,21 @@ foto: materialSelecionado.foto ?? ""
 
 }
 
-
-// 🧾 REGISTRAR MOVIMENTAÇÃO
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"saida",
 destino: tipoMov,
-obraNome: "Obra atual",
-obraDestino: tipoMov === "transferencia" ? obraDestino : null,
+obraNome:"Obra atual",
+obraDestino: obraDestino || null,
 usuarioNome:"Sistema",
 criadoEm:new Date()
 })
 
-mostrarMensagem("Movimentação realizada com sucesso")
+mostrarMensagem("Movimentação realizada")
 
 setQuantidade(0)
 setObraDestino("")
-
 await carregarMateriais()
 
 }
@@ -243,15 +252,6 @@ await updateDoc(
 doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 {saldo: novoSaldo}
 )
-
-await addDoc(collection(db,"movimentacoes"),{
-materialNome: materialSelecionado.nome,
-quantidade,
-tipo:"entrada",
-obraNome:"Obra atual",
-usuarioNome:"Sistema",
-criadoEm:new Date()
-})
 
 mostrarMensagem("Entrada registrada")
 
@@ -287,8 +287,7 @@ setMaterialSelecionado({
 foto:url
 })
 
-mostrarMensagem("Foto salva com sucesso")
-
+mostrarMensagem("Foto salva")
 }
 
 async function removerFoto(material:Material){
@@ -306,7 +305,6 @@ foto:""
 })
 
 mostrarMensagem("Foto removida")
-
 }
 
 // 🔥 ESTOQUE MÍNIMO
@@ -320,14 +318,12 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 )
 
 mostrarMensagem("Estoque mínimo salvo")
-
 await carregarMateriais()
-
 }
 
+// 🔥 BUSCA
 function normalizar(texto:string){
-return texto
-.normalize("NFD")
+return texto.normalize("NFD")
 .replace(/[\u0300-\u036f]/g,"")
 .toLowerCase()
 }
@@ -335,6 +331,10 @@ return texto
 const filtrados = materiais.filter(m =>
 normalizar(m.nome).startsWith(normalizar(busca))
 )
+
+//////////////////////////////////////////////////
+// UI
+//////////////////////////////////////////////////
 
 return(
 
@@ -361,17 +361,7 @@ onChange={(e)=>setBusca(e.target.value)}
 className="border p-3 rounded mb-6 w-full"
 />
 
-<div className="border rounded-xl overflow-hidden shadow">
-<div className="max-h-[600px] overflow-y-auto">
-
-<table className="w-full">
-
-<thead className="bg-gray-100 sticky top-0">
-<tr>
-<th className="p-3 text-left">Material</th>
-<th className="p-3 text-center">Quantidade</th>
-</tr>
-</thead>
+<table className="w-full border rounded">
 
 <tbody>
 
@@ -379,21 +369,13 @@ className="border p-3 rounded mb-6 w-full"
 
 <tr
 key={material.id}
-className="border-t hover:bg-gray-50 cursor-pointer"
+className="border-t cursor-pointer hover:bg-gray-50"
 onClick={()=>setMaterialSelecionado(material)}
 >
 
-<td className="p-3 flex items-center gap-3">
+<td className="p-3">{material.nome}</td>
 
-{material.foto && (
-<img src={material.foto} className="w-10 h-10 rounded"/>
-)}
-
-{material.nome}
-
-</td>
-
-<td className="p-3 text-center font-bold">
+<td className="p-3 text-right font-bold">
 {material.saldo} {material.unidade}
 </td>
 
@@ -403,9 +385,6 @@ onClick={()=>setMaterialSelecionado(material)}
 
 </tbody>
 </table>
-
-</div>
-</div>
 </>
 )}
 
@@ -424,13 +403,11 @@ className="mb-6 text-blue-600"
 {materialSelecionado.nome}
 </h2>
 
-<p className="mb-2 text-lg">
-Quantidade atual:
-<strong> {materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
+<p className="mb-4">
+Saldo: {materialSelecionado.saldo} {materialSelecionado.unidade}
 </p>
 
-{/* 🔥 MOVIMENTAÇÃO */}
-<div className="mt-6 flex gap-3 flex-wrap">
+<div className="flex gap-3 flex-wrap">
 
 <input
 type="number"
@@ -439,78 +416,22 @@ onChange={(e)=>setQuantidade(Number(e.target.value))}
 className="border p-2 rounded w-28"
 />
 
-<select
-value={tipoMov}
-onChange={(e)=>setTipoMov(e.target.value)}
-className="border p-2 rounded"
->
-<option value="uso">Uso na obra</option>
-<option value="transferencia">Transferência</option>
-<option value="descarte">Descarte</option>
-</select>
-
-{/* 🔥 NOVO SELECT */}
-{tipoMov === "transferencia" && (
-<select
-value={obraDestino}
-onChange={(e)=>setObraDestino(e.target.value)}
-className="border p-2 rounded"
->
-<option value="">Selecionar obra destino</option>
-
-{obras
-.filter(o => o.id !== obraId)
-.map((obra)=>(
-<option key={obra.id} value={obra.nome}>
-{obra.nome}
-</option>
-))}
-
-</select>
-)}
-
-<button onClick={registrarSaida} className="bg-red-600 text-white px-4 py-2 rounded">
-Confirmar
-</button>
-
 <button onClick={registrarEntrada} className="bg-green-600 text-white px-4 py-2 rounded">
 Entrada
 </button>
 
-</div>
-
-{/* 🔥 ESTOQUE MÍNIMO */}
-<div className="mt-6">
-<input
-type="number"
-value={materialSelecionado.estoqueMinimo ?? 0}
-onChange={(e)=>setMaterialSelecionado({
-...materialSelecionado,
-estoqueMinimo:Number(e.target.value)
-})}
-className="border p-2 rounded w-32"
-/>
-
-<button onClick={salvarEstoqueMinimo} className="ml-3 bg-blue-600 text-white px-4 py-2 rounded">
-Salvar mínimo
+<button onClick={registrarSaida} className="bg-orange-500 text-white px-4 py-2 rounded">
+Saída / Transferir
 </button>
-</div>
 
-{/* 🔥 FOTO */}
-<div className="mt-6">
-{materialSelecionado.foto ? (
-<>
-<img src={materialSelecionado.foto} className="w-48 mb-3"/>
-<button onClick={()=>removerFoto(materialSelecionado)} className="bg-red-600 text-white px-4 py-2 rounded">
-Remover foto
+{/* 🔥 BOTÃO NOVO */}
+<button
+onClick={()=>excluirMaterial(materialSelecionado)}
+className="bg-red-600 text-white px-4 py-2 rounded"
+>
+Excluir
 </button>
-</>
-) : (
-<label className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer">
-Adicionar foto
-<input type="file" className="hidden" onChange={(e)=>uploadFoto(e,materialSelecionado)} />
-</label>
-)}
+
 </div>
 
 </div>
