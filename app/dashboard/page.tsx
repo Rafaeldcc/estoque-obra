@@ -220,23 +220,27 @@ export default function Dashboard() {
 
     movSnap.forEach((docMov) => {
 
-      const data = docMov.data();
+  const data = docMov.data();
 
-      if (data.tipo === "saida") {
+  if (data.tipo !== "saida") return;
 
-        const material = data.materialNome;
-        const quantidade = Number(data.quantidade || 0);
-        const obra = data.obraNome;
+  const material = data.materialNome;
+  const quantidade = Number(data.quantidade || 0);
+  const obra = data.obraId || "Sem obra";
 
-        if (!consumoMateriais[material]) consumoMateriais[material] = 0;
-        consumoMateriais[material] += quantidade;
+  if (!consumoMateriais[material]) {
+    consumoMateriais[material] = 0;
+  }
 
-        if (!consumoObras[obra]) consumoObras[obra] = 0;
-        consumoObras[obra] += quantidade;
+  consumoMateriais[material] += quantidade;
 
-      }
+  if (!consumoObras[obra]) {
+    consumoObras[obra] = 0;
+  }
 
-    });
+  consumoObras[obra] += quantidade;
+
+});
 
     const rankingMateriais = Object.keys(consumoMateriais)
       .map((material) => ({
@@ -534,13 +538,15 @@ function MateriaisUsadosMes() {
 
       if(mesMov !== mes) return
 
-      const chave = data.materialNome + "-" + data.obraNome
+      const obra = data.obraId || "Sem obra"
+
+      const chave = data.materialNome + "-" + obra
 
       if(!mapa[chave]){
 
         mapa[chave] = {
           material:data.materialNome,
-          obra:data.obraNome,
+          obra: obra,
           quantidade:0
         }
 
