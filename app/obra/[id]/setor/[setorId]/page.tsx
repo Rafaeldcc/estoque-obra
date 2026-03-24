@@ -243,7 +243,10 @@ async function registrarEntrada(){
 if(!materialSelecionado) return
 if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
-const userSnap = await getDoc(doc(db,"usuarios",user.uid))
+if (!user) {
+  alert("Usuário não autenticado");
+  return;
+}
 const empresaId = userSnap.data()?.empresaId || null
 
 const obraSnap = await getDoc(doc(db,"obras",obraId))
