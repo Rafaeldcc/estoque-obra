@@ -88,10 +88,6 @@ export default function RootLayout({
                 Cadastrar Material
               </MenuLink>
 
-              <MenuLink href="/retirada-material">
-                Retirada de Material
-              </MenuLink>
-
               <MenuLink href="/movimentacoes">
                 Movimentações
               </MenuLink>
