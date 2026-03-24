@@ -8,7 +8,8 @@ getDocs,
 doc,
 updateDoc,
 addDoc,
-deleteDoc
+deleteDoc,
+getDoc
 } from "firebase/firestore";
 
 import {
@@ -42,11 +43,9 @@ const [materialSelecionado,setMaterialSelecionado] = useState<Material | null>(n
 const [busca,setBusca] = useState("")
 const [mensagem,setMensagem] = useState("")
 
-// 🔥 MOVIMENTAÇÃO
 const [quantidade,setQuantidade] = useState(0)
 const [tipoMov,setTipoMov] = useState("uso")
 
-// 🔥 NOVO (TRANSFERÊNCIA)
 const [obras,setObras] = useState<any[]>([])
 const [obraDestino,setObraDestino] = useState("")
 
@@ -109,7 +108,7 @@ setMensagem(texto)
 setTimeout(()=>setMensagem(""),3000)
 }
 
-// 🔥 Excluir
+// 🔥 EXCLUIR
 async function excluirMaterial(material:Material){
 
 if(!confirm(`Excluir ${material.nome}?`)) return
@@ -124,7 +123,7 @@ await carregarMateriais()
 
 }
 
-// 🔥 SAÍDA
+// 🔥 SAÍDA (TRANSFERÊNCIA CORRIGIDA)
 async function registrarSaida(){
 
 if(!materialSelecionado) return
@@ -134,57 +133,65 @@ if(quantidade > materialSelecionado.saldo){
 return alert("Estoque insuficiente")
 }
 
-// 🔥 VALIDA TRANSFERÊNCIA
 if(tipoMov === "transferencia" && !obraDestino){
 return alert("Selecione a obra de destino")
 }
 
 const novoSaldo = materialSelecionado.saldo - quantidade
 
-// 🔻 REMOVE DA OBRA ATUAL
 await updateDoc(
 doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 {saldo: novoSaldo}
 )
 
-
 // 🔥 TRANSFERÊNCIA REAL
 if(tipoMov === "transferencia"){
 
-// 🔍 BUSCAR OBRA DESTINO
-const obrasSnap = await getDocs(collection(db,"obras"))
+const obraDestinoId = obraDestino
 
-let obraDestinoId = ""
+// 🔥 BUSCAR SETOR ATUAL
+const setorRef = doc(db,"obras",obraId,"setores",setorId)
+const setorSnap = await getDoc(setorRef)
 
-obrasSnap.forEach(docSnap=>{
-const data = docSnap.data()
-if(data.nome === obraDestino){
-obraDestinoId = docSnap.id
+if(!setorSnap.exists()){
+return alert("Setor não encontrado")
 }
+
+const setorNome = setorSnap.data().nome
+
+// 🔥 CRIAR OU BUSCAR SETOR DESTINO
+const setoresDestinoRef = collection(db,"obras",obraDestinoId,"setores")
+const setoresSnap = await getDocs(setoresDestinoRef)
+
+let setorDestinoId = ""
+
+const setorExistente = setoresSnap.docs.find(
+s => s.data().nome === setorNome
+)
+
+if(setorExistente){
+setorDestinoId = setorExistente.id
+}else{
+
+const novoSetor = await addDoc(setoresDestinoRef,{
+nome:setorNome,
+criadoEm:new Date()
 })
 
-if(!obraDestinoId){
-return alert("Obra destino não encontrada")
+setorDestinoId = novoSetor.id
 }
 
-
-// 🔍 PEGAR SETORES DA OBRA DESTINO
-const setoresSnap = await getDocs(
-collection(db,"obras",obraDestinoId,"setores")
+// 🔥 MATERIAL DESTINO
+const materiaisDestinoRef = collection(
+db,
+"obras",
+obraDestinoId,
+"setores",
+setorDestinoId,
+"materiais"
 )
 
-if(setoresSnap.empty){
-return alert("Obra destino não possui setores")
-}
-
-// 👉 pega o PRIMEIRO setor (pode melhorar depois)
-const setorDestinoId = setoresSnap.docs[0].id
-
-
-// 🔍 PROCURAR MATERIAL NA OBRA DESTINO
-const materiaisSnap = await getDocs(
-collection(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais")
-)
+const materiaisSnap = await getDocs(materiaisDestinoRef)
 
 let materialExiste = false
 
@@ -194,46 +201,37 @@ const data = docMat.data()
 
 if(data.nome === materialSelecionado.nome){
 
-// ✅ MATERIAL EXISTE → SOMA
-const saldoAtual = Number(data.saldo || 0)
-
-await updateDoc(
-doc(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais",docMat.id),
-{saldo: saldoAtual + quantidade}
-)
+await updateDoc(docMat.ref,{
+saldo: (data.saldo || 0) + quantidade
+})
 
 materialExiste = true
 break
 }
 }
 
-// ❌ NÃO EXISTE → CRIA
 if(!materialExiste){
 
-await addDoc(
-collection(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais"),
-{
+await addDoc(materiaisDestinoRef,{
 nome: materialSelecionado.nome,
 saldo: quantidade,
-unidade: materialSelecionado.unidade,
-estoqueMinimo: materialSelecionado.estoqueMinimo ?? 0,
-foto: materialSelecionado.foto ?? ""
-}
-)
+unidade: materialSelecionado.unidade || "",
+estoqueMinimo: materialSelecionado.estoqueMinimo || 0,
+foto: materialSelecionado.foto || ""
+})
 
 }
 
 }
 
-
-// 🧾 REGISTRAR MOVIMENTAÇÃO
+// 🔥 LOG
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"saida",
 destino: tipoMov,
-obraNome: "Obra atual",
-obraDestino: tipoMov === "transferencia" ? obraDestino : null,
+obraId,
+obraDestinoId: obraDestino,
 usuarioNome:"Sistema",
 criadoEm:new Date()
 })
@@ -411,14 +409,12 @@ onClick={()=>setMaterialSelecionado(material)}
 
 </div>
 
-{/* 🔥 BOTÃO LIXEIRA */}
 <button
 onClick={(e)=>{
 e.stopPropagation()
 excluirMaterial(material)
 }}
 className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded transition"
-title="Excluir material"
 >
 🗑️
 </button>
@@ -461,7 +457,6 @@ Quantidade atual:
 <strong> {materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
 </p>
 
-{/* 🔥 MOVIMENTAÇÃO */}
 <div className="mt-6 flex gap-3 flex-wrap">
 
 <input
@@ -481,7 +476,6 @@ className="border p-2 rounded"
 <option value="descarte">Descarte</option>
 </select>
 
-{/* 🔥 NOVO SELECT */}
 {tipoMov === "transferencia" && (
 <select
 value={obraDestino}
@@ -493,7 +487,7 @@ className="border p-2 rounded"
 {obras
 .filter(o => o.id !== obraId)
 .map((obra)=>(
-<option key={obra.id} value={obra.nome}>
+<option key={obra.id} value={obra.id}>
 {obra.nome}
 </option>
 ))}
@@ -511,7 +505,6 @@ Entrada
 
 </div>
 
-{/* 🔥 ESTOQUE MÍNIMO */}
 <div className="mt-6">
 <input
 type="number"
@@ -528,7 +521,6 @@ Salvar mínimo
 </button>
 </div>
 
-{/* 🔥 FOTO */}
 <div className="mt-6">
 {materialSelecionado.foto ? (
 <>
