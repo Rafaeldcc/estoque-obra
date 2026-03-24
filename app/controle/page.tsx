@@ -9,6 +9,7 @@ import {
   increment,
   getDoc,
   serverTimestamp,
+  addDoc
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
@@ -32,6 +33,7 @@ export default function Controle() {
 
   const [obras,setObras] = useState<any[]>([]);
   const [obraSelecionada,setObraSelecionada] = useState("");
+  const [obraDestino,setObraDestino] = useState("");
 
   const [materiais,setMateriais] = useState<Material[]>([]);
   const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
@@ -43,41 +45,30 @@ export default function Controle() {
   const [aberto,setAberto] = useState<string | null>(null);
 
   useEffect(()=>{
-
     if(!user) return;
-
     carregarUsuario();
     carregarObras();
-
   },[user]);
 
   useEffect(()=>{
-
     if(obraSelecionada){
       carregarMateriais(obraSelecionada);
     }
-
   },[obraSelecionada]);
 
   async function carregarUsuario(){
-
     if(!user) return;
 
     const snap = await getDoc(doc(db,"usuarios",user.uid));
 
     if(snap.exists()){
-
       const data = snap.data();
-
       setRole(data.role);
       setEmpresaId(data.empresaId);
-
     }
-
   }
 
   async function carregarObras(){
-
     const snap = await getDocs(collection(db,"obras"));
 
     const lista = snap.docs.map(doc=>({
@@ -86,7 +77,6 @@ export default function Controle() {
     }));
 
     setObras(lista);
-
   }
 
   async function carregarMateriais(obraId:string){
@@ -111,7 +101,6 @@ export default function Controle() {
       );
 
       materiaisSnap.docs.forEach(docSnap=>{
-
         const data = docSnap.data();
 
         todos.push({
@@ -121,41 +110,38 @@ export default function Controle() {
           unidade:data.unidade || "",
           estoqueMinimo:data.estoqueMinimo || 0
         });
-
       });
-
     }
 
     const agrupado:{[key:string]:Material} = {};
 
     todos.forEach(item=>{
-
-      if(!agrupado[item.id]){
-        agrupado[item.id] = {...item};
+      if(!agrupado[item.nome]){
+        agrupado[item.nome] = {...item};
       }else{
-        agrupado[item.id].saldo += item.saldo || 0;
+        agrupado[item.nome].saldo += item.saldo || 0;
       }
-
     });
 
     setMateriais(Object.values(agrupado));
-
   }
 
   function mostrarMensagem(texto:string){
-
     setMensagem(texto);
+    setTimeout(()=>setMensagem(""),3000);
+  }
 
-    setTimeout(()=>{
-      setMensagem("");
-    },3000);
-
+  function normalizar(nome:string){
+    return nome
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase()
+      .trim();
   }
 
   async function salvarMinimo(material:Material){
 
-    const minimo = minimos[material.id];
-
+    const minimo = minimos[material.nome];
     if(minimo === undefined) return;
 
     const setoresSnap = await getDocs(
@@ -164,179 +150,160 @@ export default function Controle() {
 
     for(const setorDoc of setoresSnap.docs){
 
-      const materialRef = doc(
-        db,
-        "obras",
-        obraSelecionada,
-        "setores",
-        setorDoc.id,
-        "materiais",
-        material.id
+      const materiaisSnap = await getDocs(
+        collection(db,"obras",obraSelecionada,"setores",setorDoc.id,"materiais")
       );
 
-      await updateDoc(materialRef,{
-        estoqueMinimo:minimo
-      }).catch(()=>{});
+      materiaisSnap.forEach(async (docMat)=>{
+        const data = docMat.data();
+
+        if(data.nome === material.nome){
+          await updateDoc(docMat.ref,{
+            estoqueMinimo:minimo
+          });
+        }
+      });
 
     }
 
     mostrarMensagem("Estoque mínimo atualizado");
-
     carregarMateriais(obraSelecionada);
-
   }
 
   async function entrada(material:Material){
 
-    if(role !== "admin" && role !== "almoxarifado"){
-      alert("Você não tem permissão.");
-      return;
-    }
-
-    const qtd = quantidades[material.id];
-
+    const qtd = quantidades[material.nome];
     if(!qtd || qtd <= 0) return;
 
-    if(!user) return;
+    const setoresSnap = await getDocs(
+      collection(db,"obras",obraSelecionada,"setores")
+    );
 
-    try{
+    for(const setorDoc of setoresSnap.docs){
 
-      const setoresSnap = await getDocs(
-        collection(db,"obras",obraSelecionada,"setores")
+      const materiaisSnap = await getDocs(
+        collection(db,"obras",obraSelecionada,"setores",setorDoc.id,"materiais")
       );
 
-      for(const setorDoc of setoresSnap.docs){
+      materiaisSnap.forEach(async (docMat)=>{
+        const data = docMat.data();
 
-        const materialRef = doc(
-          db,
-          "obras",
-          obraSelecionada,
-          "setores",
-          setorDoc.id,
-          "materiais",
-          material.id
-        );
-
-        await updateDoc(materialRef,{
-          saldo: increment(qtd),
-          atualizadoEm: serverTimestamp()
-        }).catch(()=>{});
-
-      }
-
-      const obraNome =
-        obras.find(o=>o.id === obraSelecionada)?.nome || "";
-
-      await registrarMovimentacao({
-
-        materialId: material.id,
-        materialNome: material.nome,
-        tipo: "entrada",
-        quantidade: qtd,
-        obraId: obraSelecionada,
-        obraNome: obraNome,
-        destino: "uso",
-        usuarioId: user.uid,
-        usuarioNome: user.email || "",
-        empresaId: empresaId
-
+        if(data.nome === material.nome){
+          await updateDoc(docMat.ref,{
+            saldo: increment(qtd),
+            atualizadoEm: serverTimestamp()
+          });
+        }
       });
-
-      mostrarMensagem("Entrada registrada com sucesso!");
-
-      setQuantidades(prev=>({
-        ...prev,
-        [material.id]:0
-      }));
-
-      carregarMateriais(obraSelecionada);
-
-    }catch(error){
-
-      console.error(error);
-      alert("Erro na entrada.");
 
     }
 
+    mostrarMensagem("Entrada registrada");
+    carregarMateriais(obraSelecionada);
   }
 
   async function saida(material:Material){
 
-    if(role !== "admin" && role !== "almoxarifado"){
-      alert("Você não tem permissão.");
-      return;
-    }
-
-    const qtd = quantidades[material.id];
-
+    const qtd = quantidades[material.nome];
     if(!qtd || qtd <= 0) return;
 
     if(qtd > material.saldo){
-      alert("Quantidade maior que o saldo disponível.");
+      alert("Saldo insuficiente");
       return;
     }
 
-    if(!user) return;
+    const setoresSnap = await getDocs(
+      collection(db,"obras",obraSelecionada,"setores")
+    );
 
-    try{
+    for(const setorDoc of setoresSnap.docs){
 
-      const setoresSnap = await getDocs(
-        collection(db,"obras",obraSelecionada,"setores")
+      const materiaisSnap = await getDocs(
+        collection(db,"obras",obraSelecionada,"setores",setorDoc.id,"materiais")
       );
 
-      for(const setorDoc of setoresSnap.docs){
+      materiaisSnap.forEach(async (docMat)=>{
+        const data = docMat.data();
 
-        const materialRef = doc(
-          db,
-          "obras",
-          obraSelecionada,
-          "setores",
-          setorDoc.id,
-          "materiais",
-          material.id
-        );
-
-        await updateDoc(materialRef,{
-          saldo: increment(-qtd),
-          atualizadoEm: serverTimestamp()
-        }).catch(()=>{});
-
-      }
-
-      const obraNome =
-        obras.find(o=>o.id === obraSelecionada)?.nome || "";
-
-      await registrarMovimentacao({
-
-        materialId: material.id,
-        materialNome: material.nome,
-        tipo: "saida",
-        quantidade: qtd,
-        obraId: obraSelecionada,
-        obraNome: obraNome,
-        destino: "uso",
-        usuarioId: user.uid,
-        usuarioNome: user.email || "",
-        empresaId: empresaId
-
+        if(data.nome === material.nome){
+          await updateDoc(docMat.ref,{
+            saldo: increment(-qtd),
+            atualizadoEm: serverTimestamp()
+          });
+        }
       });
-
-      mostrarMensagem("Saída registrada com sucesso!");
-
-      setQuantidades(prev=>({
-        ...prev,
-        [material.id]:0
-      }));
-
-      carregarMateriais(obraSelecionada);
-
-    }catch(error){
-
-      console.error(error);
-      alert("Erro na saída.");
 
     }
 
+    // 🔥 TRANSFERÊNCIA
+    if(obraDestino){
+
+      const setoresDestino = await getDocs(
+        collection(db,"obras",obraDestino,"setores")
+      );
+
+      let setorDestinoId = "";
+
+      for(const setor of setoresDestino.docs){
+        setorDestinoId = setor.id;
+        break;
+      }
+
+      if(!setorDestinoId){
+        // 🔥 CRIA SETOR AUTOMÁTICO
+        const nomeSetor = "Geral";
+
+        const novoSetor = await addDoc(
+          collection(db,"obras",obraDestino,"setores"),
+          {
+            nome: nomeSetor,
+            nomeNormalizado: normalizar(nomeSetor),
+            criadoEm: new Date()
+          }
+        );
+
+        setorDestinoId = novoSetor.id;
+      }
+
+      const materiaisDestino = await getDocs(
+        collection(db,"obras",obraDestino,"setores",setorDestinoId,"materiais")
+      );
+
+      let achou = false;
+
+      for(const docMat of materiaisDestino.docs){
+
+        const data = docMat.data();
+
+        if(data.nome === material.nome){
+
+          await updateDoc(docMat.ref,{
+            saldo: increment(qtd)
+          });
+
+          achou = true;
+          break;
+        }
+      }
+
+      if(!achou){
+
+        await addDoc(
+          collection(db,"obras",obraDestino,"setores",setorDestinoId,"materiais"),
+          {
+            nome: material.nome,
+            saldo: qtd,
+            unidade: material.unidade || "",
+            estoqueMinimo: material.estoqueMinimo || 0
+          }
+        );
+
+      }
+
+    }
+
+    mostrarMensagem("Saída / Transferência realizada");
+    carregarMateriais(obraSelecionada);
   }
 
   if(loading) return null;
@@ -360,18 +327,30 @@ export default function Controle() {
       )}
 
       <select
-        className="w-full p-3 border rounded mb-6"
+        className="w-full p-3 border rounded mb-4"
         onChange={(e)=>setObraSelecionada(e.target.value)}
       >
-
         <option value="">Selecionar obra</option>
-
         {obras.map(obra=>(
           <option key={obra.id} value={obra.id}>
             {obra.nome}
           </option>
         ))}
+      </select>
 
+      {/* 🔥 NOVO SELECT DESTINO */}
+      <select
+        className="w-full p-3 border rounded mb-6"
+        onChange={(e)=>setObraDestino(e.target.value)}
+      >
+        <option value="">Destino (opcional)</option>
+        {obras
+          .filter(o=>o.id !== obraSelecionada)
+          .map(obra=>(
+          <option key={obra.id} value={obra.id}>
+            {obra.nome}
+          </option>
+        ))}
       </select>
 
       <input
@@ -383,23 +362,19 @@ export default function Controle() {
 
       {materiaisFiltrados.map(material=>{
 
-        const abertoMaterial = aberto === material.id;
+        const abertoMaterial = aberto === material.nome;
 
         return(
 
         <div
-          key={material.id}
-          className={`p-5 rounded-xl shadow mb-3 border ${
-            material.estoqueMinimo && material.saldo <= material.estoqueMinimo
-              ? "bg-red-50 border-red-400"
-              : "bg-white"
-          }`}
+          key={material.nome}
+          className="p-5 rounded-xl shadow mb-3 border bg-white"
         >
 
           <div
             className="flex justify-between cursor-pointer"
             onClick={()=>setAberto(
-              abertoMaterial ? null : material.id
+              abertoMaterial ? null : material.nome
             )}
           >
 
@@ -415,24 +390,16 @@ export default function Controle() {
 
           {abertoMaterial && (
 
-            <>
-
-            {material.estoqueMinimo && material.saldo <= material.estoqueMinimo && (
-              <div className="text-red-600 font-semibold mt-2">
-                ⚠ Estoque baixo
-              </div>
-            )}
-
             <div className="flex gap-3 mt-3">
 
               <input
                 type="number"
                 placeholder="Qtd"
-                value={quantidades[material.id] || ""}
+                value={quantidades[material.nome] || ""}
                 onChange={(e)=>
                   setQuantidades(prev=>({
                     ...prev,
-                    [material.id]: Number(e.target.value)
+                    [material.nome]: Number(e.target.value)
                   }))
                 }
                 className="border p-2 w-24 rounded"
@@ -449,36 +416,10 @@ export default function Controle() {
                 onClick={()=>saida(material)}
                 className="bg-orange-500 text-white px-4 rounded"
               >
-                Saída
+                Saída / Transferir
               </button>
 
             </div>
-
-            <div className="flex gap-2 items-center mt-3">
-
-              <input
-                type="number"
-                placeholder="Estoque mínimo"
-                value={minimos[material.id] ?? material.estoqueMinimo ?? ""}
-                onChange={(e)=>
-                  setMinimos(prev=>({
-                    ...prev,
-                    [material.id]: Number(e.target.value)
-                  }))
-                }
-                className="border p-2 w-32 rounded"
-              />
-
-              <button
-                onClick={()=>salvarMinimo(material)}
-                className="bg-blue-600 text-white px-3 py-1 rounded"
-              >
-                Salvar mínimo
-              </button>
-
-            </div>
-
-            </>
 
           )}
 
