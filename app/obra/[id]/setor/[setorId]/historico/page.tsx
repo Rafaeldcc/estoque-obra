@@ -9,6 +9,7 @@ import {
   doc,
   query,
   where,
+  serverTimestamp
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useParams } from "next/navigation";
@@ -29,12 +30,17 @@ export default function ControleSetor() {
   const [busca,setBusca] = useState("");
   const [aberto,setAberto] = useState<string | null>(null);
 
-  useEffect(()=>{
+  const [mensagem,setMensagem] = useState("");
 
+  useEffect(()=>{
     carregarMateriais();
     carregarObras();
-
   },[]);
+
+  function mostrarMensagem(texto:string){
+    setMensagem(texto);
+    setTimeout(()=>setMensagem(""),3000);
+  }
 
   async function carregarMateriais(){
 
@@ -55,7 +61,6 @@ export default function ControleSetor() {
     }));
 
     setMateriais(lista);
-
   }
 
   async function carregarObras(){
@@ -70,124 +75,141 @@ export default function ControleSetor() {
     }));
 
     setObras(lista);
-
   }
 
+  // 🔥🔥🔥 TRANSFERÊNCIA PROFISSIONAL
   async function transferir(material:any){
 
-    const quantidade = quantidades[material.id];
+    const quantidade = Number(quantidades[material.id]);
 
-    if(!quantidade || quantidade <= 0) return;
-    if(!obraDestino) return;
+    if(!quantidade || quantidade <= 0){
+      return mostrarMensagem("Digite uma quantidade válida");
+    }
+
+    if(!obraDestino){
+      return mostrarMensagem("Selecione a obra destino");
+    }
 
     if(quantidade > material.saldo){
-      alert("Quantidade maior que o saldo.");
-      return;
+      return mostrarMensagem("Estoque insuficiente");
     }
 
-    const setorSnap = await getDocs(
-      collection(db,"obras",obraId,"setores")
-    );
+    try{
 
-    const setorAtual = setorSnap.docs.find(
-      doc => doc.id === setorId
-    );
-
-    const setorNome = setorAtual?.data().nome;
-
-    const setoresDestinoRef = collection(
-      db,
-      "obras",
-      obraDestino,
-      "setores"
-    );
-
-    const qSetor = query(
-      setoresDestinoRef,
-      where("nome","==",setorNome)
-    );
-
-    const setorDestinoSnap = await getDocs(qSetor);
-
-    let setorDestinoId;
-
-    if(!setorDestinoSnap.empty){
-
-      setorDestinoId =
-        setorDestinoSnap.docs[0].id;
-
-    } else {
-
-      const novoSetor = await addDoc(
-        setoresDestinoRef,
-        {
-          nome:setorNome,
-          criadoEm:new Date()
-        }
+      // 🔥 PEGAR NOME DO SETOR ATUAL
+      const setorDoc = await getDocs(
+        query(
+          collection(db,"obras",obraId,"setores"),
+          where("__name__","==",setorId)
+        )
       );
 
-      setorDestinoId = novoSetor.id;
+      const setorNome = setorDoc.docs[0]?.data()?.nome;
 
-    }
-
-    await updateDoc(
-      doc(
+      // 🔥 PROCURAR OU CRIAR SETOR NA DESTINO
+      const setoresDestinoRef = collection(
         db,
         "obras",
-        obraId,
-        "setores",
-        setorId,
-        "materiais",
-        material.id
-      ),
-      {
-        saldo: material.saldo - quantidade
+        obraDestino,
+        "setores"
+      );
+
+      const qSetor = query(
+        setoresDestinoRef,
+        where("nome","==",setorNome)
+      );
+
+      const setorDestinoSnap = await getDocs(qSetor);
+
+      let setorDestinoId:string;
+
+      if(!setorDestinoSnap.empty){
+        setorDestinoId = setorDestinoSnap.docs[0].id;
+      }else{
+
+        const novoSetor = await addDoc(
+          setoresDestinoRef,
+          {
+            nome:setorNome,
+            criadoEm:serverTimestamp()
+          }
+        );
+
+        setorDestinoId = novoSetor.id;
       }
-    );
 
-    const materiaisDestinoRef = collection(
-      db,
-      "obras",
-      obraDestino,
-      "setores",
-      setorDestinoId,
-      "materiais"
-    );
-
-    const qMaterial = query(
-      materiaisDestinoRef,
-      where("nome","==",material.nome)
-    );
-
-    const materialDestinoSnap =
-      await getDocs(qMaterial);
-
-    if(!materialDestinoSnap.empty){
-
-      const saldoAtual =
-        materialDestinoSnap.docs[0].data().saldo || 0;
-
+      // 🔻 REMOVER DA ORIGEM
       await updateDoc(
-        materialDestinoSnap.docs[0].ref,
+        doc(
+          db,
+          "obras",
+          obraId,
+          "setores",
+          setorId,
+          "materiais",
+          material.id
+        ),
         {
-          saldo: saldoAtual + quantidade
+          saldo: material.saldo - quantidade
         }
       );
 
-    } else {
+      // 🔥 DESTINO MATERIAL
+      const materiaisDestinoRef = collection(
+        db,
+        "obras",
+        obraDestino,
+        "setores",
+        setorDestinoId,
+        "materiais"
+      );
 
-      await addDoc(materiaisDestinoRef,{
-        nome:material.nome,
-        saldo:quantidade,
-        unidade:material.unidade,
-        criadoEm:new Date()
-      });
+      const qMaterial = query(
+        materiaisDestinoRef,
+        where("nome","==",material.nome)
+      );
 
+      const materialDestinoSnap =
+        await getDocs(qMaterial);
+
+      if(!materialDestinoSnap.empty){
+
+        const saldoAtual =
+          materialDestinoSnap.docs[0].data().saldo || 0;
+
+        await updateDoc(
+          materialDestinoSnap.docs[0].ref,
+          {
+            saldo: saldoAtual + quantidade
+          }
+        );
+
+      } else {
+
+        await addDoc(materiaisDestinoRef,{
+          nome:material.nome,
+          saldo:quantidade,
+          unidade:material.unidade || "",
+          estoqueMinimo:material.estoqueMinimo || 0,
+          criadoEm:serverTimestamp()
+        });
+
+      }
+
+      mostrarMensagem("✅ Transferência realizada com sucesso");
+
+      // 🔄 ATUALIZA TELA
+      setQuantidades(prev=>({
+        ...prev,
+        [material.id]:0
+      }));
+
+      carregarMateriais();
+
+    }catch(error){
+      console.error(error);
+      mostrarMensagem("❌ Erro na transferência");
     }
-
-    alert("Transferência realizada com sucesso.");
-
-    carregarMateriais();
 
   }
 
@@ -206,7 +228,6 @@ export default function ControleSetor() {
       if(!aComeca && bComeca) return 1;
 
       return a.nome.localeCompare(b.nome);
-
     });
 
   return(
@@ -216,6 +237,12 @@ export default function ControleSetor() {
       <h1 className="text-2xl font-bold">
         Controle de Estoque
       </h1>
+
+      {mensagem && (
+        <div className="bg-green-600 text-white p-3 rounded">
+          {mensagem}
+        </div>
+      )}
 
       <input
         placeholder="Buscar material..."
@@ -260,6 +287,7 @@ export default function ControleSetor() {
                   type="number"
                   placeholder="Qtd"
                   className="border p-2 w-24"
+                  value={quantidades[material.id] || ""}
                   onChange={(e)=>
                     setQuantidades({
                       ...quantidades,
@@ -270,6 +298,7 @@ export default function ControleSetor() {
                 />
 
                 <select
+                  value={obraDestino}
                   onChange={(e)=>
                     setObraDestino(e.target.value)
                   }
