@@ -6,7 +6,8 @@ import {
 collection,
 getDocs,
 doc,
-updateDoc
+updateDoc,
+addDoc
 } from "firebase/firestore";
 
 import {
@@ -39,6 +40,10 @@ const [materiais,setMateriais] = useState<Material[]>([])
 const [materialSelecionado,setMaterialSelecionado] = useState<Material | null>(null)
 const [busca,setBusca] = useState("")
 const [mensagem,setMensagem] = useState("")
+
+// 🔥 NOVOS STATES
+const [quantidade,setQuantidade] = useState(0)
+const [tipoMov,setTipoMov] = useState("uso")
 
 useEffect(()=>{
 carregarMateriais()
@@ -76,6 +81,68 @@ setMateriais(lista)
 function mostrarMensagem(texto:string){
 setMensagem(texto)
 setTimeout(()=>setMensagem(""),3000)
+}
+
+// 🔥 SAÍDA
+async function registrarSaida(){
+
+if(!materialSelecionado) return
+if(quantidade <= 0) return alert("Digite uma quantidade válida")
+
+if(quantidade > materialSelecionado.saldo){
+return alert("Estoque insuficiente")
+}
+
+const novoSaldo = materialSelecionado.saldo - quantidade
+
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+{saldo: novoSaldo}
+)
+
+await addDoc(collection(db,"movimentacoes"),{
+materialNome: materialSelecionado.nome,
+quantidade,
+tipo:"saida",
+obraNome:"",
+usuarioNome:"Sistema",
+criadoEm:new Date()
+})
+
+mostrarMensagem("Saída registrada")
+
+setQuantidade(0)
+await carregarMateriais()
+
+}
+
+// 🔥 ENTRADA
+async function registrarEntrada(){
+
+if(!materialSelecionado) return
+if(quantidade <= 0) return alert("Digite uma quantidade válida")
+
+const novoSaldo = materialSelecionado.saldo + quantidade
+
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+{saldo: novoSaldo}
+)
+
+await addDoc(collection(db,"movimentacoes"),{
+materialNome: materialSelecionado.nome,
+quantidade,
+tipo:"entrada",
+obraNome:"",
+usuarioNome:"Sistema",
+criadoEm:new Date()
+})
+
+mostrarMensagem("Entrada registrada")
+
+setQuantidade(0)
+await carregarMateriais()
+
 }
 
 async function uploadFoto(e:any,material:Material){
@@ -255,89 +322,42 @@ Quantidade atual:
 <strong> {materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
 </p>
 
-{materialSelecionado.estoqueMinimo !== undefined &&
-materialSelecionado.saldo <= materialSelecionado.estoqueMinimo && (
-
-<div className="bg-red-500 text-white px-4 py-2 rounded mb-4 inline-block">
-⚠ Estoque baixo
-</div>
-
-)}
-
-<div className="mb-6">
-
-<p className="text-sm text-gray-600 mb-2">
-Estoque mínimo
-</p>
+{/* 🔥 NOVA PARTE */}
+<div className="mt-6 flex flex-wrap gap-3">
 
 <input
 type="number"
-value={materialSelecionado.estoqueMinimo ?? 0}
-onChange={(e)=>
-setMaterialSelecionado({
-...materialSelecionado,
-estoqueMinimo:Number(e.target.value)
-})
-}
+placeholder="Quantidade"
+value={quantidade}
+onChange={(e)=>setQuantidade(Number(e.target.value))}
 className="border p-2 rounded w-32"
 />
 
-<button
-onClick={salvarEstoqueMinimo}
-className="ml-3 bg-blue-600 text-white px-4 py-2 rounded"
+<select
+value={tipoMov}
+onChange={(e)=>setTipoMov(e.target.value)}
+className="border p-2 rounded"
 >
-
-Salvar
-
-</button>
-
-</div>
-
-{materialSelecionado.foto ? (
-
-<div className="mb-6">
-
-<img
-src={materialSelecionado.foto}
-className="w-64 rounded shadow"
-/>
-
-<div className="flex gap-3 mt-4">
-
-<label className="bg-blue-600 text-white px-4 py-2 rounded cursor-pointer">
-Trocar foto
-<input
-type="file"
-accept="image/*"
-onChange={(e)=>uploadFoto(e,materialSelecionado)}
-className="hidden"
-/>
-</label>
+<option value="uso">Uso na obra</option>
+<option value="transferencia">Transferência</option>
+<option value="descarte">Descarte</option>
+</select>
 
 <button
-onClick={()=>removerFoto(materialSelecionado)}
+onClick={registrarSaida}
 className="bg-red-600 text-white px-4 py-2 rounded"
 >
-Excluir foto
+Confirmar
+</button>
+
+<button
+onClick={registrarEntrada}
+className="bg-green-600 text-white px-4 py-2 rounded"
+>
+Entrada
 </button>
 
 </div>
-
-</div>
-
-) : (
-
-<label className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer inline-block">
-Adicionar foto
-<input
-type="file"
-accept="image/*"
-onChange={(e)=>uploadFoto(e,materialSelecionado)}
-className="hidden"
-/>
-</label>
-
-)}
 
 </div>
 
