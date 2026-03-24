@@ -8,6 +8,7 @@ import {
   updateDoc,
   addDoc,
   getDoc,
+  deleteDoc, // ✅ CORRIGIDO
   serverTimestamp
 } from "firebase/firestore";
 
@@ -54,6 +55,20 @@ useEffect(()=>{
 carregarMateriais()
 carregarObras()
 },[])
+
+// 🔥 EXCLUIR MATERIAL (ADICIONADO)
+async function excluirMaterial(material: Material){
+
+const confirmar = confirm(`Excluir ${material.nome}?`)
+if (!confirmar) return
+
+await deleteDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id)
+)
+
+mostrarMensagem("Material excluído")
+carregarMateriais()
+}
 
 // 🔥 OBRAS
 async function carregarObras(){
@@ -120,20 +135,19 @@ if(tipoMov === "transferencia" && !obraDestino){
 return alert("Selecione a obra destino")
 }
 
-// 🔥 DADOS
 const userSnap = await getDoc(doc(db,"usuarios",user.uid))
 const empresaId = userSnap.data()?.empresaId || null
 
 const obraSnap = await getDoc(doc(db,"obras",obraId))
 const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
 
-// 🔻 REMOVE DA ORIGEM
+// remove da origem
 await updateDoc(
 doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 {saldo: materialSelecionado.saldo - quantidade}
 )
 
-// 🔥 TRANSFERÊNCIA
+// 🔁 TRANSFERÊNCIA
 if(tipoMov === "transferencia"){
 
 const setorRef = doc(db,"obras",obraId,"setores",setorId)
@@ -168,15 +182,12 @@ const materiaisSnap = await getDocs(materiaisDestinoRef)
 let encontrou = false
 
 for(const docMat of materiaisSnap.docs){
-
 const data = docMat.data()
 
 if(data.nome === materialSelecionado.nome){
-
 await updateDoc(docMat.ref,{
 saldo:(data.saldo || 0) + quantidade
 })
-
 encontrou = true
 break
 }
@@ -192,7 +203,6 @@ foto: materialSelecionado.foto || ""
 })
 }
 
-// 🟢 ENTRADA DESTINO
 const obraDestinoSnap = await getDoc(doc(db,"obras",obraDestino))
 const obraDestinoNome = obraDestinoSnap.data()?.nome || `Obra ${obraDestino}`
 
@@ -209,7 +219,6 @@ empresaId,
 usuarioNome: user.email || "Sistema",
 criadoEm: serverTimestamp()
 })
-
 }
 
 // 🔴 SAÍDA
