@@ -9,6 +9,7 @@ import {
   increment,
   getDoc,
   serverTimestamp,
+  addDoc
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
@@ -32,6 +33,7 @@ export default function Controle() {
 
   const [obras,setObras] = useState<any[]>([]);
   const [obraSelecionada,setObraSelecionada] = useState("");
+  const [obraDestino,setObraDestino] = useState("");
 
   const [materiais,setMateriais] = useState<Material[]>([]);
   const [quantidades,setQuantidades] = useState<{[key:string]:number}>({});
@@ -280,6 +282,7 @@ export default function Controle() {
 
     try{
 
+      // 🔻 REMOVE DA OBRA ATUAL
       const setoresSnap = await getDocs(
         collection(db,"obras",obraSelecionada,"setores")
       );
@@ -297,9 +300,80 @@ export default function Controle() {
         );
 
         await updateDoc(materialRef,{
-          saldo: increment(-qtd),
-          atualizadoEm: serverTimestamp()
+          saldo: increment(-qtd)
         }).catch(()=>{});
+      }
+
+      // 🔥 TRANSFERÊNCIA
+      if(obraDestino){
+
+        const setoresOrigem = await getDocs(
+          collection(db,"obras",obraSelecionada,"setores")
+        );
+
+        for(const setorOrigem of setoresOrigem.docs){
+
+          const nomeSetor = setorOrigem.data().nome;
+
+          const setoresDestinoSnap = await getDocs(
+            collection(db,"obras",obraDestino,"setores")
+          );
+
+          let setorDestinoId = "";
+
+          setoresDestinoSnap.forEach(s=>{
+            if(s.data().nome === nomeSetor){
+              setorDestinoId = s.id;
+            }
+          });
+
+          if(!setorDestinoId){
+
+            const novoSetor = await addDoc(
+              collection(db,"obras",obraDestino,"setores"),
+              {
+                nome: nomeSetor,
+                criadoEm: new Date()
+              }
+            );
+
+            setorDestinoId = novoSetor.id;
+          }
+
+          const materiaisSnap = await getDocs(
+            collection(db,"obras",obraDestino,"setores",setorDestinoId,"materiais")
+          );
+
+          let existe = false;
+
+          for(const docMat of materiaisSnap.docs){
+
+            if(docMat.data().nome === material.nome){
+
+              await updateDoc(docMat.ref,{
+                saldo: increment(qtd)
+              });
+
+              existe = true;
+              break;
+            }
+          }
+
+          if(!existe){
+
+            await addDoc(
+              collection(db,"obras",obraDestino,"setores",setorDestinoId,"materiais"),
+              {
+                nome: material.nome,
+                saldo: qtd,
+                unidade: material.unidade || "",
+                estoqueMinimo: material.estoqueMinimo || 0
+              }
+            );
+
+          }
+
+        }
 
       }
 
@@ -310,30 +384,29 @@ export default function Controle() {
 
         materialId: material.id,
         materialNome: material.nome,
-        tipo: "saida",
+        tipo:"saida",
         quantidade: qtd,
         obraId: obraSelecionada,
         obraNome: obraNome,
-        destino: "uso",
+        obraDestino: obraDestino || null,
+        destino: obraDestino ? "transferencia" : "uso",
         usuarioId: user.uid,
         usuarioNome: user.email || "",
         empresaId: empresaId
 
       });
 
-      mostrarMensagem("Saída registrada com sucesso!");
+      mostrarMensagem("Movimentação realizada com sucesso");
 
-      setQuantidades(prev=>({
-        ...prev,
-        [material.id]:0
-      }));
+      setQuantidades(prev=>({...prev,[material.id]:0}));
+      setObraDestino("");
 
       carregarMateriais(obraSelecionada);
 
     }catch(error){
 
       console.error(error);
-      alert("Erro na saída.");
+      alert("Erro na movimentação");
 
     }
 
@@ -360,10 +433,9 @@ export default function Controle() {
       )}
 
       <select
-        className="w-full p-3 border rounded mb-6"
+        className="w-full p-3 border rounded mb-4"
         onChange={(e)=>setObraSelecionada(e.target.value)}
       >
-
         <option value="">Selecionar obra</option>
 
         {obras.map(obra=>(
@@ -371,7 +443,24 @@ export default function Controle() {
             {obra.nome}
           </option>
         ))}
+      </select>
 
+      {/* 🔥 SELECT TRANSFERÊNCIA */}
+      <select
+        className="w-full p-3 border rounded mb-6"
+        value={obraDestino}
+        onChange={(e)=>setObraDestino(e.target.value)}
+      >
+        <option value="">Transferir para outra obra (opcional)</option>
+
+        {obras
+          .filter(o=>o.id !== obraSelecionada)
+          .map(o=>(
+            <option key={o.id} value={o.id}>
+              {o.nome}
+            </option>
+          ))
+        }
       </select>
 
       <input
