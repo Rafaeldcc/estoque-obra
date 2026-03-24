@@ -7,7 +7,8 @@ collection,
 getDocs,
 doc,
 updateDoc,
-addDoc
+addDoc,
+deleteDoc
 } from "firebase/firestore";
 
 import {
@@ -106,6 +107,21 @@ setMateriais(lista)
 function mostrarMensagem(texto:string){
 setMensagem(texto)
 setTimeout(()=>setMensagem(""),3000)
+}
+
+// 🔥 Excluir
+async function excluirMaterial(material:Material){
+
+if(!confirm(`Excluir ${material.nome}?`)) return
+
+await deleteDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id)
+)
+
+mostrarMensagem("Material excluído")
+
+await carregarMateriais()
+
 }
 
 // 🔥 SAÍDA
@@ -383,13 +399,29 @@ className="border-t hover:bg-gray-50 cursor-pointer"
 onClick={()=>setMaterialSelecionado(material)}
 >
 
-<td className="p-3 flex items-center gap-3">
+<td className="p-3 flex items-center justify-between">
+
+<div className="flex items-center gap-3">
 
 {material.foto && (
 <img src={material.foto} className="w-10 h-10 rounded"/>
 )}
 
 {material.nome}
+
+</div>
+
+{/* 🔥 BOTÃO LIXEIRA */}
+<button
+onClick={(e)=>{
+e.stopPropagation()
+excluirMaterial(material)
+}}
+className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded transition"
+title="Excluir material"
+>
+🗑️
+</button>
 
 </td>
 
