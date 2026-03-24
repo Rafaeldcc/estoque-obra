@@ -9,33 +9,43 @@ import {
   doc,
   query,
   where,
-  serverTimestamp
+  serverTimestamp,
+  getDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useParams } from "next/navigation";
+
+type Material = {
+  id: string;
+  nome: string;
+  saldo: number;
+  unidade?: string;
+  estoqueMinimo?: number;
+};
 
 export default function ControleSetor() {
 
   const params = useParams();
 
-  const obraId = params?.id as string
-  const setorId = params?.setorId as string
+  const obraId = params?.id as string;
+  const setorId = params?.setorId as string;
 
-  const [materiais,setMateriais] = useState<any[]>([]);
-  const [obras,setObras] = useState<any[]>([]);
+  const [materiais, setMateriais] = useState<Material[]>([]);
+  const [obras, setObras] = useState<any[]>([]);
 
-  const [quantidades,setQuantidades] = useState<any>({});
-  const [obraDestino,setObraDestino] = useState("");
+  const [quantidades, setQuantidades] = useState<{[key:string]:number}>({});
+  const [obraDestino, setObraDestino] = useState("");
 
-  const [busca,setBusca] = useState("");
-  const [aberto,setAberto] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+  const [aberto, setAberto] = useState<string | null>(null);
 
-  const [mensagem,setMensagem] = useState("");
+  const [mensagem, setMensagem] = useState("");
 
   useEffect(()=>{
+    if(!obraId || !setorId) return;
     carregarMateriais();
     carregarObras();
-  },[]);
+  },[obraId,setorId]);
 
   function mostrarMensagem(texto:string){
     setMensagem(texto);
@@ -55,9 +65,12 @@ export default function ControleSetor() {
       )
     );
 
-    const lista = snap.docs.map(doc=>({
+    const lista:Material[] = snap.docs.map(doc=>({
       id:doc.id,
-      ...doc.data()
+      nome:doc.data()?.nome || "",
+      saldo:doc.data()?.saldo || 0,
+      unidade:doc.data()?.unidade || "",
+      estoqueMinimo:doc.data()?.estoqueMinimo || 0
     }));
 
     setMateriais(lista);
@@ -65,9 +78,7 @@ export default function ControleSetor() {
 
   async function carregarObras(){
 
-    const snap = await getDocs(
-      collection(db,"obras")
-    );
+    const snap = await getDocs(collection(db,"obras"));
 
     const lista = snap.docs.map(doc=>({
       id:doc.id,
@@ -77,8 +88,8 @@ export default function ControleSetor() {
     setObras(lista);
   }
 
-  // 🔥🔥🔥 TRANSFERÊNCIA PROFISSIONAL
-  async function transferir(material:any){
+  // 🔥 TRANSFERÊNCIA (MELHORADA SEM QUEBRAR NADA)
+  async function transferir(material:Material){
 
     const quantidade = Number(quantidades[material.id]);
 
@@ -96,17 +107,17 @@ export default function ControleSetor() {
 
     try{
 
-      // 🔥 PEGAR NOME DO SETOR ATUAL
-      const setorDoc = await getDocs(
-        query(
-          collection(db,"obras",obraId,"setores"),
-          where("__name__","==",setorId)
-        )
-      );
+      // 🔥 BUSCAR SETOR ATUAL (FORMA SEGURA)
+      const setorRef = doc(db,"obras",obraId,"setores",setorId);
+      const setorSnap = await getDoc(setorRef);
 
-      const setorNome = setorDoc.docs[0]?.data()?.nome;
+      if(!setorSnap.exists()){
+        return mostrarMensagem("Setor não encontrado");
+      }
 
-      // 🔥 PROCURAR OU CRIAR SETOR NA DESTINO
+      const setorNome = setorSnap.data()?.nome || "Geral";
+
+      // 🔥 DESTINO - BUSCAR OU CRIAR SETOR
       const setoresDestinoRef = collection(
         db,
         "obras",
@@ -127,18 +138,15 @@ export default function ControleSetor() {
         setorDestinoId = setorDestinoSnap.docs[0].id;
       }else{
 
-        const novoSetor = await addDoc(
-          setoresDestinoRef,
-          {
-            nome:setorNome,
-            criadoEm:serverTimestamp()
-          }
-        );
+        const novoSetor = await addDoc(setoresDestinoRef,{
+          nome:setorNome,
+          criadoEm:serverTimestamp()
+        });
 
         setorDestinoId = novoSetor.id;
       }
 
-      // 🔻 REMOVER DA ORIGEM
+      // 🔻 ATUALIZA ORIGEM (PROTEGIDO)
       await updateDoc(
         doc(
           db,
@@ -150,7 +158,7 @@ export default function ControleSetor() {
           material.id
         ),
         {
-          saldo: material.saldo - quantidade
+          saldo: Math.max(0, material.saldo - quantidade)
         }
       );
 
@@ -169,20 +177,15 @@ export default function ControleSetor() {
         where("nome","==",material.nome)
       );
 
-      const materialDestinoSnap =
-        await getDocs(qMaterial);
+      const materialDestinoSnap = await getDocs(qMaterial);
 
       if(!materialDestinoSnap.empty){
 
-        const saldoAtual =
-          materialDestinoSnap.docs[0].data().saldo || 0;
+        const saldoAtual = materialDestinoSnap.docs[0].data()?.saldo || 0;
 
-        await updateDoc(
-          materialDestinoSnap.docs[0].ref,
-          {
-            saldo: saldoAtual + quantidade
-          }
-        );
+        await updateDoc(materialDestinoSnap.docs[0].ref,{
+          saldo: saldoAtual + quantidade
+        });
 
       } else {
 
@@ -190,7 +193,7 @@ export default function ControleSetor() {
           nome:material.nome,
           saldo:quantidade,
           unidade:material.unidade || "",
-          estoqueMinimo:material.estoqueMinimo || 0,
+          estoqueMinimo:material.estoqueMinimo ?? 0,
           criadoEm:serverTimestamp()
         });
 
@@ -198,13 +201,12 @@ export default function ControleSetor() {
 
       mostrarMensagem("✅ Transferência realizada com sucesso");
 
-      // 🔄 ATUALIZA TELA
       setQuantidades(prev=>({
         ...prev,
         [material.id]:0
       }));
 
-      carregarMateriais();
+      await carregarMateriais();
 
     }catch(error){
       console.error(error);
@@ -215,7 +217,7 @@ export default function ControleSetor() {
 
   const materiaisFiltrados = materiais
     .filter(m =>
-      m.nome.toLowerCase().includes(busca.toLowerCase())
+      m?.nome?.toLowerCase().includes(busca.toLowerCase())
     )
     .sort((a,b)=>{
 
@@ -255,8 +257,7 @@ export default function ControleSetor() {
 
         {materiaisFiltrados.map(material=>{
 
-          const abertoMaterial =
-            aberto === material.id;
+          const abertoMaterial = aberto === material.id;
 
           return(
 
@@ -274,7 +275,7 @@ export default function ControleSetor() {
               </span>
 
               <span className="font-bold">
-                {material.saldo} {material.unidade}
+                {material.saldo} {material.unidade || ""}
               </span>
 
             </div>
@@ -289,22 +290,18 @@ export default function ControleSetor() {
                   className="border p-2 w-24"
                   value={quantidades[material.id] || ""}
                   onChange={(e)=>
-                    setQuantidades({
-                      ...quantidades,
-                      [material.id]:
-                        Number(e.target.value)
-                    })
+                    setQuantidades(prev=>({
+                      ...prev,
+                      [material.id]: Number(e.target.value)
+                    }))
                   }
                 />
 
                 <select
                   value={obraDestino}
-                  onChange={(e)=>
-                    setObraDestino(e.target.value)
-                  }
+                  onChange={(e)=>setObraDestino(e.target.value)}
                   className="border p-2"
                 >
-
                   <option value="">
                     Selecionar obra destino
                   </option>
@@ -312,20 +309,14 @@ export default function ControleSetor() {
                   {obras
                     .filter(o=>o.id!==obraId)
                     .map(obra=>(
-                      <option
-                        key={obra.id}
-                        value={obra.id}
-                      >
+                      <option key={obra.id} value={obra.id}>
                         {obra.nome}
                       </option>
                     ))}
-
                 </select>
 
                 <button
-                  onClick={()=>
-                    transferir(material)
-                  }
+                  onClick={()=>transferir(material)}
                   className="bg-purple-600 text-white px-4 py-2 rounded"
                 >
                   Transferir
