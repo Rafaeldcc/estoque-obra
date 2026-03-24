@@ -118,17 +118,99 @@ if(quantidade > materialSelecionado.saldo){
 return alert("Estoque insuficiente")
 }
 
+// 🔥 VALIDA TRANSFERÊNCIA
 if(tipoMov === "transferencia" && !obraDestino){
 return alert("Selecione a obra de destino")
 }
 
 const novoSaldo = materialSelecionado.saldo - quantidade
 
+// 🔻 REMOVE DA OBRA ATUAL
 await updateDoc(
 doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 {saldo: novoSaldo}
 )
 
+
+// 🔥 TRANSFERÊNCIA REAL
+if(tipoMov === "transferencia"){
+
+// 🔍 BUSCAR OBRA DESTINO
+const obrasSnap = await getDocs(collection(db,"obras"))
+
+let obraDestinoId = ""
+
+obrasSnap.forEach(docSnap=>{
+const data = docSnap.data()
+if(data.nome === obraDestino){
+obraDestinoId = docSnap.id
+}
+})
+
+if(!obraDestinoId){
+return alert("Obra destino não encontrada")
+}
+
+
+// 🔍 PEGAR SETORES DA OBRA DESTINO
+const setoresSnap = await getDocs(
+collection(db,"obras",obraDestinoId,"setores")
+)
+
+if(setoresSnap.empty){
+return alert("Obra destino não possui setores")
+}
+
+// 👉 pega o PRIMEIRO setor (pode melhorar depois)
+const setorDestinoId = setoresSnap.docs[0].id
+
+
+// 🔍 PROCURAR MATERIAL NA OBRA DESTINO
+const materiaisSnap = await getDocs(
+collection(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais")
+)
+
+let materialExiste = false
+
+for(const docMat of materiaisSnap.docs){
+
+const data = docMat.data()
+
+if(data.nome === materialSelecionado.nome){
+
+// ✅ MATERIAL EXISTE → SOMA
+const saldoAtual = Number(data.saldo || 0)
+
+await updateDoc(
+doc(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais",docMat.id),
+{saldo: saldoAtual + quantidade}
+)
+
+materialExiste = true
+break
+}
+}
+
+// ❌ NÃO EXISTE → CRIA
+if(!materialExiste){
+
+await addDoc(
+collection(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais"),
+{
+nome: materialSelecionado.nome,
+saldo: quantidade,
+unidade: materialSelecionado.unidade,
+estoqueMinimo: materialSelecionado.estoqueMinimo ?? 0,
+foto: materialSelecionado.foto ?? ""
+}
+)
+
+}
+
+}
+
+
+// 🧾 REGISTRAR MOVIMENTAÇÃO
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
@@ -140,10 +222,11 @@ usuarioNome:"Sistema",
 criadoEm:new Date()
 })
 
-mostrarMensagem("Saída registrada")
+mostrarMensagem("Movimentação realizada com sucesso")
 
 setQuantidade(0)
 setObraDestino("")
+
 await carregarMateriais()
 
 }
