@@ -35,7 +35,7 @@ export default function Setores() {
 
   const [carregando, setCarregando] = useState(false);
 
-  // 🔥 NOVO (EDITAR)
+  // 🔥 EDITAR
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [novoNome, setNovoNome] = useState("");
 
@@ -166,7 +166,7 @@ export default function Setores() {
       return;
     }
 
-    if (!confirm("Deseja excluir?")) return;
+    if (!confirm("Deseja excluir este setor?")) return;
 
     await deleteDoc(doc(db, "obras", obraId, "setores", id));
   }
@@ -191,13 +191,18 @@ export default function Setores() {
     setNovoNome("");
   }
 
+  function cancelarEdicao(){
+    setEditandoId(null);
+    setNovoNome("");
+  }
+
   return (
 
     <div className="max-w-4xl mx-auto p-6 space-y-6">
 
       <button
         onClick={() => router.push("/dashboard/obras")}
-        className="bg-gray-600 text-white px-4 py-2 rounded"
+        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
       >
         ← Voltar
       </button>
@@ -249,7 +254,7 @@ export default function Setores() {
           className="flex justify-between items-center border p-4 rounded"
         >
 
-          {/* 🔥 EDITANDO */}
+          {/* EDITANDO */}
           {editandoId === setor.id ? (
             <input
               value={novoNome}
@@ -267,15 +272,24 @@ export default function Setores() {
 
           <div className="flex gap-2">
 
-            {/* ✏️ EDITAR */}
+            {/* EDITAR */}
             {role === "admin" && (
               editandoId === setor.id ? (
-                <button
-                  onClick={() => salvarEdicao(setor.id)}
-                  className="bg-green-600 text-white px-3 py-1 rounded"
-                >
-                  Salvar
-                </button>
+                <>
+                  <button
+                    onClick={() => salvarEdicao(setor.id)}
+                    className="bg-green-600 text-white px-3 py-1 rounded"
+                  >
+                    Salvar
+                  </button>
+
+                  <button
+                    onClick={cancelarEdicao}
+                    className="bg-gray-400 text-white px-3 py-1 rounded"
+                  >
+                    Cancelar
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={() => {
@@ -289,7 +303,7 @@ export default function Setores() {
               )
             )}
 
-            {/* 🗑 */}
+            {/* EXCLUIR */}
             {role === "admin" && (
               <button
                 onClick={() => excluirSetor(setor.id)}
@@ -304,6 +318,12 @@ export default function Setores() {
         </div>
 
       ))}
+
+      {setores.length === 0 && (
+        <div className="text-gray-500 text-center py-6">
+          Nenhum setor cadastrado ainda.
+        </div>
+      )}
 
     </div>
 
