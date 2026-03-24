@@ -8,7 +8,8 @@ import {
   addDoc,
   deleteDoc,
   doc,
-  getDocs
+  getDocs,
+  updateDoc
 } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
@@ -34,7 +35,11 @@ export default function Setores() {
 
   const [carregando, setCarregando] = useState(false);
 
-  /* 🔥 CARREGAR SETORES DA OBRA (TEMPO REAL) */
+  // 🔥 NOVO (EDITAR)
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [novoNome, setNovoNome] = useState("");
+
+  /* 🔥 TEMPO REAL */
   useEffect(() => {
 
     if (!obraId) return;
@@ -60,51 +65,40 @@ export default function Setores() {
 
   }, [obraId]);
 
-
-  /* 🔥 CARREGAR TODOS SETORES (SUGESTÕES) */
+  /* 🔥 SUGESTÕES */
   useEffect(() => {
     carregarTodosSetores();
   }, []);
 
-
   async function carregarTodosSetores() {
 
-    try {
+    const obrasSnap = await getDocs(collection(db, "obras"));
 
-      const obrasSnap = await getDocs(collection(db, "obras"));
+    let lista: string[] = [];
 
-      let lista: string[] = [];
+    for (const obraDoc of obrasSnap.docs) {
 
-      for (const obraDoc of obrasSnap.docs) {
+      const setoresSnap = await getDocs(
+        collection(db, "obras", obraDoc.id, "setores")
+      );
 
-        const setoresSnap = await getDocs(
-          collection(db, "obras", obraDoc.id, "setores")
-        );
+      setoresSnap.forEach((doc) => {
 
-        setoresSnap.forEach((doc) => {
+        const nome = doc.data().nome;
 
-          const nome = doc.data().nome;
+        if (nome && !lista.includes(nome)) {
+          lista.push(nome);
+        }
 
-          if (nome && !lista.includes(nome)) {
-            lista.push(nome);
-          }
+      });
 
-        });
-
-      }
-
-      lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-      setTodosSetores(lista);
-
-    } catch (error) {
-      console.error("Erro ao carregar sugestões:", error);
     }
 
+    lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    setTodosSetores(lista);
   }
 
-
-  /* 🔥 NORMALIZAR TEXTO */
   function normalizarTexto(texto: string) {
     return texto
       .normalize("NFD")
@@ -113,8 +107,6 @@ export default function Setores() {
       .trim();
   }
 
-
-  /* 🔥 FILTRAR SUGESTÕES */
   function filtrarSugestoes(valor: string) {
 
     setNovoSetor(valor);
@@ -125,116 +117,94 @@ export default function Setores() {
       return;
     }
 
-    const filtradas = todosSetores
-      .filter((s) =>
-        normalizarTexto(s).includes(normalizarTexto(valor))
-      )
-      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const filtradas = todosSetores.filter((s) =>
+      normalizarTexto(s).includes(normalizarTexto(valor))
+    );
 
     setSugestoes(filtradas);
     setMostrarSugestoes(true);
-
   }
 
-
-  /* 🔥 CRIAR SETOR (CORRIGIDO) */
+  /* 🔥 CRIAR */
   async function criarSetor() {
 
-    if (!novoSetor || !novoSetor.trim()) {
+    if (!novoSetor.trim()) {
       alert("Digite o nome do setor");
       return;
     }
 
-    try {
+    const nomeLimpo = novoSetor.trim();
+    const nomeNormalizado = normalizarTexto(nomeLimpo);
 
-      setCarregando(true);
+    const existe = setores.some((s) => {
+      const bancoNormalizado =
+        s.nomeNormalizado || normalizarTexto(s.nome);
+      return bancoNormalizado === nomeNormalizado;
+    });
 
-      const nomeLimpo = novoSetor.trim();
-      const nomeNormalizado = normalizarTexto(nomeLimpo);
-
-      // 🔍 VERIFICA DUPLICADO
-      const existe = setores.some((s) => {
-        const bancoNormalizado =
-          s.nomeNormalizado || normalizarTexto(s.nome);
-
-        return bancoNormalizado === nomeNormalizado;
-      });
-
-      if (existe) {
-        alert("Este setor já existe.");
-        setCarregando(false);
-        return;
-      }
-
-      // 🔥 CRIA NO FIREBASE
-      await addDoc(
-        collection(db, "obras", obraId, "setores"),
-        {
-          nome: nomeLimpo,
-          nomeNormalizado,
-          criadoEm: new Date(),
-        }
-      );
-
-      console.log("Setor criado:", nomeLimpo);
-
-      setNovoSetor("");
-      setSugestoes([]);
-      setMostrarSugestoes(false);
-
-    } catch (error) {
-
-      console.error("Erro ao criar setor:", error);
-      alert("Erro ao criar setor");
-
-    } finally {
-      setCarregando(false);
-    }
-
-  }
-
-
-  /* 🔥 EXCLUIR SETOR */
-  async function excluirSetor(id: string) {
-
-    if (role !== "admin") {
-      alert("Apenas administradores podem excluir setores.");
+    if (existe) {
+      alert("Este setor já existe.");
       return;
     }
 
-    if (!confirm("Deseja realmente excluir este setor?")) return;
+    await addDoc(collection(db, "obras", obraId, "setores"), {
+      nome: nomeLimpo,
+      nomeNormalizado,
+      criadoEm: new Date(),
+    });
 
-    try {
-
-      await deleteDoc(doc(db, "obras", obraId, "setores", id));
-
-    } catch (error) {
-
-      console.error("Erro ao excluir setor:", error);
-      alert("Erro ao excluir setor");
-
-    }
-
+    setNovoSetor("");
+    setSugestoes([]);
+    setMostrarSugestoes(false);
   }
 
+  /* 🔥 EXCLUIR */
+  async function excluirSetor(id: string) {
+
+    if (role !== "admin") {
+      alert("Apenas administradores podem excluir.");
+      return;
+    }
+
+    if (!confirm("Deseja excluir?")) return;
+
+    await deleteDoc(doc(db, "obras", obraId, "setores", id));
+  }
+
+  /* 🔥 EDITAR */
+  async function salvarEdicao(id: string) {
+
+    if (!novoNome.trim()) {
+      alert("Digite um nome válido");
+      return;
+    }
+
+    await updateDoc(
+      doc(db, "obras", obraId, "setores", id),
+      {
+        nome: novoNome,
+        nomeNormalizado: normalizarTexto(novoNome)
+      }
+    );
+
+    setEditandoId(null);
+    setNovoNome("");
+  }
 
   return (
 
     <div className="max-w-4xl mx-auto p-6 space-y-6">
 
-      {/* VOLTAR */}
       <button
         onClick={() => router.push("/dashboard/obras")}
-        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
+        className="bg-gray-600 text-white px-4 py-2 rounded"
       >
         ← Voltar
       </button>
 
-      <h1 className="text-2xl font-bold">
-        Setores
-      </h1>
+      <h1 className="text-2xl font-bold">Setores</h1>
 
-      {/* INPUT + CRIAR */}
+      {/* CRIAR */}
       <div className="relative flex gap-2">
 
         <input
@@ -249,31 +219,24 @@ export default function Setores() {
           disabled={carregando}
           className="bg-blue-600 text-white px-4 rounded"
         >
-          {carregando ? "Criando..." : "Criar"}
+          Criar
         </button>
 
-        {/* SUGESTÕES */}
         {mostrarSugestoes && sugestoes.length > 0 && (
-
           <div className="absolute top-12 left-0 right-0 bg-white border rounded shadow max-h-40 overflow-y-auto z-10">
-
             {sugestoes.map((item, index) => (
-
               <div
                 key={index}
                 onClick={() => {
                   setNovoSetor(item);
                   setMostrarSugestoes(false);
                 }}
-                className="p-2 cursor-pointer hover:bg-gray-100"
+                className="p-2 hover:bg-gray-100 cursor-pointer"
               >
                 {item}
               </div>
-
             ))}
-
           </div>
-
         )}
 
       </div>
@@ -286,33 +249,61 @@ export default function Setores() {
           className="flex justify-between items-center border p-4 rounded"
         >
 
-          <Link
-            href={`/obra/${obraId}/setor/${setor.id}`}
-            className="font-medium"
-          >
-            {setor.nome}
-          </Link>
-
-          {role === "admin" && (
-
-            <button
-              onClick={() => excluirSetor(setor.id)}
-              className="bg-red-600 text-white px-3 py-1 rounded"
+          {/* 🔥 EDITANDO */}
+          {editandoId === setor.id ? (
+            <input
+              value={novoNome}
+              onChange={(e) => setNovoNome(e.target.value)}
+              className="border p-2 rounded w-full mr-4"
+            />
+          ) : (
+            <Link
+              href={`/obra/${obraId}/setor/${setor.id}`}
+              className="font-medium"
             >
-              Excluir
-            </button>
-
+              {setor.nome}
+            </Link>
           )}
+
+          <div className="flex gap-2">
+
+            {/* ✏️ EDITAR */}
+            {role === "admin" && (
+              editandoId === setor.id ? (
+                <button
+                  onClick={() => salvarEdicao(setor.id)}
+                  className="bg-green-600 text-white px-3 py-1 rounded"
+                >
+                  Salvar
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setEditandoId(setor.id);
+                    setNovoNome(setor.nome);
+                  }}
+                  className="bg-yellow-500 text-white px-3 py-1 rounded"
+                >
+                  ✏️
+                </button>
+              )
+            )}
+
+            {/* 🗑 */}
+            {role === "admin" && (
+              <button
+                onClick={() => excluirSetor(setor.id)}
+                className="bg-red-600 text-white px-3 py-1 rounded"
+              >
+                Excluir
+              </button>
+            )}
+
+          </div>
 
         </div>
 
       ))}
-
-      {setores.length === 0 && (
-        <div className="text-gray-500 text-center py-6">
-          Nenhum setor cadastrado ainda.
-        </div>
-      )}
 
     </div>
 
