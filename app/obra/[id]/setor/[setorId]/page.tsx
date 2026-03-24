@@ -201,8 +201,11 @@ await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"entrada",
+
 obraId: obraDestino,
-origem: obraId,
+obraOrigemId: obraId,
+obraDestinoId: obraDestino,
+
 destino:"transferencia",
 usuarioNome:"Sistema",
 criadoEm:new Date()
@@ -215,9 +218,12 @@ await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"saida",
-destino: tipoMov,
-obraId,
+
+obraId: obraId,
+obraOrigemId: obraId,
 obraDestinoId: obraDestino || null,
+
+destino: tipoMov,
 usuarioNome:"Sistema",
 criadoEm:new Date()
 })
