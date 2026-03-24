@@ -3,319 +3,488 @@
 import { useEffect, useState } from "react";
 
 import {
-  collection,
-  onSnapshot,
-  addDoc,
-  deleteDoc,
-  doc,
-  getDocs
+collection,
+getDocs,
+doc,
+updateDoc,
+addDoc,
+deleteDoc
 } from "firebase/firestore";
 
-import { db } from "@/lib/firebase";
+import {
+ref,
+uploadBytes,
+getDownloadURL
+} from "firebase/storage";
+
+import { db, storage } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { useAuth } from "@/lib/useAuth";
 
-export default function Setores() {
+interface Material{
+id:string
+nome:string
+saldo:number
+unidade:string
+foto?:string
+estoqueMinimo?:number
+}
 
-  const params = useParams();
-  const router = useRouter();
+export default function ControleEstoque(){
 
-  const obraId = params.id as string;
+const router = useRouter()
+const params = useParams()
 
-  const { user, role } = useAuth();
+const obraId = params.id as string
+const setorId = params.setorId as string
 
-  const [setores, setSetores] = useState<any[]>([]);
-  const [novoSetor, setNovoSetor] = useState("");
+const [materiais,setMateriais] = useState<Material[]>([])
+const [materialSelecionado,setMaterialSelecionado] = useState<Material | null>(null)
+const [busca,setBusca] = useState("")
+const [mensagem,setMensagem] = useState("")
 
-  const [todosSetores, setTodosSetores] = useState<string[]>([]);
-  const [sugestoes, setSugestoes] = useState<string[]>([]);
-  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+const [quantidade,setQuantidade] = useState(0)
+const [tipoMov,setTipoMov] = useState("uso")
 
-  const [carregando, setCarregando] = useState(false);
+const [obras,setObras] = useState<any[]>([])
+const [obraDestino,setObraDestino] = useState("")
 
-  /* 🔥 CARREGAR SETORES DA OBRA (TEMPO REAL) */
-  useEffect(() => {
+useEffect(()=>{
+carregarMateriais()
+carregarObras()
+},[])
 
-    if (!obraId) return;
+/* 🔥 BUSCAR OBRAS */
+async function carregarObras(){
 
-    const setoresRef = collection(db, "obras", obraId, "setores");
+const snap = await getDocs(collection(db,"obras"))
 
-    const unsubscribe = onSnapshot(setoresRef, (snapshot) => {
+const lista:any[] = []
 
-      const lista = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+snap.forEach(docSnap=>{
+const data = docSnap.data()
 
-      lista.sort((a: any, b: any) =>
-        a.nome.localeCompare(b.nome, "pt-BR")
-      );
+lista.push({
+id:docSnap.id,
+nome:data.nome
+})
+})
 
-      setSetores(lista);
+setObras(lista)
 
-    });
+}
 
-    return () => unsubscribe();
+/* 🔥 CARREGAR MATERIAIS */
+async function carregarMateriais(){
 
-  }, [obraId]);
+const snapshot = await getDocs(
+collection(db,"obras",obraId,"setores",setorId,"materiais")
+)
 
+const lista:Material[] = []
 
-  /* 🔥 CARREGAR TODOS SETORES (SUGESTÕES) */
-  useEffect(() => {
-    carregarTodosSetores();
-  }, []);
+snapshot.forEach(docSnap=>{
 
+const data = docSnap.data()
 
-  async function carregarTodosSetores() {
+lista.push({
+id:docSnap.id,
+nome:data.nome,
+saldo:data.saldo ?? 0,
+unidade:data.unidade ?? "",
+foto:data.foto ?? "",
+estoqueMinimo:data.estoqueMinimo ?? 0
+})
 
-    try {
+})
 
-      const obrasSnap = await getDocs(collection(db, "obras"));
+lista.sort((a,b)=>a.nome.localeCompare(b.nome))
 
-      let lista: string[] = [];
+setMateriais(lista)
 
-      for (const obraDoc of obrasSnap.docs) {
+}
 
-        const setoresSnap = await getDocs(
-          collection(db, "obras", obraDoc.id, "setores")
-        );
+function mostrarMensagem(texto:string){
+setMensagem(texto)
+setTimeout(()=>setMensagem(""),3000)
+}
 
-        setoresSnap.forEach((doc) => {
+/* 🔥 EXCLUIR MATERIAL */
+async function excluirMaterial(material: Material){
 
-          const nome = doc.data().nome;
+const confirmar = confirm(`Excluir ${material.nome}?`)
 
-          if (nome && !lista.includes(nome)) {
-            lista.push(nome);
-          }
+if(!confirmar) return
 
-        });
+try{
 
-      }
+await deleteDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id)
+)
 
-      lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
+mostrarMensagem("Material excluído")
 
-      setTodosSetores(lista);
+setMaterialSelecionado(null)
 
-    } catch (error) {
-      console.error("Erro ao carregar sugestões:", error);
-    }
+await carregarMateriais()
 
-  }
+}catch(error){
 
+console.error("Erro ao excluir:",error)
+alert("Erro ao excluir material")
 
-  /* 🔥 NORMALIZAR TEXTO */
-  function normalizarTexto(texto: string) {
-    return texto
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .trim();
-  }
+}
 
+}
 
-  /* 🔥 FILTRAR SUGESTÕES */
-  function filtrarSugestoes(valor: string) {
+/* 🔥 SAÍDA + TRANSFERÊNCIA */
+async function registrarSaida(){
 
-    setNovoSetor(valor);
+if(!materialSelecionado) return
+if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
-    if (!valor.trim()) {
-      setSugestoes([]);
-      setMostrarSugestoes(false);
-      return;
-    }
+if(quantidade > materialSelecionado.saldo){
+return alert("Estoque insuficiente")
+}
 
-    const filtradas = todosSetores
-      .filter((s) =>
-        normalizarTexto(s).includes(normalizarTexto(valor))
-      )
-      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+if(tipoMov === "transferencia" && !obraDestino){
+return alert("Selecione a obra destino")
+}
 
-    setSugestoes(filtradas);
-    setMostrarSugestoes(true);
+const novoSaldo = materialSelecionado.saldo - quantidade
 
-  }
+// remove da obra atual
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+{saldo: novoSaldo}
+)
 
+// 🔥 TRANSFERÊNCIA REAL
+if(tipoMov === "transferencia"){
 
-  /* 🔥 CRIAR SETOR (CORRIGIDO) */
-  async function criarSetor() {
+let obraDestinoId = ""
 
-    if (!novoSetor || !novoSetor.trim()) {
-      alert("Digite o nome do setor");
-      return;
-    }
+obras.forEach(o=>{
+if(o.nome === obraDestino){
+obraDestinoId = o.id
+}
+})
 
-    try {
+if(!obraDestinoId){
+return alert("Obra destino não encontrada")
+}
 
-      setCarregando(true);
+// 🔥 BUSCAR SETOR COM MESMO NOME
+const setoresSnap = await getDocs(
+collection(db,"obras",obraDestinoId,"setores")
+)
 
-      const nomeLimpo = novoSetor.trim();
-      const nomeNormalizado = normalizarTexto(nomeLimpo);
+let setorDestinoId = ""
 
-      // 🔍 VERIFICA DUPLICADO
-      const existe = setores.some((s) => {
-        const bancoNormalizado =
-          s.nomeNormalizado || normalizarTexto(s.nome);
+setoresSnap.forEach(docSnap=>{
+const data = docSnap.data()
 
-        return bancoNormalizado === nomeNormalizado;
-      });
+if(data.nome === setorId){
+setorDestinoId = docSnap.id
+}
+})
 
-      if (existe) {
-        alert("Este setor já existe.");
-        setCarregando(false);
-        return;
-      }
+// fallback
+if(!setorDestinoId && !setoresSnap.empty){
+setorDestinoId = setoresSnap.docs[0].id
+}
 
-      // 🔥 CRIA NO FIREBASE
-      await addDoc(
-        collection(db, "obras", obraId, "setores"),
-        {
-          nome: nomeLimpo,
-          nomeNormalizado,
-          criadoEm: new Date(),
-        }
-      );
+if(!setorDestinoId){
+return alert("Nenhum setor encontrado na obra destino")
+}
 
-      console.log("Setor criado:", nomeLimpo);
+// 🔥 PROCURAR MATERIAL
+const materiaisSnap = await getDocs(
+collection(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais")
+)
 
-      setNovoSetor("");
-      setSugestoes([]);
-      setMostrarSugestoes(false);
+let materialExiste = false
 
-    } catch (error) {
+for(const docMat of materiaisSnap.docs){
 
-      console.error("Erro ao criar setor:", error);
-      alert("Erro ao criar setor");
+const data = docMat.data()
 
-    } finally {
-      setCarregando(false);
-    }
+if(data.nome === materialSelecionado.nome){
 
-  }
+const saldoAtual = Number(data.saldo || 0)
 
+await updateDoc(
+doc(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais",docMat.id),
+{saldo: saldoAtual + quantidade}
+)
 
-  /* 🔥 EXCLUIR SETOR */
-  async function excluirSetor(id: string) {
+materialExiste = true
+break
+}
+}
 
-    if (role !== "admin") {
-      alert("Apenas administradores podem excluir setores.");
-      return;
-    }
+if(!materialExiste){
 
-    if (!confirm("Deseja realmente excluir este setor?")) return;
+await addDoc(
+collection(db,"obras",obraDestinoId,"setores",setorDestinoId,"materiais"),
+{
+nome: materialSelecionado.nome,
+saldo: quantidade,
+unidade: materialSelecionado.unidade,
+estoqueMinimo: materialSelecionado.estoqueMinimo ?? 0,
+foto: materialSelecionado.foto ?? ""
+}
+)
 
-    try {
+}
 
-      await deleteDoc(doc(db, "obras", obraId, "setores", id));
+}
 
-    } catch (error) {
+// 🔥 REGISTRO
+await addDoc(collection(db,"movimentacoes"),{
+materialNome: materialSelecionado.nome,
+quantidade,
+tipo:"saida",
+destino: tipoMov,
+obraNome: "Obra atual",
+obraDestino: tipoMov === "transferencia" ? obraDestino : null,
+usuarioNome:"Sistema",
+criadoEm:new Date()
+})
 
-      console.error("Erro ao excluir setor:", error);
-      alert("Erro ao excluir setor");
+mostrarMensagem("Movimentação realizada")
 
-    }
+setQuantidade(0)
+setObraDestino("")
 
-  }
+await carregarMateriais()
 
+}
 
-  return (
+/* 🔥 ENTRADA */
+async function registrarEntrada(){
 
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+if(!materialSelecionado) return
+if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
-      {/* VOLTAR */}
-      <button
-        onClick={() => router.push("/dashboard/obras")}
-        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
-      >
-        ← Voltar
-      </button>
+const novoSaldo = materialSelecionado.saldo + quantidade
 
-      <h1 className="text-2xl font-bold">
-        Setores
-      </h1>
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+{saldo: novoSaldo}
+)
 
-      {/* INPUT + CRIAR */}
-      <div className="relative flex gap-2">
+await addDoc(collection(db,"movimentacoes"),{
+materialNome: materialSelecionado.nome,
+quantidade,
+tipo:"entrada",
+obraNome:"Obra atual",
+usuarioNome:"Sistema",
+criadoEm:new Date()
+})
 
-        <input
-          placeholder="Nome do setor"
-          value={novoSetor}
-          onChange={(e) => filtrarSugestoes(e.target.value)}
-          className="flex-1 border p-2 rounded"
-        />
+mostrarMensagem("Entrada registrada")
 
-        <button
-          onClick={criarSetor}
-          disabled={carregando}
-          className="bg-blue-600 text-white px-4 rounded"
-        >
-          {carregando ? "Criando..." : "Criar"}
-        </button>
+setQuantidade(0)
+await carregarMateriais()
 
-        {/* SUGESTÕES */}
-        {mostrarSugestoes && sugestoes.length > 0 && (
+}
 
-          <div className="absolute top-12 left-0 right-0 bg-white border rounded shadow max-h-40 overflow-y-auto z-10">
+/* 🔥 FOTO */
+async function uploadFoto(e:any,material:Material){
 
-            {sugestoes.map((item, index) => (
+const file = e.target.files[0]
+if(!file) return
 
-              <div
-                key={index}
-                onClick={() => {
-                  setNovoSetor(item);
-                  setMostrarSugestoes(false);
-                }}
-                className="p-2 cursor-pointer hover:bg-gray-100"
-              >
-                {item}
-              </div>
+const storageRef = ref(
+storage,
+`materiais/${obraId}/${material.id}-${Date.now()}`
+)
 
-            ))}
+await uploadBytes(storageRef,file)
 
-          </div>
+const url = await getDownloadURL(storageRef)
 
-        )}
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+{foto:url}
+)
 
-      </div>
+await carregarMateriais()
 
-      {/* LISTA */}
-      {setores.map((setor) => (
+setMaterialSelecionado({...material,foto:url})
 
-        <div
-          key={setor.id}
-          className="flex justify-between items-center border p-4 rounded"
-        >
+mostrarMensagem("Foto salva")
 
-          <Link
-            href={`/obra/${obraId}/setor/${setor.id}`}
-            className="font-medium"
-          >
-            {setor.nome}
-          </Link>
+}
 
-          {role === "admin" && (
+async function removerFoto(material:Material){
 
-            <button
-              onClick={() => excluirSetor(setor.id)}
-              className="bg-red-600 text-white px-3 py-1 rounded"
-            >
-              Excluir
-            </button>
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+{foto:""}
+)
 
-          )}
+await carregarMateriais()
 
-        </div>
+setMaterialSelecionado({...material,foto:""})
 
-      ))}
+mostrarMensagem("Foto removida")
 
-      {setores.length === 0 && (
-        <div className="text-gray-500 text-center py-6">
-          Nenhum setor cadastrado ainda.
-        </div>
-      )}
+}
 
-    </div>
+/* 🔥 ESTOQUE MÍNIMO */
+async function salvarEstoqueMinimo(){
 
-  );
+if(!materialSelecionado) return
 
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+{estoqueMinimo: materialSelecionado.estoqueMinimo ?? 0}
+)
+
+mostrarMensagem("Estoque mínimo salvo")
+
+await carregarMateriais()
+
+}
+
+/* 🔍 FILTRO */
+function normalizar(texto:string){
+return texto.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
+}
+
+const filtrados = materiais.filter(m =>
+normalizar(m.nome).startsWith(normalizar(busca))
+)
+
+/* UI */
+return(
+
+<div className="max-w-6xl mx-auto p-8">
+
+<button
+onClick={()=>router.push(`/obra/${obraId}`)}
+className="bg-gray-600 text-white px-4 py-2 rounded mb-6"
+>
+← Voltar
+</button>
+
+<h1 className="text-3xl font-bold mb-6">
+Controle de Estoque
+</h1>
+
+{/* LISTA */}
+{!materialSelecionado && (
+<>
+<input
+placeholder="Buscar material..."
+value={busca}
+onChange={(e)=>setBusca(e.target.value)}
+className="border p-3 rounded mb-6 w-full"
+/>
+
+<table className="w-full border rounded">
+<thead className="bg-gray-100">
+<tr>
+<th className="p-3 text-left">Material</th>
+<th className="p-3 text-center">Quantidade</th>
+</tr>
+</thead>
+<tbody>
+{filtrados.map(material=>(
+<tr key={material.id}
+className="border-t cursor-pointer"
+onClick={()=>setMaterialSelecionado(material)}
+>
+<td className="p-3">{material.nome}</td>
+<td className="p-3 text-center font-bold">
+{material.saldo} {material.unidade}
+</td>
+</tr>
+))}
+</tbody>
+</table>
+</>
+)}
+
+{/* DETALHE */}
+{materialSelecionado && (
+
+<div className="bg-white border rounded-xl p-8 shadow-md">
+
+<button onClick={()=>setMaterialSelecionado(null)}>
+← Voltar
+</button>
+
+<h2 className="text-xl font-bold mt-4">
+{materialSelecionado.nome}
+</h2>
+
+<p>
+Quantidade atual: <b>{materialSelecionado.saldo}</b>
+</p>
+
+{/* MOVIMENTAÇÃO */}
+<div className="mt-4 flex gap-3 flex-wrap">
+
+<input type="number"
+value={quantidade}
+onChange={(e)=>setQuantidade(Number(e.target.value))}
+className="border p-2 rounded w-28"
+/>
+
+<select
+value={tipoMov}
+onChange={(e)=>setTipoMov(e.target.value)}
+className="border p-2 rounded"
+>
+<option value="uso">Uso</option>
+<option value="transferencia">Transferência</option>
+<option value="descarte">Descarte</option>
+</select>
+
+{tipoMov === "transferencia" && (
+<select
+value={obraDestino}
+onChange={(e)=>setObraDestino(e.target.value)}
+className="border p-2 rounded"
+>
+<option value="">Selecionar obra</option>
+{obras.filter(o=>o.id !== obraId).map(o=>(
+<option key={o.id}>{o.nome}</option>
+))}
+</select>
+)}
+
+<button onClick={registrarSaida} className="bg-red-600 text-white px-4 py-2 rounded">
+Confirmar
+</button>
+
+<button onClick={registrarEntrada} className="bg-green-600 text-white px-4 py-2 rounded">
+Entrada
+</button>
+
+</div>
+
+{/* EXCLUIR */}
+<div className="mt-6">
+<button
+onClick={()=>excluirMaterial(materialSelecionado)}
+className="bg-red-700 text-white px-4 py-2 rounded"
+>
+🗑 Excluir Material
+</button>
+</div>
+
+</div>
+)}
+
+{mensagem && (
+<div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded">
+{mensagem}
+</div>
+)}
+
+</div>
+)
 }
