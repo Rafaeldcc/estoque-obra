@@ -136,13 +136,10 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 // 🔥 TRANSFERÊNCIA
 if(tipoMov === "transferencia"){
 
-// 🔍 SETOR ATUAL
 const setorRef = doc(db,"obras",obraId,"setores",setorId)
 const setorSnap = await getDoc(setorRef)
-
 const setorNome = setorSnap.data()?.nome
 
-// 🔍 DESTINO
 const setoresDestinoRef = collection(db,"obras",obraDestino,"setores")
 const setoresSnap = await getDocs(setoresDestinoRef)
 
@@ -162,7 +159,6 @@ criadoEm:new Date()
 setorDestinoId = novoSetor.id
 }
 
-// 🔍 MATERIAL DESTINO
 const materiaisDestinoRef = collection(
 db,"obras",obraDestino,"setores",setorDestinoId,"materiais"
 )
@@ -196,7 +192,7 @@ foto: materialSelecionado.foto || ""
 })
 }
 
-// 🟢 ENTRADA NO DESTINO
+// 🟢 ENTRADA DESTINO (CORRIGIDO)
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
@@ -213,7 +209,7 @@ criadoEm:new Date()
 
 }
 
-// 🔴 SAÍDA
+// 🔴 SAÍDA (CORRIGIDO)
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
@@ -221,7 +217,7 @@ tipo:"saida",
 
 obraId: obraId,
 obraOrigemId: obraId,
-obraDestinoId: obraDestino || null,
+obraDestinoId: tipoMov === "transferencia" ? obraDestino : null,
 
 destino: tipoMov,
 usuarioNome:"Sistema",
@@ -235,7 +231,7 @@ setObraDestino("")
 carregarMateriais()
 }
 
-// 🔥 ENTRADA SIMPLES
+// 🔥 ENTRADA
 async function registrarEntrada(){
 
 if(!materialSelecionado) return
