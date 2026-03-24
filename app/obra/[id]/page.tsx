@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import {
   collection,
   onSnapshot,
@@ -31,104 +32,97 @@ export default function Setores() {
   const [sugestoes, setSugestoes] = useState<string[]>([]);
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
 
-  /* CARREGAR SETORES DA OBRA */
+  const [carregando, setCarregando] = useState(false);
 
+  /* 🔥 CARREGAR SETORES DA OBRA (TEMPO REAL) */
   useEffect(() => {
 
     if (!obraId) return;
 
-    const setoresRef = collection(
-      db,
-      "obras",
-      obraId,
-      "setores"
-    );
+    const setoresRef = collection(db, "obras", obraId, "setores");
 
-    const unsubscribe = onSnapshot(
-      setoresRef,
-      (snapshot) => {
+    const unsubscribe = onSnapshot(setoresRef, (snapshot) => {
 
-        const lista = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+      const lista = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-        setSetores(lista);
+      lista.sort((a: any, b: any) =>
+        a.nome.localeCompare(b.nome, "pt-BR")
+      );
 
-      }
-    );
+      setSetores(lista);
+
+    });
 
     return () => unsubscribe();
 
   }, [obraId]);
 
 
-  /* CARREGAR SETORES DE TODAS AS OBRAS */
-
+  /* 🔥 CARREGAR TODOS SETORES (SUGESTÕES) */
   useEffect(() => {
-
     carregarTodosSetores();
-
   }, []);
 
 
   async function carregarTodosSetores() {
 
-    const obrasSnap = await getDocs(collection(db, "obras"));
+    try {
 
-    let lista: string[] = [];
+      const obrasSnap = await getDocs(collection(db, "obras"));
 
-    for (const obraDoc of obrasSnap.docs) {
+      let lista: string[] = [];
 
-      const setoresSnap = await getDocs(
-        collection(db, "obras", obraDoc.id, "setores")
-      );
+      for (const obraDoc of obrasSnap.docs) {
 
-      setoresSnap.forEach((doc) => {
+        const setoresSnap = await getDocs(
+          collection(db, "obras", obraDoc.id, "setores")
+        );
 
-        const nome = doc.data().nome;
+        setoresSnap.forEach((doc) => {
 
-        if (!lista.includes(nome)) {
-          lista.push(nome);
-        }
+          const nome = doc.data().nome;
 
-      });
+          if (nome && !lista.includes(nome)) {
+            lista.push(nome);
+          }
 
+        });
+
+      }
+
+      lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+      setTodosSetores(lista);
+
+    } catch (error) {
+      console.error("Erro ao carregar sugestões:", error);
     }
-
-    lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-    setTodosSetores(lista);
 
   }
 
 
-  /* NORMALIZAR TEXTO */
-
+  /* 🔥 NORMALIZAR TEXTO */
   function normalizarTexto(texto: string) {
-
     return texto
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
       .trim();
-
   }
 
 
-  /* FILTRAR SUGESTÕES */
-
+  /* 🔥 FILTRAR SUGESTÕES */
   function filtrarSugestoes(valor: string) {
 
     setNovoSetor(valor);
 
     if (!valor.trim()) {
-
       setSugestoes([]);
       setMostrarSugestoes(false);
-
       return;
-
     }
 
     const filtradas = todosSetores
@@ -138,58 +132,69 @@ export default function Setores() {
       .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
     setSugestoes(filtradas);
-
     setMostrarSugestoes(true);
 
   }
 
 
-  /* CRIAR SETOR */
-
+  /* 🔥 CRIAR SETOR (CORRIGIDO) */
   async function criarSetor() {
 
-    if (!novoSetor.trim()) return;
-
-    const nomeNormalizado = normalizarTexto(novoSetor);
-
-    const existe = setores.some((s) => {
-
-      const bancoNormalizado =
-        s.nomeNormalizado || normalizarTexto(s.nome);
-
-      return bancoNormalizado === nomeNormalizado;
-
-    });
-
-    if (existe) {
-
-      alert("Este setor já existe.");
+    if (!novoSetor || !novoSetor.trim()) {
+      alert("Digite o nome do setor");
       return;
-
     }
 
-    await addDoc(
-      collection(
-        db,
-        "obras",
-        obraId,
-        "setores"
-      ),
-      {
-        nome: novoSetor.trim(),
-        nomeNormalizado,
-        criadoEm: new Date(),
-      }
-    );
+    try {
 
-    setNovoSetor("");
-    setMostrarSugestoes(false);
+      setCarregando(true);
+
+      const nomeLimpo = novoSetor.trim();
+      const nomeNormalizado = normalizarTexto(nomeLimpo);
+
+      // 🔍 VERIFICA DUPLICADO
+      const existe = setores.some((s) => {
+        const bancoNormalizado =
+          s.nomeNormalizado || normalizarTexto(s.nome);
+
+        return bancoNormalizado === nomeNormalizado;
+      });
+
+      if (existe) {
+        alert("Este setor já existe.");
+        setCarregando(false);
+        return;
+      }
+
+      // 🔥 CRIA NO FIREBASE
+      await addDoc(
+        collection(db, "obras", obraId, "setores"),
+        {
+          nome: nomeLimpo,
+          nomeNormalizado,
+          criadoEm: new Date(),
+        }
+      );
+
+      console.log("Setor criado:", nomeLimpo);
+
+      setNovoSetor("");
+      setSugestoes([]);
+      setMostrarSugestoes(false);
+
+    } catch (error) {
+
+      console.error("Erro ao criar setor:", error);
+      alert("Erro ao criar setor");
+
+    } finally {
+      setCarregando(false);
+    }
 
   }
 
 
-  /* EXCLUIR SETOR */
-
+  /* 🔥 EXCLUIR SETOR */
   async function excluirSetor(id: string) {
 
     if (role !== "admin") {
@@ -199,15 +204,16 @@ export default function Setores() {
 
     if (!confirm("Deseja realmente excluir este setor?")) return;
 
-    await deleteDoc(
-      doc(
-        db,
-        "obras",
-        obraId,
-        "setores",
-        id
-      )
-    );
+    try {
+
+      await deleteDoc(doc(db, "obras", obraId, "setores", id));
+
+    } catch (error) {
+
+      console.error("Erro ao excluir setor:", error);
+      alert("Erro ao excluir setor");
+
+    }
 
   }
 
@@ -216,7 +222,7 @@ export default function Setores() {
 
     <div className="max-w-4xl mx-auto p-6 space-y-6">
 
-      {/* BOTÃO VOLTAR */}
+      {/* VOLTAR */}
       <button
         onClick={() => router.push("/dashboard/obras")}
         className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
@@ -228,24 +234,25 @@ export default function Setores() {
         Setores
       </h1>
 
+      {/* INPUT + CRIAR */}
       <div className="relative flex gap-2">
 
         <input
           placeholder="Nome do setor"
           value={novoSetor}
-          onChange={(e) =>
-            filtrarSugestoes(e.target.value)
-          }
+          onChange={(e) => filtrarSugestoes(e.target.value)}
           className="flex-1 border p-2 rounded"
         />
 
         <button
           onClick={criarSetor}
+          disabled={carregando}
           className="bg-blue-600 text-white px-4 rounded"
         >
-          Criar
+          {carregando ? "Criando..." : "Criar"}
         </button>
 
+        {/* SUGESTÕES */}
         {mostrarSugestoes && sugestoes.length > 0 && (
 
           <div className="absolute top-12 left-0 right-0 bg-white border rounded shadow max-h-40 overflow-y-auto z-10">
@@ -255,10 +262,8 @@ export default function Setores() {
               <div
                 key={index}
                 onClick={() => {
-
                   setNovoSetor(item);
                   setMostrarSugestoes(false);
-
                 }}
                 className="p-2 cursor-pointer hover:bg-gray-100"
               >
@@ -273,6 +278,7 @@ export default function Setores() {
 
       </div>
 
+      {/* LISTA */}
       {setores.map((setor) => (
 
         <div
@@ -290,9 +296,7 @@ export default function Setores() {
           {role === "admin" && (
 
             <button
-              onClick={() =>
-                excluirSetor(setor.id)
-              }
+              onClick={() => excluirSetor(setor.id)}
               className="bg-red-600 text-white px-3 py-1 rounded"
             >
               Excluir
@@ -303,6 +307,12 @@ export default function Setores() {
         </div>
 
       ))}
+
+      {setores.length === 0 && (
+        <div className="text-gray-500 text-center py-6">
+          Nenhum setor cadastrado ainda.
+        </div>
+      )}
 
     </div>
 
