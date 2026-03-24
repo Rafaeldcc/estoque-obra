@@ -41,7 +41,7 @@ const [materialSelecionado,setMaterialSelecionado] = useState<Material | null>(n
 const [busca,setBusca] = useState("")
 const [mensagem,setMensagem] = useState("")
 
-// 🔥 NOVOS STATES
+// 🔥 NOVOS STATES (movimentação)
 const [quantidade,setQuantidade] = useState(0)
 const [tipoMov,setTipoMov] = useState("uso")
 
@@ -104,7 +104,8 @@ await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"saida",
-obraNome:"",
+destino: tipoMov,
+obraNome: "Obra atual",
 usuarioNome:"Sistema",
 criadoEm:new Date()
 })
@@ -133,7 +134,7 @@ await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"entrada",
-obraNome:"",
+obraNome:"Obra atual",
 usuarioNome:"Sistema",
 criadoEm:new Date()
 })
@@ -145,6 +146,7 @@ await carregarMateriais()
 
 }
 
+// 🔥 FOTO
 async function uploadFoto(e:any,material:Material){
 
 const file = e.target.files[0]
@@ -193,6 +195,7 @@ mostrarMensagem("Foto removida")
 
 }
 
+// 🔥 ESTOQUE MÍNIMO
 async function salvarEstoqueMinimo(){
 
 if(!materialSelecionado) return
@@ -209,12 +212,10 @@ await carregarMateriais()
 }
 
 function normalizar(texto:string){
-
 return texto
 .normalize("NFD")
 .replace(/[\u0300-\u036f]/g,"")
 .toLowerCase()
-
 }
 
 const filtrados = materiais.filter(m =>
@@ -239,7 +240,6 @@ Controle de Estoque
 {!materialSelecionado && (
 
 <>
-
 <input
 placeholder="Buscar material..."
 value={busca}
@@ -248,12 +248,11 @@ className="border p-3 rounded mb-6 w-full"
 />
 
 <div className="border rounded-xl overflow-hidden shadow">
-
 <div className="max-h-[600px] overflow-y-auto">
 
 <table className="w-full">
 
-<thead className="bg-gray-100 sticky top-0 z-10">
+<thead className="bg-gray-100 sticky top-0">
 <tr>
 <th className="p-3 text-left">Material</th>
 <th className="p-3 text-center">Quantidade</th>
@@ -266,17 +265,14 @@ className="border p-3 rounded mb-6 w-full"
 
 <tr
 key={material.id}
-className="border-t hover:bg-gray-50 cursor-pointer transition"
+className="border-t hover:bg-gray-50 cursor-pointer"
 onClick={()=>setMaterialSelecionado(material)}
 >
 
 <td className="p-3 flex items-center gap-3">
 
 {material.foto && (
-<img
-src={material.foto}
-className="w-10 h-10 object-cover rounded"
-/>
+<img src={material.foto} className="w-10 h-10 rounded"/>
 )}
 
 {material.nome}
@@ -292,14 +288,11 @@ className="w-10 h-10 object-cover rounded"
 ))}
 
 </tbody>
-
 </table>
 
 </div>
 </div>
-
 </>
-
 )}
 
 {materialSelecionado && (
@@ -308,7 +301,7 @@ className="w-10 h-10 object-cover rounded"
 
 <button
 onClick={()=>setMaterialSelecionado(null)}
-className="mb-6 text-blue-600 font-semibold"
+className="mb-6 text-blue-600"
 >
 ← Voltar
 </button>
@@ -322,15 +315,14 @@ Quantidade atual:
 <strong> {materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
 </p>
 
-{/* 🔥 NOVA PARTE */}
-<div className="mt-6 flex flex-wrap gap-3">
+{/* 🔥 MOVIMENTAÇÃO */}
+<div className="mt-6 flex gap-3 flex-wrap">
 
 <input
 type="number"
-placeholder="Quantidade"
 value={quantidade}
 onChange={(e)=>setQuantidade(Number(e.target.value))}
-className="border p-2 rounded w-32"
+className="border p-2 rounded w-28"
 />
 
 <select
@@ -343,36 +335,59 @@ className="border p-2 rounded"
 <option value="descarte">Descarte</option>
 </select>
 
-<button
-onClick={registrarSaida}
-className="bg-red-600 text-white px-4 py-2 rounded"
->
+<button onClick={registrarSaida} className="bg-red-600 text-white px-4 py-2 rounded">
 Confirmar
 </button>
 
-<button
-onClick={registrarEntrada}
-className="bg-green-600 text-white px-4 py-2 rounded"
->
+<button onClick={registrarEntrada} className="bg-green-600 text-white px-4 py-2 rounded">
 Entrada
 </button>
 
 </div>
 
+{/* 🔥 ESTOQUE MÍNIMO */}
+<div className="mt-6">
+<input
+type="number"
+value={materialSelecionado.estoqueMinimo ?? 0}
+onChange={(e)=>setMaterialSelecionado({
+...materialSelecionado,
+estoqueMinimo:Number(e.target.value)
+})}
+className="border p-2 rounded w-32"
+/>
+
+<button onClick={salvarEstoqueMinimo} className="ml-3 bg-blue-600 text-white px-4 py-2 rounded">
+Salvar mínimo
+</button>
 </div>
 
+{/* 🔥 FOTO */}
+<div className="mt-6">
+{materialSelecionado.foto ? (
+<>
+<img src={materialSelecionado.foto} className="w-48 mb-3"/>
+<button onClick={()=>removerFoto(materialSelecionado)} className="bg-red-600 text-white px-4 py-2 rounded">
+Remover foto
+</button>
+</>
+) : (
+<label className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer">
+Adicionar foto
+<input type="file" className="hidden" onChange={(e)=>uploadFoto(e,materialSelecionado)} />
+</label>
+)}
+</div>
+
+</div>
 )}
 
 {mensagem && (
-
-<div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded-xl shadow-xl">
+<div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded">
 {mensagem}
 </div>
-
 )}
 
 </div>
-
 )
-
 }
