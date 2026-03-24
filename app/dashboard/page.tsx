@@ -538,17 +538,18 @@ function MateriaisUsadosMes() {
 
       if(mesMov !== mes) return
 
-      const obra = data.obraId || "Sem obra"
+      const material = data.materialNome || "Sem material"
+      const obra = data.obraNome || data.obraId || "Sem obra"
 
-      const chave = data.materialNome + "-" + obra
+      const chave = material + "-" + obra
 
       if(!mapa[chave]){
 
         mapa[chave] = {
-          material:data.materialNome,
+         material: material,
           obra: obra,
-          quantidade:0
-        }
+          quantidade: 0
+       }
 
       }
 
