@@ -209,83 +209,96 @@ export default function Controle() {
   // 🔥🔥🔥 SAÍDA COM TRANSFERÊNCIA
   async function saida(material:Material){
 
-    if(!obraDestino){
-      return alert("Selecione obra destino");
-    }
+  if(role !== "admin" && role !== "almoxarifado"){
+    alert("Você não tem permissão.");
+    return;
+  }
 
-    const qtd = quantidades[material.id];
-    if(!qtd || qtd <= 0) return;
+  const qtd = quantidades[material.id];
 
-    try{
+  if(!qtd || qtd <= 0) return;
 
-      // 🔻 REMOVE DA ORIGEM
-      const setoresSnap = await getDocs(
-        collection(db,"obras",obraSelecionada,"setores")
+  if(qtd > material.saldo){
+    alert("Quantidade maior que o saldo disponível.");
+    return;
+  }
+
+  if(!obraDestino){
+    alert("Selecione a obra destino");
+    return;
+  }
+
+  if(!user) return;
+
+  try{
+
+    // 🔻 REMOVE DA OBRA ATUAL
+    const setoresSnap = await getDocs(
+      collection(db,"obras",obraSelecionada,"setores")
+    );
+
+    for(const setorDoc of setoresSnap.docs){
+
+      const nomeSetorOrigem = setorDoc.data().nome;
+
+      const materialRef = doc(
+        db,
+        "obras",
+        obraSelecionada,
+        "setores",
+        setorDoc.id,
+        "materiais",
+        material.id
       );
 
-      for(const setorDoc of setoresSnap.docs){
-
-        const materialRef = doc(
-          db,
-          "obras",
-          obraSelecionada,
-          "setores",
-          setorDoc.id,
-          "materiais",
-          material.id
-        );
-
-        await updateDoc(materialRef,{
-          saldo: increment(-qtd)
-        }).catch(()=>{});
-      }
+      await updateDoc(materialRef,{
+        saldo: increment(-qtd),
+        atualizadoEm: serverTimestamp()
+      }).catch(()=>{});
 
       // 🔥 DESTINO
+
       const setoresDestinoSnap = await getDocs(
         collection(db,"obras",obraDestino,"setores")
       );
 
       let setorDestinoId = "";
 
-      if(setoresDestinoSnap.empty){
+      // 🔍 PROCURA SETOR COM MESMO NOME
+      const setorExistente = setoresDestinoSnap.docs.find(
+        s => s.data().nome === nomeSetorOrigem
+      );
 
+      if(setorExistente){
+        setorDestinoId = setorExistente.id;
+      }else{
+        // 🔥 CRIA O MESMO SETOR (EX: Elétrica)
         const novoSetor = await addDoc(
           collection(db,"obras",obraDestino,"setores"),
           {
-            nome:"Geral",
+            nome: nomeSetorOrigem,
+            nomeNormalizado: nomeSetorOrigem.toLowerCase(),
             criadoEm:new Date()
           }
         );
 
         setorDestinoId = novoSetor.id;
-
-      }else{
-        setorDestinoId = setoresDestinoSnap.docs[0].id;
       }
 
+      // 🔍 MATERIAL NO DESTINO
       const materiaisDestinoSnap = await getDocs(
         collection(db,"obras",obraDestino,"setores",setorDestinoId,"materiais")
       );
 
-      let encontrou = false;
+      const materialExistente = materiaisDestinoSnap.docs.find(
+        m => m.data().nome === material.nome
+      );
 
-      for(const docMat of materiaisDestinoSnap.docs){
-
-        const data = docMat.data();
-
-        if(data.nome === material.nome){
-
-          await updateDoc(docMat.ref,{
-            saldo: increment(qtd)
-          });
-
-          encontrou = true;
-          break;
-        }
-      }
-
-      if(!encontrou){
-
+      if(materialExistente){
+        await updateDoc(materialExistente.ref,{
+          saldo: increment(qtd)
+        });
+      }else{
         await addDoc(
           collection(db,"obras",obraDestino,"setores",setorDestinoId,"materiais"),
           {
@@ -297,14 +310,43 @@ export default function Controle() {
         );
       }
 
-      mostrarMensagem("Transferência realizada 🚀");
-      carregarMateriais(obraSelecionada);
-
-    }catch(e){
-      console.error(e);
-      alert("Erro na transferência");
     }
+
+    // 🧾 REGISTRO (mantive seu padrão)
+    const obraNome =
+      obras.find(o=>o.id === obraSelecionada)?.nome || "";
+
+    await registrarMovimentacao({
+
+      materialId: material.id,
+      materialNome: material.nome,
+      tipo: "transferencia",
+      quantidade: qtd,
+      obraId: obraSelecionada,
+      obraNome: obraNome,
+      destino: "transferencia",
+      usuarioId: user.uid,
+      usuarioNome: user.email || "",
+      empresaId: empresaId
+
+    });
+
+    mostrarMensagem("Transferência realizada com sucesso 🚀");
+
+    setQuantidades(prev=>({
+      ...prev,
+      [material.id]:0
+    }));
+
+    carregarMateriais(obraSelecionada);
+
+  }catch(error){
+
+    console.error(error);
+    alert("Erro na transferência.");
+
   }
+}
 
   if(loading) return null;
 
