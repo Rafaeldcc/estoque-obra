@@ -75,63 +75,58 @@ export default function MovimentacoesPage() {
 
   }
 
+async function carregarMovimentacoes(){
 
-  async function carregarMovimentacoes(){
+  if(!empresaId) return;
 
-    if(!empresaId) return;
+  setCarregando(true);
 
-    setCarregando(true);
+  try{
 
-    try{
+    const q = query(
+      collection(db,"movimentacoes"),
+      orderBy("criadoEm","desc") // ✅ CORRIGIDO
+    );
 
-      const q = query(
-        collection(db,"movimentacoes"),
-        orderBy("createdAt","desc")
-      );
+    const snap = await getDocs(q);
 
-      const snap = await getDocs(q);
+    const lista = snap.docs
+      .map(doc=>({
+        id:doc.id,
+        ...doc.data()
+      }))
+      .filter((mov:any)=>{
 
-      const lista = snap.docs
-        .map(doc=>({
-          id:doc.id,
-          ...doc.data()
-        }))
-        .filter((mov:any)=>{
+        const data = mov.createdAt || mov.criadoEm;
 
-          if(!mov.empresaId) return false;
-          if(mov.empresaId !== empresaId) return false;
+        if(!data) return false;
 
-          const data = mov.createdAt || mov.criadoEm;
+        try {
 
-          if(!data) return false;
+          const dataMov = data.toDate();
+          const mesMov = dataMov.getMonth() + 1;
 
-          try {
+          return mesMov === mesSelecionado;
 
-            const dataMov = data.toDate();
-            const mesMov = dataMov.getMonth() + 1;
+        } catch {
 
-            return mesMov === mesSelecionado;
+          return false;
 
-          } catch {
+        }
 
-            return false;
+      }) as Movimentacao[];
 
-          }
+    setMovimentacoes(lista);
 
-        }) as Movimentacao[];
+  }catch(error){
 
-      setMovimentacoes(lista);
-
-    }catch(error){
-
-      console.error("Erro ao carregar movimentações:",error);
-      setMovimentacoes([]);
-
-    }
-
-    setCarregando(false);
+    console.error("Erro ao carregar movimentações:",error);
+    setMovimentacoes([]);
 
   }
+
+  setCarregando(false);
+}
 
 
   async function excluirMovimentacao(id: string) {
