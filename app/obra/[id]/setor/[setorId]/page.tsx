@@ -54,26 +54,22 @@ carregarMateriais()
 carregarObras()
 },[])
 
-// 🔥 BUSCAR OBRAS
+// 🔥 OBRAS
 async function carregarObras(){
-
 const snap = await getDocs(collection(db,"obras"))
-
 const lista:any[] = []
 
 snap.forEach(docSnap=>{
-const data = docSnap.data()
-
 lista.push({
 id:docSnap.id,
-nome:data.nome
+nome:docSnap.data().nome
 })
 })
 
 setObras(lista)
-
 }
 
+// 🔥 MATERIAIS
 async function carregarMateriais(){
 
 const snapshot = await getDocs(
@@ -83,7 +79,6 @@ collection(db,"obras",obraId,"setores",setorId,"materiais")
 const lista:Material[] = []
 
 snapshot.forEach(docSnap=>{
-
 const data = docSnap.data()
 
 lista.push({
@@ -94,13 +89,10 @@ unidade:data.unidade ?? "",
 foto:data.foto ?? "",
 estoqueMinimo:data.estoqueMinimo ?? 0
 })
-
 })
 
 lista.sort((a,b)=>a.nome.localeCompare(b.nome))
-
 setMateriais(lista)
-
 }
 
 function mostrarMensagem(texto:string){
@@ -118,12 +110,10 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id)
 )
 
 mostrarMensagem("Material excluído")
-
-await carregarMateriais()
-
+carregarMateriais()
 }
 
-// 🔥 SAÍDA (TRANSFERÊNCIA CORRIGIDA)
+// 🔥 SAÍDA + TRANSFERÊNCIA PROFISSIONAL
 async function registrarSaida(){
 
 if(!materialSelecionado) return
@@ -134,33 +124,26 @@ return alert("Estoque insuficiente")
 }
 
 if(tipoMov === "transferencia" && !obraDestino){
-return alert("Selecione a obra de destino")
+return alert("Selecione a obra destino")
 }
 
-const novoSaldo = materialSelecionado.saldo - quantidade
-
+// 🔻 REMOVE DA ORIGEM
 await updateDoc(
 doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
-{saldo: novoSaldo}
+{saldo: materialSelecionado.saldo - quantidade}
 )
 
-// 🔥 TRANSFERÊNCIA REAL
+// 🔥 TRANSFERÊNCIA
 if(tipoMov === "transferencia"){
 
-const obraDestinoId = obraDestino
-
-// 🔥 BUSCAR SETOR ATUAL
+// 🔍 SETOR ATUAL
 const setorRef = doc(db,"obras",obraId,"setores",setorId)
 const setorSnap = await getDoc(setorRef)
 
-if(!setorSnap.exists()){
-return alert("Setor não encontrado")
-}
+const setorNome = setorSnap.data()?.nome
 
-const setorNome = setorSnap.data().nome
-
-// 🔥 CRIAR OU BUSCAR SETOR DESTINO
-const setoresDestinoRef = collection(db,"obras",obraDestinoId,"setores")
+// 🔍 DESTINO
+const setoresDestinoRef = collection(db,"obras",obraDestino,"setores")
 const setoresSnap = await getDocs(setoresDestinoRef)
 
 let setorDestinoId = ""
@@ -172,28 +155,21 @@ s => s.data().nome === setorNome
 if(setorExistente){
 setorDestinoId = setorExistente.id
 }else{
-
 const novoSetor = await addDoc(setoresDestinoRef,{
 nome:setorNome,
 criadoEm:new Date()
 })
-
 setorDestinoId = novoSetor.id
 }
 
-// 🔥 MATERIAL DESTINO
+// 🔍 MATERIAL DESTINO
 const materiaisDestinoRef = collection(
-db,
-"obras",
-obraDestinoId,
-"setores",
-setorDestinoId,
-"materiais"
+db,"obras",obraDestino,"setores",setorDestinoId,"materiais"
 )
 
 const materiaisSnap = await getDocs(materiaisDestinoRef)
 
-let materialExiste = false
+let encontrou = false
 
 for(const docMat of materiaisSnap.docs){
 
@@ -202,16 +178,15 @@ const data = docMat.data()
 if(data.nome === materialSelecionado.nome){
 
 await updateDoc(docMat.ref,{
-saldo: (data.saldo || 0) + quantidade
+saldo:(data.saldo || 0) + quantidade
 })
 
-materialExiste = true
+encontrou = true
 break
 }
 }
 
-if(!materialExiste){
-
+if(!encontrou){
 await addDoc(materiaisDestinoRef,{
 nome: materialSelecionado.nome,
 saldo: quantidade,
@@ -219,19 +194,30 @@ unidade: materialSelecionado.unidade || "",
 estoqueMinimo: materialSelecionado.estoqueMinimo || 0,
 foto: materialSelecionado.foto || ""
 })
+}
+
+// 🟢 ENTRADA NO DESTINO
+await addDoc(collection(db,"movimentacoes"),{
+materialNome: materialSelecionado.nome,
+quantidade,
+tipo:"entrada",
+obraId: obraDestino,
+origem: obraId,
+destino:"transferencia",
+usuarioNome:"Sistema",
+criadoEm:new Date()
+})
 
 }
 
-}
-
-// 🔥 LOG
+// 🔴 SAÍDA
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"saida",
 destino: tipoMov,
 obraId,
-obraDestinoId: obraDestino,
+obraDestinoId: obraDestino || null,
 usuarioNome:"Sistema",
 criadoEm:new Date()
 })
@@ -240,73 +226,33 @@ mostrarMensagem("Movimentação realizada com sucesso")
 
 setQuantidade(0)
 setObraDestino("")
-
-await carregarMateriais()
-
+carregarMateriais()
 }
 
-// 🔥 ENTRADA
+// 🔥 ENTRADA SIMPLES
 async function registrarEntrada(){
 
 if(!materialSelecionado) return
 if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
-const novoSaldo = materialSelecionado.saldo + quantidade
-
 await updateDoc(
 doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
-{saldo: novoSaldo}
+{saldo: materialSelecionado.saldo + quantidade}
 )
 
-// 🔴 SAÍDA (origem)
 await addDoc(collection(db,"movimentacoes"),{
-  materialNome: materialSelecionado.nome,
-  quantidade,
-  tipo:"saida",
-  obraId: obraId,
-  obraDestinoId: obraDestino,
-  destino: tipoMov,
-  usuarioNome:"Sistema",
-  criadoEm:new Date()
+materialNome: materialSelecionado.nome,
+quantidade,
+tipo:"entrada",
+obraId,
+usuarioNome:"Sistema",
+criadoEm:new Date()
 })
-
-// 🔥 REGISTRA ENTRADA NA OBRA DESTINO
-if(tipoMov === "transferencia"){
-
-  await addDoc(collection(db,"movimentacoes"),{
-    materialNome: materialSelecionado.nome,
-    quantidade,
-    tipo:"entrada",
-    destino:"transferencia",
-
-    obraNome: obraDestino, // destino
-    obraOrigem: "Obra atual",
-
-    usuarioNome:"Sistema",
-    criadoEm:new Date()
-  })
-
-}
-
-// 🟢 ENTRADA (destino)
-if(tipoMov === "transferencia"){
-  await addDoc(collection(db,"movimentacoes"),{
-    materialNome: materialSelecionado.nome,
-    quantidade,
-    tipo:"entrada",
-    obraId: obraDestino,
-    origem: obraId,
-    destino:"transferencia",
-    usuarioNome:"Sistema",
-    criadoEm:new Date()
-  })
-}
 
 mostrarMensagem("Entrada registrada")
 
 setQuantidade(0)
-await carregarMateriais()
-
+carregarMateriais()
 }
 
 // 🔥 FOTO
@@ -321,7 +267,6 @@ storage,
 )
 
 await uploadBytes(storageRef,file)
-
 const url = await getDownloadURL(storageRef)
 
 await updateDoc(
@@ -329,17 +274,14 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {foto:url}
 )
 
-await carregarMateriais()
+carregarMateriais()
 
-setMaterialSelecionado({
-...material,
-foto:url
-})
+setMaterialSelecionado({...material,foto:url})
 
-mostrarMensagem("Foto salva com sucesso")
-
+mostrarMensagem("Foto salva")
 }
 
+// 🔥 REMOVER FOTO
 async function removerFoto(material:Material){
 
 await updateDoc(
@@ -347,15 +289,11 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {foto:""}
 )
 
-await carregarMateriais()
+carregarMateriais()
 
-setMaterialSelecionado({
-...material,
-foto:""
-})
+setMaterialSelecionado({...material,foto:""})
 
 mostrarMensagem("Foto removida")
-
 }
 
 // 🔥 ESTOQUE MÍNIMO
@@ -369,16 +307,11 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 )
 
 mostrarMensagem("Estoque mínimo salvo")
-
-await carregarMateriais()
-
+carregarMateriais()
 }
 
 function normalizar(texto:string){
-return texto
-.normalize("NFD")
-.replace(/[\u0300-\u036f]/g,"")
-.toLowerCase()
+return texto.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
 }
 
 const filtrados = materiais.filter(m =>
@@ -386,7 +319,6 @@ normalizar(m.nome).startsWith(normalizar(busca))
 )
 
 return(
-
 <div className="max-w-6xl mx-auto p-8">
 
 <button
@@ -401,7 +333,6 @@ Controle de Estoque
 </h1>
 
 {!materialSelecionado && (
-
 <>
 <input
 placeholder="Buscar material..."
@@ -435,13 +366,10 @@ onClick={()=>setMaterialSelecionado(material)}
 <td className="p-3 flex items-center justify-between">
 
 <div className="flex items-center gap-3">
-
 {material.foto && (
 <img src={material.foto} className="w-10 h-10 rounded"/>
 )}
-
 {material.nome}
-
 </div>
 
 <button
