@@ -270,6 +270,24 @@ await addDoc(collection(db,"movimentacoes"),{
   criadoEm:new Date()
 })
 
+// 🔥 REGISTRA ENTRADA NA OBRA DESTINO
+if(tipoMov === "transferencia"){
+
+  await addDoc(collection(db,"movimentacoes"),{
+    materialNome: materialSelecionado.nome,
+    quantidade,
+    tipo:"entrada",
+    destino:"transferencia",
+
+    obraNome: obraDestino, // destino
+    obraOrigem: "Obra atual",
+
+    usuarioNome:"Sistema",
+    criadoEm:new Date()
+  })
+
+}
+
 // 🟢 ENTRADA (destino)
 if(tipoMov === "transferencia"){
   await addDoc(collection(db,"movimentacoes"),{
