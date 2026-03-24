@@ -7,8 +7,8 @@ import {
   doc,
   updateDoc,
   addDoc,
-  deleteDoc,
-  getDoc
+  getDoc,
+  serverTimestamp
 } from "firebase/firestore";
 
 import {
@@ -19,7 +19,7 @@ import {
 
 import { db, storage } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/lib/useAuth"; // ✅ NOVO
+import { useAuth } from "@/lib/useAuth";
 
 interface Material{
   id:string
@@ -34,7 +34,7 @@ export default function ControleEstoque(){
 
 const router = useRouter()
 const params = useParams()
-const { user } = useAuth() // ✅ NOVO
+const { user } = useAuth()
 
 const obraId = params.id as string
 const setorId = params.setorId as string
@@ -104,6 +104,11 @@ setTimeout(()=>setMensagem(""),3000)
 // 🔥 SAÍDA + TRANSFERÊNCIA
 async function registrarSaida(){
 
+if(!user){
+alert("Usuário não autenticado")
+return
+}
+
 if(!materialSelecionado) return
 if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
@@ -115,12 +120,12 @@ if(tipoMov === "transferencia" && !obraDestino){
 return alert("Selecione a obra destino")
 }
 
-// 🔥 BUSCAR EMPRESA E OBRA
+// 🔥 DADOS
 const userSnap = await getDoc(doc(db,"usuarios",user.uid))
 const empresaId = userSnap.data()?.empresaId || null
 
 const obraSnap = await getDoc(doc(db,"obras",obraId))
-const obraNome = obraSnap.data()?.nome || "Sem nome"
+const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
 
 // 🔻 REMOVE DA ORIGEM
 await updateDoc(
@@ -149,7 +154,7 @@ setorDestinoId = setorExistente.id
 }else{
 const novoSetor = await addDoc(setoresDestinoRef,{
 nome:setorNome,
-criadoEm:new Date()
+criadoEm: serverTimestamp()
 })
 setorDestinoId = novoSetor.id
 }
@@ -187,47 +192,39 @@ foto: materialSelecionado.foto || ""
 })
 }
 
-// 🟢 ENTRADA DESTINO (COMPLETA)
+// 🟢 ENTRADA DESTINO
 const obraDestinoSnap = await getDoc(doc(db,"obras",obraDestino))
-const obraDestinoNome = obraDestinoSnap.data()?.nome || "Sem nome"
+const obraDestinoNome = obraDestinoSnap.data()?.nome || `Obra ${obraDestino}`
 
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"entrada",
-
 obraId: obraDestino,
 obraNome: obraDestinoNome,
-
 obraOrigemId: obraId,
 obraDestinoId: obraDestino,
-
 destino:"transferencia",
-
 empresaId,
-usuarioNome: user?.email || "Sistema",
-criadoEm:new Date()
+usuarioNome: user.email || "Sistema",
+criadoEm: serverTimestamp()
 })
 
 }
 
-// 🔴 SAÍDA (COMPLETA)
+// 🔴 SAÍDA
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"saida",
-
 obraId: obraId,
 obraNome: obraNome,
-
 obraOrigemId: obraId,
 obraDestinoId: tipoMov === "transferencia" ? obraDestino : null,
-
 destino: tipoMov,
-
 empresaId,
-usuarioNome: user?.email || "Sistema",
-criadoEm:new Date()
+usuarioNome: user.email || "Sistema",
+criadoEm: serverTimestamp()
 })
 
 mostrarMensagem("Movimentação realizada com sucesso")
@@ -240,17 +237,19 @@ carregarMateriais()
 // 🔥 ENTRADA
 async function registrarEntrada(){
 
+if(!user){
+alert("Usuário não autenticado")
+return
+}
+
 if(!materialSelecionado) return
 if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
-if (!user) {
-  alert("Usuário não autenticado");
-  return;
-}
+const userSnap = await getDoc(doc(db,"usuarios",user.uid))
 const empresaId = userSnap.data()?.empresaId || null
 
 const obraSnap = await getDoc(doc(db,"obras",obraId))
-const obraNome = obraSnap.data()?.nome || "Sem nome"
+const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
 
 await updateDoc(
 doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
@@ -261,13 +260,11 @@ await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"entrada",
-
 obraId,
 obraNome,
-
 empresaId,
-usuarioNome: user?.email || "Sistema",
-criadoEm:new Date()
+usuarioNome: user.email || "Sistema",
+criadoEm: serverTimestamp()
 })
 
 mostrarMensagem("Entrada registrada")
@@ -276,7 +273,7 @@ setQuantidade(0)
 carregarMateriais()
 }
 
-// 🔥 FOTO
+// 🔥 FOTO (mantido igual)
 async function uploadFoto(e:any,material:Material){
 
 const file = e.target.files[0]
