@@ -218,29 +218,7 @@ export default function Dashboard() {
     const consumoMateriais: any = {};
     const consumoObras: any = {};
 
-    movSnap.forEach((docMov) => {
-
-  const data = docMov.data();
-
-  if (data.tipo !== "saida") return;
-
-  const material = data.materialNome;
-  const quantidade = Number(data.quantidade || 0);
-  const obra = data.obraId || "Sem obra";
-
-  if (!consumoMateriais[material]) {
-    consumoMateriais[material] = 0;
-  }
-
-  consumoMateriais[material] += quantidade;
-
-  if (!consumoObras[obra]) {
-    consumoObras[obra] = 0;
-  }
-
-  consumoObras[obra] += quantidade;
-
-});
+    
 
     const rankingMateriais = Object.keys(consumoMateriais)
       .map((material) => ({
