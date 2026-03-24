@@ -18,8 +18,8 @@ export default function ControleSetor() {
 
   const params = useParams();
 
-  const obraId = params.id as string;
-  const setorId = params.setorId as string;
+  const obraId = params?.id as string
+  const setorId = params?.setorId as string
 
   const [materiais,setMateriais] = useState<any[]>([]);
   const [obras,setObras] = useState<any[]>([]);
