@@ -41,13 +41,38 @@ const [materialSelecionado,setMaterialSelecionado] = useState<Material | null>(n
 const [busca,setBusca] = useState("")
 const [mensagem,setMensagem] = useState("")
 
-// 🔥 NOVOS STATES (movimentação)
+// 🔥 MOVIMENTAÇÃO
 const [quantidade,setQuantidade] = useState(0)
 const [tipoMov,setTipoMov] = useState("uso")
 
+// 🔥 NOVO (TRANSFERÊNCIA)
+const [obras,setObras] = useState<any[]>([])
+const [obraDestino,setObraDestino] = useState("")
+
 useEffect(()=>{
 carregarMateriais()
+carregarObras()
 },[])
+
+// 🔥 BUSCAR OBRAS
+async function carregarObras(){
+
+const snap = await getDocs(collection(db,"obras"))
+
+const lista:any[] = []
+
+snap.forEach(docSnap=>{
+const data = docSnap.data()
+
+lista.push({
+id:docSnap.id,
+nome:data.nome
+})
+})
+
+setObras(lista)
+
+}
 
 async function carregarMateriais(){
 
@@ -93,6 +118,10 @@ if(quantidade > materialSelecionado.saldo){
 return alert("Estoque insuficiente")
 }
 
+if(tipoMov === "transferencia" && !obraDestino){
+return alert("Selecione a obra de destino")
+}
+
 const novoSaldo = materialSelecionado.saldo - quantidade
 
 await updateDoc(
@@ -106,6 +135,7 @@ quantidade,
 tipo:"saida",
 destino: tipoMov,
 obraNome: "Obra atual",
+obraDestino: tipoMov === "transferencia" ? obraDestino : null,
 usuarioNome:"Sistema",
 criadoEm:new Date()
 })
@@ -113,6 +143,7 @@ criadoEm:new Date()
 mostrarMensagem("Saída registrada")
 
 setQuantidade(0)
+setObraDestino("")
 await carregarMateriais()
 
 }
@@ -334,6 +365,26 @@ className="border p-2 rounded"
 <option value="transferencia">Transferência</option>
 <option value="descarte">Descarte</option>
 </select>
+
+{/* 🔥 NOVO SELECT */}
+{tipoMov === "transferencia" && (
+<select
+value={obraDestino}
+onChange={(e)=>setObraDestino(e.target.value)}
+className="border p-2 rounded"
+>
+<option value="">Selecionar obra destino</option>
+
+{obras
+.filter(o => o.id !== obraId)
+.map((obra)=>(
+<option key={obra.id} value={obra.nome}>
+{obra.nome}
+</option>
+))}
+
+</select>
+)}
 
 <button onClick={registrarSaida} className="bg-red-600 text-white px-4 py-2 rounded">
 Confirmar
