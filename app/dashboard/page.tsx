@@ -209,14 +209,53 @@ export default function Dashboard() {
 
 
     const movQuery = query(
-      collection(db, "movimentacoes"),
-      where("empresaId", "==", empresaId)
-    );
+  collection(db, "movimentacoes"),
+  where("empresaId", "==", empresaId)
+);
 
-    const movSnap = await getDocs(movQuery);
+const movSnap = await getDocs(movQuery);
 
-    const consumoMateriais: any = {};
-    const consumoObras: any = {};
+const consumoMateriais: any = {};
+const consumoObras: any = {};
+
+// 🔥 MAPA DE OBRAS (ID → NOME)
+const mapaObras: any = {};
+
+obrasSnap.forEach((doc) => {
+  mapaObras[doc.id] = doc.data().nome;
+});
+
+// 🔥 PROCESSA MOVIMENTAÇÕES
+movSnap.forEach((docMov) => {
+
+  const data = docMov.data();
+
+  if (data.tipo !== "saida") return;
+
+  const material = data.materialNome || "Sem material";
+  const quantidade = Number(data.quantidade || 0);
+
+  // ✅ CORREÇÃO PRINCIPAL
+  const obra =
+    data.obraNome ||
+    mapaObras[data.obraId] ||
+    "Sem obra";
+
+  // 🔹 SOMA POR MATERIAL
+  if (!consumoMateriais[material]) {
+    consumoMateriais[material] = 0;
+  }
+
+  consumoMateriais[material] += quantidade;
+
+  // 🔹 SOMA POR OBRA
+  if (!consumoObras[obra]) {
+    consumoObras[obra] = 0;
+  }
+
+  consumoObras[obra] += quantidade;
+
+});
 
     
 
