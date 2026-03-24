@@ -20,24 +20,14 @@ type Movimentacao = {
 };
 
 export default function Historico() {
-
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 NOVO: mês selecionado
-  const [mesSelecionado, setMesSelecionado] = useState(
-    new Date().getMonth() + 1
-  );
-
   useEffect(() => {
     carregarMovimentacoes();
-  }, [mesSelecionado]); // 🔥 atualiza ao trocar mês
-
+  }, []);
 
   async function carregarMovimentacoes() {
-
-    setLoading(true);
-
     const q = query(
       collection(db, "movimentacoes"),
       orderBy("createdAt", "desc")
@@ -45,41 +35,20 @@ export default function Historico() {
 
     const snap = await getDocs(q);
 
-    const lista = snap.docs
-      .map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }))
-      .filter((mov: any) => {
-
-        if (!mov.createdAt) return false;
-
-        try {
-
-          const data = mov.createdAt.toDate();
-          const mes = data.getMonth() + 1;
-
-          return mes === mesSelecionado;
-
-        } catch {
-
-          return false;
-
-        }
-
-      }) as Movimentacao[];
+    const lista = snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Movimentacao[];
 
     setMovimentacoes(lista);
     setLoading(false);
   }
-
 
   function formatarData(timestamp: any) {
     if (!timestamp) return "";
     const data = timestamp.toDate();
     return data.toLocaleString("pt-BR");
   }
-
 
   if (loading) {
     return (
@@ -89,44 +58,11 @@ export default function Historico() {
     );
   }
 
-
   return (
     <div style={{ maxWidth: 1100, margin: "40px auto" }}>
-
-      {/* 🔥 HEADER COM FILTRO */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2>Histórico de Movimentações</h2>
-
-        <select
-          value={mesSelecionado}
-          onChange={(e) => setMesSelecionado(Number(e.target.value))}
-          style={{ padding: 8, borderRadius: 6 }}
-        >
-          <option value={1}>Janeiro</option>
-          <option value={2}>Fevereiro</option>
-          <option value={3}>Março</option>
-          <option value={4}>Abril</option>
-          <option value={5}>Maio</option>
-          <option value={6}>Junho</option>
-          <option value={7}>Julho</option>
-          <option value={8}>Agosto</option>
-          <option value={9}>Setembro</option>
-          <option value={10}>Outubro</option>
-          <option value={11}>Novembro</option>
-          <option value={12}>Dezembro</option>
-        </select>
-      </div>
-
-
-      {/* 🔥 TOTAL DO MÊS */}
-      <div style={{ marginTop: 15, fontWeight: "bold" }}>
-        Total movimentado no mês:{" "}
-        {movimentacoes.reduce((acc, mov) => acc + mov.quantidade, 0)}
-      </div>
-
+      <h2>Histórico de Movimentações</h2>
 
       <div style={{ marginTop: 30 }}>
-
         {movimentacoes.length === 0 && (
           <p>Nenhuma movimentação encontrada.</p>
         )}
@@ -168,7 +104,6 @@ export default function Historico() {
             </div>
           </div>
         ))}
-
       </div>
     </div>
   );
