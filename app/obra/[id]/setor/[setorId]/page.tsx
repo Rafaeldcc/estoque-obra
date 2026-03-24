@@ -258,14 +258,31 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 {saldo: novoSaldo}
 )
 
+// 🔴 SAÍDA (origem)
 await addDoc(collection(db,"movimentacoes"),{
-materialNome: materialSelecionado.nome,
-quantidade,
-tipo:"entrada",
-obraNome:"Obra atual",
-usuarioNome:"Sistema",
-criadoEm:new Date()
+  materialNome: materialSelecionado.nome,
+  quantidade,
+  tipo:"saida",
+  obraId: obraId,
+  obraDestinoId: obraDestino,
+  destino: tipoMov,
+  usuarioNome:"Sistema",
+  criadoEm:new Date()
 })
+
+// 🟢 ENTRADA (destino)
+if(tipoMov === "transferencia"){
+  await addDoc(collection(db,"movimentacoes"),{
+    materialNome: materialSelecionado.nome,
+    quantidade,
+    tipo:"entrada",
+    obraId: obraDestino,
+    origem: obraId,
+    destino:"transferencia",
+    usuarioNome:"Sistema",
+    criadoEm:new Date()
+  })
+}
 
 mostrarMensagem("Entrada registrada")
 
