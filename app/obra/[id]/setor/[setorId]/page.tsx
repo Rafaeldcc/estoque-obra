@@ -51,6 +51,9 @@ const [tipoMov,setTipoMov] = useState("uso")
 const [obras,setObras] = useState<any[]>([])
 const [obraDestino,setObraDestino] = useState("")
 
+const [editandoNome, setEditandoNome] = useState(false)
+const [novoNome, setNovoNome] = useState("")
+
 useEffect(()=>{
 carregarMateriais()
 carregarObras()
@@ -67,6 +70,25 @@ doc(db,"obras",obraId,"setores",setorId,"materiais",material.id)
 )
 
 mostrarMensagem("Material excluído")
+carregarMateriais()
+}
+
+async function salvarNomeMaterial(){
+
+if(!materialSelecionado || !novoNome.trim()) return
+
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+{ nome: novoNome }
+)
+
+setMaterialSelecionado({
+...materialSelecionado,
+nome: novoNome
+})
+
+setEditandoNome(false)
+mostrarMensagem("Nome atualizado")
 carregarMateriais()
 }
 
@@ -438,9 +460,49 @@ className="mb-6 text-blue-600"
 ← Voltar
 </button>
 
-<h2 className="text-xl font-bold mb-2">
+<div className="flex items-center gap-3 mb-4">
+
+{editandoNome ? (
+<>
+<input
+value={novoNome}
+onChange={(e)=>setNovoNome(e.target.value)}
+className="border p-2 rounded"
+/>
+
+<button
+onClick={salvarNomeMaterial}
+className="bg-green-600 text-white px-3 py-1 rounded"
+>
+Salvar
+</button>
+
+<button
+onClick={()=>setEditandoNome(false)}
+className="bg-gray-400 text-white px-3 py-1 rounded"
+>
+Cancelar
+</button>
+</>
+) : (
+<>
+<h2 className="text-xl font-bold">
 {materialSelecionado.nome}
 </h2>
+
+<button
+onClick={()=>{
+setEditandoNome(true)
+setNovoNome(materialSelecionado.nome)
+}}
+className="text-blue-600"
+>
+✏️
+</button>
+</>
+)}
+
+</div>
 
 <p className="mb-2 text-lg">
 Quantidade atual:
