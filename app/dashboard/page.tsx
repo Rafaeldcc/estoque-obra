@@ -743,3 +743,9 @@ function MateriaisUsadosMes() {
   </div>
 
 )}
+
+</div>  {/* 👈 FECHA A DIV PRINCIPAL */}
+
+)
+
+}
