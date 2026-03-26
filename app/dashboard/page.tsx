@@ -743,7 +743,3 @@ function MateriaisUsadosMes() {
   </div>
 
 )}
-
-  )
-
-}
