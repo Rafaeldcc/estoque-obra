@@ -714,16 +714,16 @@ function MateriaisUsadosMes() {
                 </tr>
               </thead>
 
-               <tbody>
-                 {dados
-                   .filter((d:any)=>d.obra === obraSelecionada)
-                   .map((item:any,i:number)=>(
-                     <tr key={i} className="border-b">
-                       <td className="p-2">{item.material}</td>
-                       <td className="p-2 text-center font-bold text-blue-600">
-                         {item.quantidade}
-                       </td>
-                     </tr>
+              <tbody>
+                {dados
+                  .filter((d:any)=>d.obra === obraSelecionada)
+                  .map((item:any,i:number)=>(
+                    <tr key={i} className="border-b">
+                      <td className="p-2">{item.material}</td>
+                      <td className="p-2 text-center font-bold text-blue-600">
+                        {item.quantidade}
+                      </td>
+                    </tr>
                 ))}
               </tbody>
 
