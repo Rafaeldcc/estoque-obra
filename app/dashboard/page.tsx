@@ -728,15 +728,16 @@ function MateriaisUsadosMes() {
               </tbody>
 
             </table>
-          </div>
-      </div>
+            </div> {/* scroll */}
 
-      <button
-        onClick={gerarPDF}
-        className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-      >
-        📄 Gerar PDF
-      </button>
+            </div> {/* 👈 FECHA o bloco da obraSelecionada */}
+
+            <button
+              onClick={gerarPDF}
+              className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            >
+              📄 Gerar PDF
+            </button>
 
     </div>
 
