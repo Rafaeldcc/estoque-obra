@@ -691,55 +691,58 @@ function MateriaisUsadosMes() {
 
       {obraSelecionada && (
 
-        <div>
+  <div>
 
-          <button
-            onClick={()=>setObraSelecionada(null)}
-            className="mb-4 bg-gray-200 px-3 py-1 rounded"
-          >
-            ← Voltar
-          </button>
+    <button
+      onClick={()=>setObraSelecionada(null)}
+      className="mb-4 bg-gray-200 px-3 py-1 rounded"
+    >
+      ← Voltar
+    </button>
 
-          <h3 className="font-semibold mb-4">
-            Materiais usados — {obraSelecionada}
-          </h3>
+    <h3 className="font-semibold mb-4">
+      Materiais usados — {obraSelecionada}
+    </h3>
 
-          <div className="max-h-[400px] overflow-y-auto">
-            <table className="w-full">
+    <div className="max-h-[400px] overflow-y-auto">
+      <table className="w-full">
 
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Material</th>
-                  <th className="text-center p-2">Quantidade</th>
-                </tr>
-              </thead>
+        <thead>
+          <tr className="border-b">
+            <th className="text-left p-2">Material</th>
+            <th className="text-center p-2">Quantidade</th>
+          </tr>
+        </thead>
 
-              <tbody>
-                {dados
-                  .filter((d:any)=>d.obra === obraSelecionada)
-                  .map((item:any,i:number)=>(
-                    <tr key={i} className="border-b">
-                      <td className="p-2">{item.material}</td>
-                      <td className="p-2 text-center font-bold text-blue-600">
-                        {item.quantidade}
-                      </td>
-                    </tr>
-                ))}
-              </tbody>
+        <tbody>
+          {dados
+            .filter((d:any)=>d.obra === obraSelecionada)
+            .map((item:any,i:number)=>(
 
-            </table>
-            </div> {/* scroll */}
+              <tr key={i} className="border-b">
+                <td className="p-2">{item.material}</td>
+                <td className="p-2 text-center font-bold text-blue-600">
+                  {item.quantidade}
+                </td>
+              </tr>
 
-            </div> {/* 👈 FECHA o bloco da obraSelecionada */}
+          ))}
+        </tbody>
 
-            <button
-              onClick={gerarPDF}
-              className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-            >
-              📄 Gerar PDF
-            </button>
-
+      </table>
     </div>
+
+    {/* BOTÃO TEM QUE FICAR DENTRO */}
+    <button
+      onClick={gerarPDF}
+      className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+    >
+      📄 Gerar PDF
+    </button>
+
+  </div>
+
+)}
 
   )
 
