@@ -611,141 +611,109 @@ function MateriaisUsadosMes() {
   const obras = [...new Set(dados.map((d:any)=>d.obra))]
 
 
-  return(
+  return (
 
-    <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100">
+  <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100">
 
-      <div className="flex justify-between mb-4">
+    <div className="flex justify-between mb-4">
+      <h2 className="text-xl font-bold">
+        🔥 Materiais mais usados
+      </h2>
 
-        <h2 className="text-xl font-bold">
-          🔥 Materiais mais usados
-        </h2>
-
-        <select
-          value={mes}
-          onChange={(e)=>setMes(Number(e.target.value))}
-          className="border p-2 rounded"
-        >
-
-          <option value={1}>Janeiro</option>
-          <option value={2}>Fevereiro</option>
-          <option value={3}>Março</option>
-          <option value={4}>Abril</option>
-          <option value={5}>Maio</option>
-          <option value={6}>Junho</option>
-          <option value={7}>Julho</option>
-          <option value={8}>Agosto</option>
-          <option value={9}>Setembro</option>
-          <option value={10}>Outubro</option>
-          <option value={11}>Novembro</option>
-          <option value={12}>Dezembro</option>
-
-        </select>
-
-      </div>
-
-
-      {/* LISTA DE OBRAS */}
-
-      {!obraSelecionada && (
-
-        <div>
-
-          <h3 className="font-semibold mb-4">
-            Obras com consumo
-          </h3>
-
-          {obras.map((obra:any,i:number)=>{
-
-            const total = dados
-              .filter((d:any)=>d.obra === obra)
-              .reduce((acc:any,item:any)=>acc+item.quantidade,0)
-
-            return(
-
-              <div
-                key={i}
-                onClick={()=>setObraSelecionada(obra)}
-                className="border-b py-3 cursor-pointer hover:bg-gray-100 flex justify-between"
-              >
-
-                <span>{obra}</span>
-
-                <span className="font-bold text-blue-600">
-                  {total}
-                </span>
-
-              </div>
-
-            )
-
-          })}
-
-        </div>
-
-      )}
-
-
-
-      {/* LISTA DE MATERIAIS DA OBRA */}
-
-      {obraSelecionada && (
-
-  <div>
-
-    <button
-      onClick={()=>setObraSelecionada(null)}
-      className="mb-4 bg-gray-200 px-3 py-1 rounded"
-    >
-      ← Voltar
-    </button>
-
-    <h3 className="font-semibold mb-4">
-      Materiais usados — {obraSelecionada}
-    </h3>
-
-    <div className="max-h-[400px] overflow-y-auto">
-      <table className="w-full">
-
-        <thead>
-          <tr className="border-b">
-            <th className="text-left p-2">Material</th>
-            <th className="text-center p-2">Quantidade</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {dados
-            .filter((d:any)=>d.obra === obraSelecionada)
-            .map((item:any,i:number)=>(
-
-              <tr key={i} className="border-b">
-                <td className="p-2">{item.material}</td>
-                <td className="p-2 text-center font-bold text-blue-600">
-                  {item.quantidade}
-                </td>
-              </tr>
-
-          ))}
-        </tbody>
-
-      </table>
+      <select
+        value={mes}
+        onChange={(e)=>setMes(Number(e.target.value))}
+        className="border p-2 rounded"
+      >
+        <option value={1}>Janeiro</option>
+        <option value={2}>Fevereiro</option>
+        <option value={3}>Março</option>
+        <option value={4}>Abril</option>
+        <option value={5}>Maio</option>
+        <option value={6}>Junho</option>
+        <option value={7}>Julho</option>
+        <option value={8}>Agosto</option>
+        <option value={9}>Setembro</option>
+        <option value={10}>Outubro</option>
+        <option value={11}>Novembro</option>
+        <option value={12}>Dezembro</option>
+      </select>
     </div>
 
-    {/* BOTÃO TEM QUE FICAR DENTRO */}
-    <button
-      onClick={gerarPDF}
-      className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-    >
-      📄 Gerar PDF
-    </button>
+    {!obraSelecionada && (
+      <div>
+        <h3 className="font-semibold mb-4">Obras com consumo</h3>
+
+        {obras.map((obra:any,i:number)=>{
+
+          const total = dados
+            .filter((d:any)=>d.obra === obra)
+            .reduce((acc:any,item:any)=>acc+item.quantidade,0)
+
+          return(
+            <div
+              key={i}
+              onClick={()=>setObraSelecionada(obra)}
+              className="border-b py-3 cursor-pointer hover:bg-gray-100 flex justify-between"
+            >
+              <span>{obra}</span>
+              <span className="font-bold text-blue-600">
+                {total}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    )}
+
+    {obraSelecionada && (
+      <div>
+
+        <button
+          onClick={()=>setObraSelecionada(null)}
+          className="mb-4 bg-gray-200 px-3 py-1 rounded"
+        >
+          ← Voltar
+        </button>
+
+        <h3 className="font-semibold mb-4">
+          Materiais usados — {obraSelecionada}
+        </h3>
+
+        <div className="max-h-[400px] overflow-y-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left p-2">Material</th>
+                <th className="text-center p-2">Quantidade</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {dados
+                .filter((d:any)=>d.obra === obraSelecionada)
+                .map((item:any,i:number)=>(
+                  <tr key={i} className="border-b">
+                    <td className="p-2">{item.material}</td>
+                    <td className="p-2 text-center font-bold text-blue-600">
+                      {item.quantidade}
+                    </td>
+                  </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <button
+          onClick={gerarPDF}
+          className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+        >
+          📄 Gerar PDF
+        </button>
+
+      </div>
+    )}
 
   </div>
 
-)}
-
-</div>  {/* 👈 FECHA A DIV PRINCIPAL */}
-
 )
-
-}
