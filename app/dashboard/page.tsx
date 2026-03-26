@@ -729,6 +729,7 @@ function MateriaisUsadosMes() {
 
             </table>
           </div>
+      </div>
 
       <button
         onClick={gerarPDF}
