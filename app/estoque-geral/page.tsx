@@ -127,12 +127,12 @@ export default function EstoqueGeral() {
 
             if (saldo === 0) continue;
 
-            const chave = materialNome;
+            const chave = normalizar(materialNome.trim());
 
             if (!mapa[chave]) {
               mapa[chave] = {
-                material: materialNome,
-                setor: setorNome, // pode manter ou remover depois
+                material: materialNome.trim(), // 👈 nome bonito
+                setor: setorNome,
                 total: 0,
                 obras: {}
               };
