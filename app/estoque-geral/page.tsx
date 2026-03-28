@@ -122,27 +122,34 @@ export default function EstoqueGeral() {
 
             const data = mat.data();
 
-            const materialNome = data.nome || "Material";
+            const materialNomeBruto = data.nome || "Material";
+
+            // 🔥 REMOVE espaços duplicados + limpa
+            const materialNome = materialNomeBruto
+              .replace(/\s+/g, " ")
+              .trim();
+
             const saldo = Number(data.saldo || 0);
 
             if (saldo === 0) continue;
 
-            const chave = normalizar(materialNome.trim());
+            // 🔥 chave normalizada PERFEITA
+            const chave = normalizar(materialNome);
 
             if (!mapa[chave]) {
               mapa[chave] = {
-                material: materialNome.trim(), // 👈 nome bonito
+                material: materialNome, // 👈 agora padronizado
                 setor: setorNome,
                 total: 0,
                 obras: {}
               };
             }
 
-            // 🔥 soma corretamente por obra
+            // 🔥 soma correta
             mapa[chave].obras[obra.nome] =
               (mapa[chave].obras[obra.nome] || 0) + saldo;
 
-            // 🔥 soma total geral
+            // 🔥 soma total
             mapa[chave].total += saldo;
 
           }
