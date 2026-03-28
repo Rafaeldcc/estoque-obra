@@ -127,16 +127,23 @@ export default function EstoqueGeral() {
 
             if (saldo === 0) continue;
 
-            const chave = materialNome + "_" + setorNome;
+            const chave = materialNome;
 
             if (!mapa[chave]) {
               mapa[chave] = {
                 material: materialNome,
-                setor: setorNome,
+                setor: setorNome, // pode manter ou remover depois
                 total: 0,
                 obras: {}
               };
             }
+
+            // 🔥 soma corretamente por obra
+            mapa[chave].obras[obra.nome] =
+              (mapa[chave].obras[obra.nome] || 0) + saldo;
+
+            // 🔥 soma total geral
+            mapa[chave].total += saldo;
 
             mapa[chave].obras[obra.nome] = saldo;
             mapa[chave].total += saldo;
