@@ -252,11 +252,25 @@ export default function EstoqueGeral() {
 
   }
 
+  // 🔥 BUSCA INTELIGENTE (PRIORIDADE PRA QUEM COMEÇA)
+  const termo = normalizar(busca);
+
   const materiais = tabela
     .filter(l => l.setor === setorSelecionado)
-    .filter(l =>
-      normalizar(l.material).includes(normalizar(busca))
-    );
+    .filter(l => normalizar(l.material).includes(termo))
+    .sort((a, b) => {
+
+      const nomeA = normalizar(a.material);
+      const nomeB = normalizar(b.material);
+
+      const aComeca = nomeA.startsWith(termo);
+      const bComeca = nomeB.startsWith(termo);
+
+      if (aComeca && !bComeca) return -1;
+      if (!aComeca && bComeca) return 1;
+
+      return nomeA.localeCompare(nomeB);
+    });
 
   return (
 
@@ -304,12 +318,10 @@ export default function EstoqueGeral() {
 
               <tr key={index} className="border hover:bg-gray-50">
 
-                {/* 🔒 MATERIAL NÃO CLICÁVEL */}
                 <td className="p-3 border font-semibold text-black">
                   {linha.material}
                 </td>
 
-                {/* 🔥 SÓ QUANTIDADE CLICA */}
                 {obras.map((obra) => {
 
                   const valor = linha.obras[obra.nome] ?? 0;
