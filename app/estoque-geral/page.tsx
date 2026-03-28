@@ -305,7 +305,7 @@ export default function EstoqueGeral() {
               <tr key={index} className="border hover:bg-gray-50">
 
                 {/* 🔒 MATERIAL NÃO CLICÁVEL */}
-                <td className="p-3 border font-semibold text-blue-600">
+                <td className="p-3 border font-semibold text-black">
                   {linha.material}
                 </td>
 
@@ -317,15 +317,9 @@ export default function EstoqueGeral() {
                   return (
                     <td
                       key={obra.id}
-                      className={`p-3 border text-center ${
-                        valor > 0
-                          ? "cursor-pointer hover:bg-blue-100 text-blue-600 font-bold"
-                          : "text-gray-400"
-                      }`}
+                      className="p-3 border text-center cursor-pointer hover:bg-blue-100 text-blue-600 font-bold"
                       onClick={() => {
-                        if (valor > 0) {
-                          abrirControle(linha, obra.nome);
-                        }
+                        abrirControle(linha, obra.nome);
                       }}
                     >
                       {valor}
