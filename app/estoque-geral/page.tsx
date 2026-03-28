@@ -145,9 +145,6 @@ export default function EstoqueGeral() {
             // 🔥 soma total geral
             mapa[chave].total += saldo;
 
-            mapa[chave].obras[obra.nome] = saldo;
-            mapa[chave].total += saldo;
-
           }
 
         }
