@@ -157,7 +157,6 @@ export default function EstoqueGeral() {
 
   }
 
-  // 🔥 FUNÇÃO PRINCIPAL (CLIQUE NO MATERIAL)
   async function abrirControle(linha: LinhaEstoque, obraNome: string) {
 
     try {
@@ -305,29 +304,12 @@ export default function EstoqueGeral() {
 
               <tr key={index} className="border hover:bg-gray-50">
 
-                <td className="p-3 border font-semibold">
-
-                  <span
-                    className="cursor-pointer text-blue-600 hover:underline"
-                    onClick={() => {
-
-                      const obraComEstoque = obras.find(o =>
-                        (linha.obras[o.nome] ?? 0) > 0
-                      );
-
-                      if (obraComEstoque) {
-                        abrirControle(linha, obraComEstoque.nome);
-                      } else {
-                        alert("Nenhuma obra com estoque para este material");
-                      }
-
-                    }}
-                  >
-                    {linha.material}
-                  </span>
-
+                {/* 🔒 MATERIAL NÃO CLICÁVEL */}
+                <td className="p-3 border font-semibold text-blue-600">
+                  {linha.material}
                 </td>
 
+                {/* 🔥 SÓ QUANTIDADE CLICA */}
                 {obras.map((obra) => {
 
                   const valor = linha.obras[obra.nome] ?? 0;
@@ -335,7 +317,11 @@ export default function EstoqueGeral() {
                   return (
                     <td
                       key={obra.id}
-                      className="p-3 border text-center cursor-pointer hover:bg-blue-100"
+                      className={`p-3 border text-center ${
+                        valor > 0
+                          ? "cursor-pointer hover:bg-blue-100 text-blue-600 font-bold"
+                          : "text-gray-400"
+                      }`}
                       onClick={() => {
                         if (valor > 0) {
                           abrirControle(linha, obra.nome);
@@ -346,7 +332,7 @@ export default function EstoqueGeral() {
                     </td>
                   );
 
-                 })}
+                })}
 
                 <td className="p-3 border font-bold text-center">
                   {linha.total}
