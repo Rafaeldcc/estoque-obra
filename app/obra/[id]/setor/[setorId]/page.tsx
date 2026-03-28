@@ -19,7 +19,7 @@ import {
 } from "firebase/storage";
 
 import { db, storage } from "@/lib/firebase";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 
 interface Material{
@@ -36,6 +36,9 @@ export default function ControleEstoque(){
 const router = useRouter()
 const params = useParams()
 const { user } = useAuth()
+
+const searchParams = useSearchParams();
+const materialUrl = searchParams.get("material");
 
 const obraId = params.id as string
 const setorId = params.setorId as string
@@ -58,6 +61,20 @@ useEffect(()=>{
 carregarMateriais()
 carregarObras()
 },[])
+
+useEffect(() => {
+
+  if (!materialUrl || materiais.length === 0) return;
+
+  const encontrado = materiais.find(m =>
+    m.nome.toLowerCase().trim() === materialUrl.toLowerCase().trim()
+  );
+
+  if (encontrado) {
+    setMaterialSelecionado(encontrado);
+  }
+
+}, [materialUrl, materiais]);
 
 // 🔥 EXCLUIR MATERIAL (ADICIONADO)
 async function excluirMaterial(material: Material){

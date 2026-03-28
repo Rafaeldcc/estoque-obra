@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   collection,
   getDocs,
@@ -27,12 +28,12 @@ type LinhaEstoque = {
 export default function EstoqueGeral() {
 
   const { user } = useAuth();
+  const router = useRouter();
 
   const [obras, setObras] = useState<Obra[]>([]);
   const [tabela, setTabela] = useState<LinhaEstoque[]>([]);
   const [loading, setLoading] = useState(true);
   const [setorSelecionado, setSetorSelecionado] = useState<string | null>(null);
-
   const [busca, setBusca] = useState("");
 
   useEffect(() => {
@@ -48,9 +49,7 @@ export default function EstoqueGeral() {
   }
 
   async function carregarUsuario() {
-
     try {
-
       if (!user) return;
 
       const snap = await getDoc(doc(db, "usuarios", user.uid));
@@ -72,12 +71,9 @@ export default function EstoqueGeral() {
       await carregarEstoque(data.empresaId);
 
     } catch (error) {
-
       console.error("Erro ao carregar usuário:", error);
       setLoading(false);
-
     }
-
   }
 
   async function carregarEstoque(empresaId: string) {
@@ -134,14 +130,12 @@ export default function EstoqueGeral() {
             const chave = materialNome + "_" + setorNome;
 
             if (!mapa[chave]) {
-
               mapa[chave] = {
                 material: materialNome,
                 setor: setorNome,
                 total: 0,
                 obras: {}
               };
-
             }
 
             mapa[chave].obras[obra.nome] = saldo;
@@ -157,22 +151,54 @@ export default function EstoqueGeral() {
       setLoading(false);
 
     } catch (error) {
-
       console.error("Erro ao carregar estoque:", error);
       setLoading(false);
+    }
 
+  }
+
+  // 🔥 FUNÇÃO PRINCIPAL (CLIQUE NO MATERIAL)
+  async function abrirControle(linha: LinhaEstoque, obraNome: string) {
+
+    try {
+
+      const obra = obras.find(o => o.nome === obraNome);
+      if (!obra) return;
+
+      const setoresSnap = await getDocs(
+        collection(db, "obras", obra.id, "setores")
+      );
+
+      let setorId = "";
+
+      setoresSnap.forEach((docSetor) => {
+        const data = docSetor.data();
+        if (data.nome === linha.setor) {
+          setorId = docSetor.id;
+        }
+      });
+
+      if (!setorId) {
+        alert("Setor não encontrado");
+        return;
+      }
+
+      router.push(
+        `/obra/${obra.id}/setor/${setorId}?material=${encodeURIComponent(linha.material)}`
+      );
+
+    } catch (error) {
+      console.error("Erro ao abrir controle:", error);
     }
 
   }
 
   if (loading) {
-
     return (
       <div className="p-10 text-center">
         Carregando estoque geral...
       </div>
     );
-
   }
 
   const setores = Array.from(new Set(tabela.map(l => l.setor)));
@@ -180,13 +206,11 @@ export default function EstoqueGeral() {
   if (!setorSelecionado) {
 
     const dadosSetores = setores.map(setor => {
-
       const total = tabela
         .filter(l => l.setor === setor)
         .reduce((acc, l) => acc + l.total, 0);
 
       return { setor, total };
-
     });
 
     return (
@@ -207,9 +231,7 @@ export default function EstoqueGeral() {
               className="bg-white p-6 rounded-xl shadow hover:shadow-lg cursor-pointer transition"
             >
 
-              <p className="text-gray-500">
-                Setor
-              </p>
+              <p className="text-gray-500">Setor</p>
 
               <h2 className="text-xl font-bold mt-2">
                 {s.setor}
@@ -231,7 +253,6 @@ export default function EstoqueGeral() {
 
   }
 
-  // 🔎 BUSCA INTELIGENTE
   const materiais = tabela
     .filter(l => l.setor === setorSelecionado)
     .filter(l =>
@@ -265,12 +286,8 @@ export default function EstoqueGeral() {
         <table className="w-full">
 
           <thead className="bg-gray-100">
-
             <tr>
-
-              <th className="p-3 border text-left">
-                Material
-              </th>
+              <th className="p-3 border text-left">Material</th>
 
               {obras.map((obra) => (
                 <th key={obra.id} className="p-3 border">
@@ -278,12 +295,8 @@ export default function EstoqueGeral() {
                 </th>
               ))}
 
-              <th className="p-3 border">
-                Total
-              </th>
-
+              <th className="p-3 border">Total</th>
             </tr>
-
           </thead>
 
           <tbody>
@@ -293,15 +306,32 @@ export default function EstoqueGeral() {
               <tr key={index} className="border hover:bg-gray-50">
 
                 <td className="p-3 border font-semibold">
-                  {linha.material}
+
+                  <span
+                    className="cursor-pointer text-blue-600 hover:underline"
+                    onClick={() => {
+
+                      const obraComEstoque = obras.find(o =>
+                        (linha.obras[o.nome] ?? 0) > 0
+                      );
+
+                      if (obraComEstoque) {
+                        abrirControle(linha, obraComEstoque.nome);
+                      } else {
+                        alert("Nenhuma obra com estoque para este material");
+                      }
+
+                    }}
+                  >
+                    {linha.material}
+                  </span>
+
                 </td>
 
                 {obras.map((obra) => (
-
                   <td key={obra.id} className="p-3 border text-center">
                     {linha.obras[obra.nome] ?? 0}
                   </td>
-
                 ))}
 
                 <td className="p-3 border font-bold text-center">
