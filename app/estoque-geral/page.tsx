@@ -328,11 +328,25 @@ export default function EstoqueGeral() {
 
                 </td>
 
-                {obras.map((obra) => (
-                  <td key={obra.id} className="p-3 border text-center">
-                    {linha.obras[obra.nome] ?? 0}
-                  </td>
-                ))}
+                {obras.map((obra) => {
+
+                  const valor = linha.obras[obra.nome] ?? 0;
+
+                  return (
+                    <td
+                      key={obra.id}
+                      className="p-3 border text-center cursor-pointer hover:bg-blue-100"
+                      onClick={() => {
+                        if (valor > 0) {
+                          abrirControle(linha, obra.nome);
+                        }
+                      }}
+                    >
+                      {valor}
+                    </td>
+                  );
+
+                 })}
 
                 <td className="p-3 border font-bold text-center">
                   {linha.total}
