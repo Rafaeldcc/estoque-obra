@@ -330,7 +330,6 @@ criadoEm: serverTimestamp()
 }
 
 // 🔴 SAÍDA
-// 🔴 SAÍDA
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
@@ -458,7 +457,6 @@ mostrarMensagem("Foto removida")
 }
 
 // 🔥 ESTOQUE MÍNIMO
-// 🔥 ESTOQUE MÍNIMO
 async function salvarEstoqueMinimo(){
 
 if(!materialSelecionado || !subcategoriaSelecionada) return
@@ -519,28 +517,6 @@ className="bg-green-600 text-white px-4 py-2 rounded"
 </button>
 </div>
 
-<div className="flex gap-2 mb-6 flex-wrap">
-
-{!subcategoriaSelecionada && subcategorias.map(sub=>(
-<button
-key={sub.id}
-onClick={()=>setSubcategoriaSelecionada(sub)}
-className="bg-gray-300 px-3 py-2 rounded"
->
-{sub.nome}
-</button>
-))}
-
-{subcategoriaSelecionada && (
-<button
-onClick={()=>setSubcategoriaSelecionada(null)}
-className="bg-blue-600 text-white px-3 py-2 rounded"
->
-← Voltar
-</button>
-)}
-
-</div>
 
 {!materialSelecionado && subcategoriaSelecionada && (
 <>
