@@ -22,6 +22,7 @@ import {
 import { db, storage } from "@/lib/firebase";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
+import { increment } from "firebase/firestore"
 
 interface Material{
   id:string
@@ -128,11 +129,6 @@ material.id
 
 mostrarMensagem("Material excluído")
 carregarMateriais()
-}
-
-// 🔥 NORMALIZAR (ADICIONE SE AINDA NÃO TEM)
-function normalizar(txt:string){
-return txt.toLowerCase().trim().replace(/\s+/g," ")
 }
 
 // 🔥 EDITAR NOME (VERSÃO MELHORADA)
