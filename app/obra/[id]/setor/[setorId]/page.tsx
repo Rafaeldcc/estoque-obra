@@ -61,41 +61,45 @@ const [novoNome, setNovoNome] = useState("")
 const [subcategorias,setSubcategorias] = useState<any[]>([])
 const [subcategoriaSelecionada,setSubcategoriaSelecionada] = useState<any>(null)
 const [novaSubcategoria,setNovaSubcategoria] = useState("")
-
 useEffect(()=>{
-carregarMateriais()
 carregarObras()
 },[])
 
+// 🔥 SUBCATEGORIAS
 useEffect(()=>{
 const unsubscribe = onSnapshot(
 collection(db,"obras",obraId,"setores",setorId,"subcategorias"),
 (snapshot)=>{
-const lista = snapshot.docs.map(doc=>({
+setSubcategorias(snapshot.docs.map(doc=>({
 id:doc.id,
 ...doc.data()
-}))
-setSubcategorias(lista)
+})))
 }
 )
-
 return ()=>unsubscribe()
 },[])
 
+// 🔥 CARREGAR MATERIAL AO CLICAR
+useEffect(()=>{
+if(subcategoriaSelecionada){
+carregarMateriais()
+}
+},[subcategoriaSelecionada])
+
+// 🔥 URL MATERIAL (CORRETO)
 useEffect(() => {
 
-  if (!materialUrl || materiais.length === 0) return;
+if (!materialUrl || materiais.length === 0) return;
 
-  const encontrado = materiais.find(m =>
-    m.nome.toLowerCase().trim() === materialUrl.toLowerCase().trim()
-  );
+const encontrado = materiais.find(m =>
+m.nome.toLowerCase().trim() === materialUrl.toLowerCase().trim()
+);
 
-  if (encontrado) {
-    setMaterialSelecionado(encontrado);
-  }
+if (encontrado) {
+setMaterialSelecionado(encontrado);
+}
 
 }, [materialUrl, materiais]);
-
 // 🔥 EXCLUIR MATERIAL (ADICIONADO)
 async function excluirMaterial(material: Material){
 
@@ -103,7 +107,14 @@ const confirmar = confirm(`Excluir ${material.nome}?`)
 if (!confirmar) return
 
 await deleteDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",material.id)
+doc(
+db,
+"obras",obraId,
+"setores",setorId,
+"subcategorias",subcategoriaSelecionada.id,
+"materiais",
+id
+)
 )
 
 mostrarMensagem("Material excluído")
@@ -115,7 +126,14 @@ async function salvarNomeMaterial(){
 if(!materialSelecionado || !novoNome.trim()) return
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+doc(
+db,
+"obras",obraId,
+"setores",setorId,
+"subcategorias",subcategoriaSelecionada.id,
+"materiais",
+id
+)
 { nome: novoNome }
 )
 
@@ -148,14 +166,7 @@ setObras(lista)
 async function carregarMateriais(){
 
 const snapshot = await getDocs(
-if(!subcategoriaSelecionada) return
-
-collection(
-db,
-"obras",obraId,
-"setores",setorId,
-"subcategorias",subcategoriaSelecionada.id,
-"materiais"
+collection(db,"obras",obraId,"setores",setorId,"materiais")
 )
 
 const lista:Material[] = []
@@ -186,6 +197,7 @@ collection(db,"obras",obraId,"setores",setorId,"subcategorias"),
 )
 
 setNovaSubcategoria("")
+mostrarMensagem("Subcategoria criada")
 }
 
 function mostrarMensagem(texto:string){
@@ -226,7 +238,7 @@ db,
 "setores",setorId,
 "subcategorias",subcategoriaSelecionada.id,
 "materiais",
-material.id
+id
 )
 {saldo: materialSelecionado.saldo - quantidade}
 )
@@ -258,14 +270,7 @@ setorDestinoId = novoSetor.id
 }
 
 const materiaisDestinoRef = collection(
-doc(
-db,
-"obras",obraId,
-"setores",setorId,
-"subcategorias",subcategoriaSelecionada.id,
-"materiais",
-material.id
-)
+db,"obras",obraDestino,"setores",setorDestinoId,"materiais"
 )
 
 const materiaisSnap = await getDocs(materiaisDestinoRef)
@@ -352,14 +357,7 @@ const obraSnap = await getDoc(doc(db,"obras",obraId))
 const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
 
 await updateDoc(
-doc(
-db,
-"obras",obraId,
-"setores",setorId,
-"subcategorias",subcategoriaSelecionada.id,
-"materiais",
-material.id
-)
+doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 {saldo: materialSelecionado.saldo + quantidade}
 )
 
@@ -395,14 +393,7 @@ await uploadBytes(storageRef,file)
 const url = await getDownloadURL(storageRef)
 
 await updateDoc(
-doc(
-db,
-"obras",obraId,
-"setores",setorId,
-"subcategorias",subcategoriaSelecionada.id,
-"materiais",
-material.id
-)
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {foto:url}
 )
 
@@ -417,14 +408,7 @@ mostrarMensagem("Foto salva")
 async function removerFoto(material:Material){
 
 await updateDoc(
-doc(
-db,
-"obras",obraId,
-"setores",setorId,
-"subcategorias",subcategoriaSelecionada.id,
-"materiais",
-material.id
-)
+doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
 {foto:""}
 )
 
@@ -441,14 +425,7 @@ async function salvarEstoqueMinimo(){
 if(!materialSelecionado) return
 
 await updateDoc(
-doc(
-db,
-"obras",obraId,
-"setores",setorId,
-"subcategorias",subcategoriaSelecionada.id,
-"materiais",
-material.id
-)
+doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
 {estoqueMinimo: materialSelecionado.estoqueMinimo ?? 0}
 )
 
