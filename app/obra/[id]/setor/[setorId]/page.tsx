@@ -62,6 +62,10 @@ const [novoNome, setNovoNome] = useState("")
 const [subcategorias,setSubcategorias] = useState<any[]>([])
 const [subcategoriaSelecionada,setSubcategoriaSelecionada] = useState<any>(null)
 const [novaSubcategoria,setNovaSubcategoria] = useState("")
+
+const [novoMaterial,setNovoMaterial] = useState("")
+const [unidade,setUnidade] = useState("")
+
 useEffect(()=>{
 carregarObras()
 },[])
@@ -501,6 +505,8 @@ Controle de Estoque
 
 {/* 🔥 SUBCATEGORIAS */}
 
+
+
 <div className="flex gap-2 mb-4">
 <input
 placeholder="Ex: Fio 1,5mm"
@@ -664,6 +670,8 @@ className="mb-6 text-blue-600"
 >
 ← Voltar
 </button>
+
+
 
 <div className="flex items-center gap-3 mb-4">
 
