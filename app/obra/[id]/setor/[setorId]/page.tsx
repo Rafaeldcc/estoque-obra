@@ -8,8 +8,9 @@ import {
   updateDoc,
   addDoc,
   getDoc,
-  deleteDoc, // ✅ CORRIGIDO
-  serverTimestamp
+  deleteDoc,
+  serverTimestamp,
+  onSnapshot
 } from "firebase/firestore";
 
 import {
@@ -100,8 +101,10 @@ setMaterialSelecionado(encontrado);
 }
 
 }, [materialUrl, materiais]);
-// 🔥 EXCLUIR MATERIAL (ADICIONADO)
+// 🔥 EXCLUIR MATERIAL
 async function excluirMaterial(material: Material){
+
+if(!subcategoriaSelecionada) return
 
 const confirmar = confirm(`Excluir ${material.nome}?`)
 if (!confirmar) return
@@ -113,7 +116,7 @@ db,
 "setores",setorId,
 "subcategorias",subcategoriaSelecionada.id,
 "materiais",
-id
+material.id
 )
 )
 
@@ -121,9 +124,10 @@ mostrarMensagem("Material excluído")
 carregarMateriais()
 }
 
+// 🔥 EDITAR NOME
 async function salvarNomeMaterial(){
 
-if(!materialSelecionado || !novoNome.trim()) return
+if(!materialSelecionado || !novoNome.trim() || !subcategoriaSelecionada) return
 
 await updateDoc(
 doc(
@@ -132,8 +136,8 @@ db,
 "setores",setorId,
 "subcategorias",subcategoriaSelecionada.id,
 "materiais",
-id
-)
+materialSelecionado.id
+),
 { nome: novoNome }
 )
 
@@ -165,8 +169,16 @@ setObras(lista)
 // 🔥 MATERIAIS
 async function carregarMateriais(){
 
+if(!subcategoriaSelecionada) return
+
 const snapshot = await getDocs(
-collection(db,"obras",obraId,"setores",setorId,"materiais")
+collection(
+db,
+"obras",obraId,
+"setores",setorId,
+"subcategorias",subcategoriaSelecionada.id,
+"materiais"
+)
 )
 
 const lista:Material[] = []
@@ -213,7 +225,7 @@ alert("Usuário não autenticado")
 return
 }
 
-if(!materialSelecionado) return
+if(!materialSelecionado || !subcategoriaSelecionada) return
 if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
 if(quantidade > materialSelecionado.saldo){
@@ -238,8 +250,8 @@ db,
 "setores",setorId,
 "subcategorias",subcategoriaSelecionada.id,
 "materiais",
-id
-)
+materialSelecionado.id
+),
 {saldo: materialSelecionado.saldo - quantidade}
 )
 
@@ -318,6 +330,7 @@ criadoEm: serverTimestamp()
 }
 
 // 🔴 SAÍDA
+// 🔴 SAÍDA
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
@@ -347,7 +360,7 @@ alert("Usuário não autenticado")
 return
 }
 
-if(!materialSelecionado) return
+if(!materialSelecionado || !subcategoriaSelecionada) return
 if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
 const userSnap = await getDoc(doc(db,"usuarios",user.uid))
@@ -357,7 +370,14 @@ const obraSnap = await getDoc(doc(db,"obras",obraId))
 const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+doc(
+db,
+"obras",obraId,
+"setores",setorId,
+"subcategorias",subcategoriaSelecionada.id,
+"materiais",
+materialSelecionado.id
+),
 {saldo: materialSelecionado.saldo + quantidade}
 )
 
@@ -378,8 +398,10 @@ setQuantidade(0)
 carregarMateriais()
 }
 
-// 🔥 FOTO (mantido igual)
+// 🔥 FOTO
 async function uploadFoto(e:any,material:Material){
+
+if(!subcategoriaSelecionada) return
 
 const file = e.target.files[0]
 if(!file) return
@@ -393,7 +415,14 @@ await uploadBytes(storageRef,file)
 const url = await getDownloadURL(storageRef)
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+doc(
+db,
+"obras",obraId,
+"setores",setorId,
+"subcategorias",subcategoriaSelecionada.id,
+"materiais",
+material.id
+),
 {foto:url}
 )
 
@@ -407,8 +436,17 @@ mostrarMensagem("Foto salva")
 // 🔥 REMOVER FOTO
 async function removerFoto(material:Material){
 
+if(!subcategoriaSelecionada) return
+
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+doc(
+db,
+"obras",obraId,
+"setores",setorId,
+"subcategorias",subcategoriaSelecionada.id,
+"materiais",
+material.id
+),
 {foto:""}
 )
 
@@ -420,12 +458,20 @@ mostrarMensagem("Foto removida")
 }
 
 // 🔥 ESTOQUE MÍNIMO
+// 🔥 ESTOQUE MÍNIMO
 async function salvarEstoqueMinimo(){
 
-if(!materialSelecionado) return
+if(!materialSelecionado || !subcategoriaSelecionada) return
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+doc(
+db,
+"obras",obraId,
+"setores",setorId,
+"subcategorias",subcategoriaSelecionada.id,
+"materiais",
+materialSelecionado.id
+),
 {estoqueMinimo: materialSelecionado.estoqueMinimo ?? 0}
 )
 
@@ -569,7 +615,10 @@ className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded transition
 <div className="bg-white border rounded-xl p-8 shadow-md">
 
 <button
-onClick={()=>setMaterialSelecionado(null)}
+onClick={()=>{
+setMaterialSelecionado(null)
+setQuantidade(0)
+}}
 className="mb-6 text-blue-600"
 >
 ← Voltar
@@ -676,10 +725,13 @@ Entrada
 <input
 type="number"
 value={materialSelecionado.estoqueMinimo ?? 0}
-onChange={(e)=>setMaterialSelecionado({
+onChange={(e)=>{
+if(!materialSelecionado) return
+setMaterialSelecionado({
 ...materialSelecionado,
 estoqueMinimo:Number(e.target.value)
-})}
+})
+}}
 className="border p-2 rounded w-32"
 />
 
