@@ -705,8 +705,6 @@ className="bg-blue-600 text-white px-3 py-2 rounded"
 </button>
 )}
 
-</div>
-
 {/* 🔥 LISTA DE MATERIAIS */}
 {!materialSelecionado && subcategoriaSelecionada && (
 <>
@@ -731,7 +729,15 @@ className="border p-3 rounded mb-6 w-full"
 
 <tbody>
 
-{filtrados.map(material=>(
+{filtrados.length === 0 && (
+<tr>
+<td colSpan={2} className="p-4 text-center text-gray-500">
+Nenhum material encontrado
+</td>
+</tr>
+)}
+
+{filtrados.map(material => (
 
 <tr
 key={material.id}
