@@ -517,6 +517,38 @@ className="bg-green-600 text-white px-4 py-2 rounded"
 </button>
 </div>
 
+<div className="flex gap-2 mb-6 flex-wrap">
+
+{!subcategoriaSelecionada && subcategorias
+.sort((a,b)=>{
+const numA = parseFloat(a.nome.replace(",", "."))
+const numB = parseFloat(b.nome.replace(",", "."))
+return numA - numB
+})
+.map(sub=>(
+<button
+key={sub.id}
+onClick={()=>setSubcategoriaSelecionada(sub)}
+className="bg-gray-300 px-3 py-2 rounded"
+>
+{sub.nome}
+</button>
+))}
+
+{subcategoriaSelecionada && (
+<button
+onClick={()=>{
+setSubcategoriaSelecionada(null)
+setMaterialSelecionado(null)
+setQuantidade(0)
+}}
+className="bg-blue-600 text-white px-3 py-2 rounded"
+>
+← Voltar
+</button>
+)}
+
+</div>
 
 {!materialSelecionado && subcategoriaSelecionada && (
 <>
