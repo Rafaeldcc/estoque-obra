@@ -70,8 +70,9 @@ useEffect(()=>{
 carregarObras()
 },[])
 
-// 🔥 SUBCATEGORIAS
 useEffect(()=>{
+if(!obraId || !setorId) return
+
 const unsubscribe = onSnapshot(
 collection(db,"obras",obraId,"setores",setorId,"subcategorias"),
 (snapshot)=>{
@@ -81,8 +82,9 @@ id:doc.id,
 })))
 }
 )
+
 return ()=>unsubscribe()
-},[])
+},[obraId,setorId])
 
 // 🔥 CARREGAR MATERIAL AO CLICAR
 useEffect(()=>{
@@ -128,10 +130,35 @@ mostrarMensagem("Material excluído")
 carregarMateriais()
 }
 
-// 🔥 EDITAR NOME
+// 🔥 NORMALIZAR (ADICIONE SE AINDA NÃO TEM)
+function normalizar(txt:string){
+return txt.toLowerCase().trim().replace(/\s+/g," ")
+}
+
+// 🔥 EDITAR NOME (VERSÃO MELHORADA)
 async function salvarNomeMaterial(){
 
 if(!materialSelecionado || !novoNome.trim() || !subcategoriaSelecionada) return
+
+// 🔥 EVITAR DUPLICADO
+const snapshot = await getDocs(
+collection(
+db,
+"obras",obraId,
+"setores",setorId,
+"subcategorias",subcategoriaSelecionada.id,
+"materiais"
+)
+)
+
+const existe = snapshot.docs.find(doc =>
+normalizar(doc.data().nome) === normalizar(novoNome)
+)
+
+if(existe && normalizar(novoNome) !== normalizar(materialSelecionado.nome)){
+mostrarMensagem("Já existe material com esse nome")
+return
+}
 
 await updateDoc(
 doc(
@@ -155,25 +182,22 @@ mostrarMensagem("Nome atualizado")
 carregarMateriais()
 }
 
-// 🔥 OBRAS
+// 🔥 OBRAS (OK, SÓ MELHORIA DE SEGURANÇA)
 async function carregarObras(){
 const snap = await getDocs(collection(db,"obras"))
-const lista:any[] = []
 
-snap.forEach(docSnap=>{
-lista.push({
+const lista = snap.docs.map(docSnap=>({
 id:docSnap.id,
 nome:docSnap.data().nome
-})
-})
+}))
 
 setObras(lista)
 }
 
-// 🔥 MATERIAIS
+// 🔥 MATERIAIS (PROTEÇÃO EXTRA)
 async function carregarMateriais(){
 
-if(!subcategoriaSelecionada) return
+if(!subcategoriaSelecionada || !obraId || !setorId) return
 
 const snapshot = await getDocs(
 collection(
@@ -185,40 +209,69 @@ db,
 )
 )
 
-const lista:Material[] = []
-
-snapshot.forEach(docSnap=>{
+const lista:Material[] = snapshot.docs.map(docSnap=>{
 const data = docSnap.data()
 
-lista.push({
+return {
 id:docSnap.id,
 nome:data.nome,
 saldo:data.saldo ?? 0,
 unidade:data.unidade ?? "",
 foto:data.foto ?? "",
 estoqueMinimo:data.estoqueMinimo ?? 0
-})
+}
 })
 
 lista.sort((a,b)=>a.nome.localeCompare(b.nome))
 setMateriais(lista)
 }
 
-async function criarSubcategoria(){
-if(!novaSubcategoria.trim()) return
+// 🔥 CRIAR MATERIAL (VERSÃO PROFISSIONAL)
+async function criarMaterial(){
 
-await addDoc(
-collection(db,"obras",obraId,"setores",setorId,"subcategorias"),
-{ nome:novaSubcategoria }
+if(!novoMaterial.trim() || !subcategoriaSelecionada) return
+
+const snapshot = await getDocs(
+collection(
+db,
+"obras",obraId,
+"setores",setorId,
+"subcategorias",subcategoriaSelecionada.id,
+"materiais"
+)
 )
 
-setNovaSubcategoria("")
-mostrarMensagem("Subcategoria criada")
+const existe = snapshot.docs.find(doc =>
+normalizar(doc.data().nome) === normalizar(novoMaterial)
+)
+
+if(existe){
+mostrarMensagem("Material já existe")
+return
 }
 
-function mostrarMensagem(texto:string){
-setMensagem(texto)
-setTimeout(()=>setMensagem(""),3000)
+await addDoc(
+collection(
+db,
+"obras",obraId,
+"setores",setorId,
+"subcategorias",subcategoriaSelecionada.id,
+"materiais"
+),
+{
+nome: novoMaterial,
+saldo: 0,
+unidade: unidade || "un",
+estoqueMinimo: 0,
+foto: ""
+}
+)
+
+setNovoMaterial("")
+setUnidade("")
+mostrarMensagem("Material cadastrado")
+
+carregarMateriais()
 }
 
 // 🔥 SAÍDA + TRANSFERÊNCIA
@@ -246,7 +299,7 @@ const empresaId = userSnap.data()?.empresaId || null
 const obraSnap = await getDoc(doc(db,"obras",obraId))
 const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
 
-// remove da origem
+// 🔥 REMOVE DA ORIGEM (SEGURO)
 await updateDoc(
 doc(
 db,
@@ -256,7 +309,9 @@ db,
 "materiais",
 materialSelecionado.id
 ),
-{saldo: materialSelecionado.saldo - quantidade}
+{
+saldo: increment(-quantidade)
+}
 )
 
 // 🔁 TRANSFERÊNCIA
@@ -298,7 +353,7 @@ const data = docMat.data()
 
 if(data.nome === materialSelecionado.nome){
 await updateDoc(docMat.ref,{
-saldo:(data.saldo || 0) + quantidade
+saldo: increment(quantidade)
 })
 encontrou = true
 break
@@ -372,6 +427,7 @@ const empresaId = userSnap.data()?.empresaId || null
 const obraSnap = await getDoc(doc(db,"obras",obraId))
 const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
 
+// 🔥 ENTRADA SEGURA
 await updateDoc(
 doc(
 db,
@@ -381,7 +437,9 @@ db,
 "materiais",
 materialSelecionado.id
 ),
-{saldo: materialSelecionado.saldo + quantidade}
+{
+saldo: increment(quantidade)
+}
 )
 
 await addDoc(collection(db,"movimentacoes"),{
@@ -401,13 +459,25 @@ setQuantidade(0)
 carregarMateriais()
 }
 
-// 🔥 FOTO
+// 🔥 FOTO (VERSÃO PROFISSIONAL)
 async function uploadFoto(e:any,material:Material){
 
 if(!subcategoriaSelecionada) return
 
 const file = e.target.files[0]
 if(!file) return
+
+// 🔥 VALIDAR IMAGEM
+if(!file.type.startsWith("image/")){
+alert("Envie apenas imagens")
+return
+}
+
+// 🔥 TAMANHO MÁX 2MB
+if(file.size > 2 * 1024 * 1024){
+alert("Imagem muito grande (máx 2MB)")
+return
+}
 
 const storageRef = ref(
 storage,
@@ -431,12 +501,15 @@ material.id
 
 carregarMateriais()
 
+// 🔥 ATUALIZA SOMENTE SE FOR O MESMO MATERIAL
+if(materialSelecionado?.id === material.id){
 setMaterialSelecionado({...material,foto:url})
+}
 
 mostrarMensagem("Foto salva")
 }
 
-// 🔥 REMOVER FOTO
+// 🔥 REMOVER FOTO (SEGURO)
 async function removerFoto(material:Material){
 
 if(!subcategoriaSelecionada) return
@@ -455,12 +528,14 @@ material.id
 
 carregarMateriais()
 
+if(materialSelecionado?.id === material.id){
 setMaterialSelecionado({...material,foto:""})
+}
 
 mostrarMensagem("Foto removida")
 }
 
-// 🔥 ESTOQUE MÍNIMO
+// 🔥 ESTOQUE MÍNIMO (CORRIGIDO)
 async function salvarEstoqueMinimo(){
 
 if(!materialSelecionado || !subcategoriaSelecionada) return
@@ -474,17 +549,21 @@ db,
 "materiais",
 materialSelecionado.id
 ),
-{estoqueMinimo: materialSelecionado.estoqueMinimo ?? 0}
+{
+estoqueMinimo: Number(materialSelecionado.estoqueMinimo) || 0
+}
 )
 
 mostrarMensagem("Estoque mínimo salvo")
 carregarMateriais()
 }
 
+// 🔥 NORMALIZAR
 function normalizar(texto:string){
 return texto.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
 }
 
+// 🔥 FILTRO
 const filtrados = materiais.filter(m =>
 normalizar(m.nome).startsWith(normalizar(busca))
 )
@@ -503,15 +582,52 @@ className="bg-gray-600 text-white px-4 py-2 rounded mb-6"
 Controle de Estoque
 </h1>
 
-{/* 🔥 SUBCATEGORIAS */}
+{/* 🔥 CADASTRO MATERIAL */}
+{subcategoriaSelecionada && !materialSelecionado && (
 
+<div className="flex gap-2 mb-4">
 
+<input
+placeholder="Nome do material"
+value={novoMaterial}
+onChange={(e)=>setNovoMaterial(e.target.value)}
+onKeyDown={(e)=>{
+if(e.key === "Enter") criarMaterial()
+}}
+autoFocus
+className="border p-2 rounded"
+/>
 
+<input
+placeholder="Un"
+value={unidade}
+onChange={(e)=>setUnidade(e.target.value)}
+onKeyDown={(e)=>{
+if(e.key === "Enter") criarMaterial()
+}}
+className="border p-2 rounded w-32"
+/>
+
+<button
+onClick={criarMaterial}
+className="bg-green-600 text-white px-4 py-2 rounded"
+>
++ Material
+</button>
+
+</div>
+
+)}
+
+{/* 🔥 CADASTRO SUBCATEGORIA */}
 <div className="flex gap-2 mb-4">
 <input
 placeholder="Ex: Fio 1,5mm"
 value={novaSubcategoria}
 onChange={(e)=>setNovaSubcategoria(e.target.value)}
+onKeyDown={(e)=>{
+if(e.key === "Enter") criarSubcategoria()
+}}
 className="border p-2 rounded"
 />
 
@@ -523,6 +639,7 @@ className="bg-green-600 text-white px-4 py-2 rounded"
 </button>
 </div>
 
+{/* 🔥 LISTA SUBCATEGORIAS */}
 <div className="flex gap-2 mb-6 flex-wrap">
 
 {!subcategoriaSelecionada && subcategorias
@@ -533,6 +650,7 @@ const numB = parseFloat(b.nome.replace(/[^0-9,]/g,"").replace(",","."))
 return numA - numB
 })
 .map(sub=>(
+
 <div key={sub.id} className="flex items-center gap-2">
 
 <button
@@ -572,7 +690,10 @@ className="text-red-600"
 </button>
 
 </div>
+
 ))}
+
+</div>
 
 {subcategoriaSelecionada && (
 <button
@@ -580,6 +701,7 @@ onClick={()=>{
 setSubcategoriaSelecionada(null)
 setMaterialSelecionado(null)
 setQuantidade(0)
+setBusca("") // 🔥 limpa busca (melhoria)
 }}
 className="bg-blue-600 text-white px-3 py-2 rounded"
 >
@@ -589,6 +711,7 @@ className="bg-blue-600 text-white px-3 py-2 rounded"
 
 </div>
 
+{/* 🔥 LISTA DE MATERIAIS */}
 {!materialSelecionado && subcategoriaSelecionada && (
 <>
 <input
@@ -657,6 +780,7 @@ className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded transition
 </>
 )}
 
+{/* 🔥 DETALHE DO MATERIAL */}
 {materialSelecionado && (
 
 <div className="bg-white border rounded-xl p-8 shadow-md">
@@ -671,8 +795,7 @@ className="mb-6 text-blue-600"
 ← Voltar
 </button>
 
-
-
+{/* 🔥 NOME */}
 <div className="flex items-center gap-3 mb-4">
 
 {editandoNome ? (
@@ -680,6 +803,9 @@ className="mb-6 text-blue-600"
 <input
 value={novoNome}
 onChange={(e)=>setNovoNome(e.target.value)}
+onKeyDown={(e)=>{
+if(e.key === "Enter") salvarNomeMaterial()
+}}
 className="border p-2 rounded"
 />
 
@@ -722,12 +848,16 @@ Quantidade atual:
 <strong> {materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
 </p>
 
+{/* 🔥 MOVIMENTAÇÃO */}
 <div className="mt-6 flex gap-3 flex-wrap">
 
 <input
 type="number"
 value={quantidade}
 onChange={(e)=>setQuantidade(Number(e.target.value))}
+onKeyDown={(e)=>{
+if(e.key === "Enter") registrarSaida()
+}}
 className="border p-2 rounded w-28"
 />
 
@@ -760,16 +890,23 @@ className="border p-2 rounded"
 </select>
 )}
 
-<button onClick={registrarSaida} className="bg-red-600 text-white px-4 py-2 rounded">
+<button
+onClick={registrarSaida}
+className="bg-red-600 text-white px-4 py-2 rounded"
+>
 Confirmar
 </button>
 
-<button onClick={registrarEntrada} className="bg-green-600 text-white px-4 py-2 rounded">
+<button
+onClick={registrarEntrada}
+className="bg-green-600 text-white px-4 py-2 rounded"
+>
 Entrada
 </button>
 
 </div>
 
+{/* 🔥 ESTOQUE MÍNIMO */}
 <div className="mt-6">
 <input
 type="number"
@@ -784,23 +921,34 @@ estoqueMinimo:Number(e.target.value)
 className="border p-2 rounded w-32"
 />
 
-<button onClick={salvarEstoqueMinimo} className="ml-3 bg-blue-600 text-white px-4 py-2 rounded">
+<button
+onClick={salvarEstoqueMinimo}
+className="ml-3 bg-blue-600 text-white px-4 py-2 rounded"
+>
 Salvar mínimo
 </button>
 </div>
 
+{/* 🔥 FOTO */}
 <div className="mt-6">
 {materialSelecionado.foto ? (
 <>
 <img src={materialSelecionado.foto} className="w-48 mb-3"/>
-<button onClick={()=>removerFoto(materialSelecionado)} className="bg-red-600 text-white px-4 py-2 rounded">
+<button
+onClick={()=>removerFoto(materialSelecionado)}
+className="bg-red-600 text-white px-4 py-2 rounded"
+>
 Remover foto
 </button>
 </>
 ) : (
 <label className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer">
 Adicionar foto
-<input type="file" className="hidden" onChange={(e)=>uploadFoto(e,materialSelecionado)} />
+<input
+type="file"
+className="hidden"
+onChange={(e)=>uploadFoto(e,materialSelecionado)}
+/>
 </label>
 )}
 </div>
@@ -808,6 +956,7 @@ Adicionar foto
 </div>
 )}
 
+{/* 🔥 MENSAGEM */}
 {mensagem && (
 <div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded">
 {mensagem}
