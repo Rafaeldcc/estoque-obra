@@ -520,19 +520,52 @@ className="bg-green-600 text-white px-4 py-2 rounded"
 <div className="flex gap-2 mb-6 flex-wrap">
 
 {!subcategoriaSelecionada && subcategorias
+.slice()
 .sort((a,b)=>{
-const numA = parseFloat(a.nome.replace(",", "."))
-const numB = parseFloat(b.nome.replace(",", "."))
+const numA = parseFloat(a.nome.replace(/[^0-9,]/g,"").replace(",","."))
+const numB = parseFloat(b.nome.replace(/[^0-9,]/g,"").replace(",","."))
 return numA - numB
 })
 .map(sub=>(
+<div key={sub.id} className="flex items-center gap-2">
+
 <button
-key={sub.id}
 onClick={()=>setSubcategoriaSelecionada(sub)}
 className="bg-gray-300 px-3 py-2 rounded"
 >
 {sub.nome}
 </button>
+
+<button
+onClick={async()=>{
+const novo = prompt("Novo nome:", sub.nome)
+if(!novo) return
+
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"subcategorias",sub.id),
+{ nome: novo }
+)
+}}
+className="text-blue-600"
+>
+✏️
+</button>
+
+<button
+onClick={async()=>{
+const confirmar = confirm("Excluir subcategoria?")
+if(!confirmar) return
+
+await deleteDoc(
+doc(db,"obras",obraId,"setores",setorId,"subcategorias",sub.id)
+)
+}}
+className="text-red-600"
+>
+🗑️
+</button>
+
+</div>
 ))}
 
 {subcategoriaSelecionada && (
