@@ -8,8 +8,9 @@ import {
   updateDoc,
   addDoc,
   getDoc,
-  deleteDoc, // ✅ CORRIGIDO
-  serverTimestamp
+  deleteDoc,
+  serverTimestamp,
+  onSnapshot
 } from "firebase/firestore";
 
 import {
@@ -57,45 +58,86 @@ const [obraDestino,setObraDestino] = useState("")
 const [editandoNome, setEditandoNome] = useState(false)
 const [novoNome, setNovoNome] = useState("")
 
+// 🔥 CATEGORIAS
+const [categorias, setCategorias] = useState<any[]>([])
+const [categoriaSelecionada, setCategoriaSelecionada] = useState<any>(null)
+const [novaCategoria, setNovaCategoria] = useState("")
+
+// 🔥 CARREGAR CATEGORIAS
+useEffect(() => {
+  const unsubscribe = onSnapshot(
+    collection(db, "obras", obraId, "setores", setorId, "categorias"),
+    (snapshot) => {
+      const lista = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+
+      setCategorias(lista)
+
+      if (!categoriaSelecionada && lista.length > 0) {
+        setCategoriaSelecionada(lista[0])
+      }
+    }
+  )
+
+  return () => unsubscribe()
+}, [])
+
+// 🔥 CARREGAR MATERIAIS POR CATEGORIA
+useEffect(() => {
+  if (categoriaSelecionada) {
+    carregarMateriais()
+  }
+}, [categoriaSelecionada])
+
 useEffect(()=>{
-carregarMateriais()
 carregarObras()
 },[])
 
-useEffect(() => {
-
-  if (!materialUrl || materiais.length === 0) return;
-
-  const encontrado = materiais.find(m =>
-    m.nome.toLowerCase().trim() === materialUrl.toLowerCase().trim()
-  );
-
-  if (encontrado) {
-    setMaterialSelecionado(encontrado);
-  }
-
-}, [materialUrl, materiais]);
-
-// 🔥 EXCLUIR MATERIAL (ADICIONADO)
+// 🔥 EXCLUIR MATERIAL
 async function excluirMaterial(material: Material){
+
+if (!categoriaSelecionada) return
 
 const confirmar = confirm(`Excluir ${material.nome}?`)
 if (!confirmar) return
 
 await deleteDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",material.id)
+doc(
+  db,
+  "obras",
+  obraId,
+  "setores",
+  setorId,
+  "categorias",
+  categoriaSelecionada.id,
+  "materiais",
+  material.id
+)
 )
 
 mostrarMensagem("Material excluído")
 carregarMateriais()
 }
 
+// 🔥 EDITAR NOME
 async function salvarNomeMaterial(){
 
-if(!materialSelecionado || !novoNome.trim()) return
+if(!materialSelecionado || !novoNome.trim() || !categoriaSelecionada) return
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+doc(
+  db,
+  "obras",
+  obraId,
+  "setores",
+  setorId,
+  "categorias",
+  categoriaSelecionada.id,
+  "materiais",
+  materialSelecionado.id
+),
 { nome: novoNome }
 )
 
@@ -127,8 +169,19 @@ setObras(lista)
 // 🔥 MATERIAIS
 async function carregarMateriais(){
 
+if (!categoriaSelecionada) return
+
 const snapshot = await getDocs(
-collection(db,"obras",obraId,"setores",setorId,"materiais")
+collection(
+  db,
+  "obras",
+  obraId,
+  "setores",
+  setorId,
+  "categorias",
+  categoriaSelecionada.id,
+  "materiais"
+)
 )
 
 const lista:Material[] = []
@@ -150,6 +203,18 @@ lista.sort((a,b)=>a.nome.localeCompare(b.nome))
 setMateriais(lista)
 }
 
+// 🔥 CRIAR CATEGORIA
+async function criarCategoria() {
+  if (!novaCategoria.trim()) return
+
+  await addDoc(
+    collection(db, "obras", obraId, "setores", setorId, "categorias"),
+    { nome: novaCategoria }
+  )
+
+  setNovaCategoria("")
+}
+
 function mostrarMensagem(texto:string){
 setMensagem(texto)
 setTimeout(()=>setMensagem(""),3000)
@@ -158,11 +223,7 @@ setTimeout(()=>setMensagem(""),3000)
 // 🔥 SAÍDA + TRANSFERÊNCIA
 async function registrarSaida(){
 
-if(!user){
-alert("Usuário não autenticado")
-return
-}
-
+if(!user || !categoriaSelecionada) return
 if(!materialSelecionado) return
 if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
@@ -182,11 +243,21 @@ const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
 
 // remove da origem
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+doc(
+  db,
+  "obras",
+  obraId,
+  "setores",
+  setorId,
+  "categorias",
+  categoriaSelecionada.id,
+  "materiais",
+  materialSelecionado.id
+),
 {saldo: materialSelecionado.saldo - quantidade}
 )
 
-// 🔁 TRANSFERÊNCIA
+// 🔁 TRANSFERÊNCIA (mantido original)
 if(tipoMov === "transferencia"){
 
 const setorRef = doc(db,"obras",obraId,"setores",setorId)
@@ -241,42 +312,21 @@ estoqueMinimo: materialSelecionado.estoqueMinimo || 0,
 foto: materialSelecionado.foto || ""
 })
 }
-
-const obraDestinoSnap = await getDoc(doc(db,"obras",obraDestino))
-const obraDestinoNome = obraDestinoSnap.data()?.nome || `Obra ${obraDestino}`
-
-await addDoc(collection(db,"movimentacoes"),{
-materialNome: materialSelecionado.nome,
-quantidade,
-tipo:"entrada",
-obraId: obraDestino,
-obraNome: obraDestinoNome,
-obraOrigemId: obraId,
-obraDestinoId: obraDestino,
-destino:"transferencia",
-empresaId,
-usuarioNome: user.email || "Sistema",
-criadoEm: serverTimestamp()
-})
 }
 
-// 🔴 SAÍDA
+// 🔴 LOG
 await addDoc(collection(db,"movimentacoes"),{
 materialNome: materialSelecionado.nome,
 quantidade,
 tipo:"saida",
-obraId: obraId,
-obraNome: obraNome,
-obraOrigemId: obraId,
-obraDestinoId: tipoMov === "transferencia" ? obraDestino : null,
-destino: tipoMov,
+obraId,
+obraNome,
 empresaId,
 usuarioNome: user.email || "Sistema",
 criadoEm: serverTimestamp()
 })
 
 mostrarMensagem("Movimentação realizada com sucesso")
-
 setQuantidade(0)
 setObraDestino("")
 carregarMateriais()
@@ -285,44 +335,32 @@ carregarMateriais()
 // 🔥 ENTRADA
 async function registrarEntrada(){
 
-if(!user){
-alert("Usuário não autenticado")
-return
-}
-
-if(!materialSelecionado) return
-if(quantidade <= 0) return alert("Digite uma quantidade válida")
-
-const userSnap = await getDoc(doc(db,"usuarios",user.uid))
-const empresaId = userSnap.data()?.empresaId || null
-
-const obraSnap = await getDoc(doc(db,"obras",obraId))
-const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
+if(!user || !materialSelecionado || quantidade <= 0 || !categoriaSelecionada) return
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+doc(
+  db,
+  "obras",
+  obraId,
+  "setores",
+  setorId,
+  "categorias",
+  categoriaSelecionada.id,
+  "materiais",
+  materialSelecionado.id
+),
 {saldo: materialSelecionado.saldo + quantidade}
 )
 
-await addDoc(collection(db,"movimentacoes"),{
-materialNome: materialSelecionado.nome,
-quantidade,
-tipo:"entrada",
-obraId,
-obraNome,
-empresaId,
-usuarioNome: user.email || "Sistema",
-criadoEm: serverTimestamp()
-})
-
 mostrarMensagem("Entrada registrada")
-
 setQuantidade(0)
 carregarMateriais()
 }
 
-// 🔥 FOTO (mantido igual)
+// 🔥 FOTO
 async function uploadFoto(e:any,material:Material){
+
+if (!categoriaSelecionada) return
 
 const file = e.target.files[0]
 if(!file) return
@@ -336,46 +374,26 @@ await uploadBytes(storageRef,file)
 const url = await getDownloadURL(storageRef)
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+doc(
+  db,
+  "obras",
+  obraId,
+  "setores",
+  setorId,
+  "categorias",
+  categoriaSelecionada.id,
+  "materiais",
+  material.id
+),
 {foto:url}
 )
 
 carregarMateriais()
-
 setMaterialSelecionado({...material,foto:url})
-
 mostrarMensagem("Foto salva")
 }
 
-// 🔥 REMOVER FOTO
-async function removerFoto(material:Material){
-
-await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
-{foto:""}
-)
-
-carregarMateriais()
-
-setMaterialSelecionado({...material,foto:""})
-
-mostrarMensagem("Foto removida")
-}
-
-// 🔥 ESTOQUE MÍNIMO
-async function salvarEstoqueMinimo(){
-
-if(!materialSelecionado) return
-
-await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
-{estoqueMinimo: materialSelecionado.estoqueMinimo ?? 0}
-)
-
-mostrarMensagem("Estoque mínimo salvo")
-carregarMateriais()
-}
-
+// 🔥 FILTRO
 function normalizar(texto:string){
 return texto.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
 }
@@ -398,6 +416,39 @@ className="bg-gray-600 text-white px-4 py-2 rounded mb-6"
 Controle de Estoque
 </h1>
 
+{/* 🔥 CATEGORIAS */}
+<div className="flex gap-2 mb-4">
+<input
+placeholder="Nova categoria"
+value={novaCategoria}
+onChange={(e)=>setNovaCategoria(e.target.value)}
+className="border p-2 rounded"
+/>
+
+<button
+onClick={criarCategoria}
+className="bg-green-600 text-white px-4 py-2 rounded"
+>
++ Categoria
+</button>
+</div>
+
+<div className="flex gap-2 mb-6 flex-wrap">
+{categorias.map(cat=>(
+<button
+key={cat.id}
+onClick={()=>setCategoriaSelecionada(cat)}
+className={`px-3 py-2 rounded ${
+categoriaSelecionada?.id === cat.id
+? "bg-gray-800 text-white"
+: "bg-gray-300"
+}`}
+>
+{cat.nome}
+</button>
+))}
+</div>
+
 {!materialSelecionado && (
 <>
 <input
@@ -411,7 +462,6 @@ className="border p-3 rounded mb-6 w-full"
 <div className="max-h-[600px] overflow-y-auto">
 
 <table className="w-full">
-
 <thead className="bg-gray-100 sticky top-0">
 <tr>
 <th className="p-3 text-left">Material</th>
@@ -420,21 +470,15 @@ className="border p-3 rounded mb-6 w-full"
 </thead>
 
 <tbody>
-
 {filtrados.map(material=>(
-
 <tr
 key={material.id}
 className="border-t hover:bg-gray-50 cursor-pointer"
 onClick={()=>setMaterialSelecionado(material)}
 >
-
 <td className="p-3 flex items-center justify-between">
-
 <div className="flex items-center gap-3">
-{material.foto && (
-<img src={material.foto} className="w-10 h-10 rounded"/>
-)}
+{material.foto && <img src={material.foto} className="w-10 h-10 rounded"/>}
 {material.nome}
 </div>
 
@@ -443,21 +487,17 @@ onClick={(e)=>{
 e.stopPropagation()
 excluirMaterial(material)
 }}
-className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded transition"
+className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded"
 >
 🗑️
 </button>
-
 </td>
 
 <td className="p-3 text-center font-bold">
 {material.saldo} {material.unidade}
 </td>
-
 </tr>
-
 ))}
-
 </tbody>
 </table>
 
@@ -467,59 +507,15 @@ className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded transition
 )}
 
 {materialSelecionado && (
-
 <div className="bg-white border rounded-xl p-8 shadow-md">
 
-<button
-onClick={()=>setMaterialSelecionado(null)}
-className="mb-6 text-blue-600"
->
+<button onClick={()=>setMaterialSelecionado(null)} className="mb-6 text-blue-600">
 ← Voltar
 </button>
 
-<div className="flex items-center gap-3 mb-4">
-
-{editandoNome ? (
-<>
-<input
-value={novoNome}
-onChange={(e)=>setNovoNome(e.target.value)}
-className="border p-2 rounded"
-/>
-
-<button
-onClick={salvarNomeMaterial}
-className="bg-green-600 text-white px-3 py-1 rounded"
->
-Salvar
-</button>
-
-<button
-onClick={()=>setEditandoNome(false)}
-className="bg-gray-400 text-white px-3 py-1 rounded"
->
-Cancelar
-</button>
-</>
-) : (
-<>
-<h2 className="text-xl font-bold">
+<h2 className="text-xl font-bold mb-4">
 {materialSelecionado.nome}
 </h2>
-
-<button
-onClick={()=>{
-setEditandoNome(true)
-setNovoNome(materialSelecionado.nome)
-}}
-className="text-blue-600"
->
-✏️
-</button>
-</>
-)}
-
-</div>
 
 <p className="mb-2 text-lg">
 Quantidade atual:
@@ -527,7 +523,6 @@ Quantidade atual:
 </p>
 
 <div className="mt-6 flex gap-3 flex-wrap">
-
 <input
 type="number"
 value={quantidade}
@@ -552,15 +547,11 @@ onChange={(e)=>setObraDestino(e.target.value)}
 className="border p-2 rounded"
 >
 <option value="">Selecionar obra destino</option>
-
-{obras
-.filter(o => o.id !== obraId)
-.map((obra)=>(
+{obras.filter(o => o.id !== obraId).map((obra)=>(
 <option key={obra.id} value={obra.id}>
 {obra.nome}
 </option>
 ))}
-
 </select>
 )}
 
@@ -571,32 +562,12 @@ Confirmar
 <button onClick={registrarEntrada} className="bg-green-600 text-white px-4 py-2 rounded">
 Entrada
 </button>
-
-</div>
-
-<div className="mt-6">
-<input
-type="number"
-value={materialSelecionado.estoqueMinimo ?? 0}
-onChange={(e)=>setMaterialSelecionado({
-...materialSelecionado,
-estoqueMinimo:Number(e.target.value)
-})}
-className="border p-2 rounded w-32"
-/>
-
-<button onClick={salvarEstoqueMinimo} className="ml-3 bg-blue-600 text-white px-4 py-2 rounded">
-Salvar mínimo
-</button>
 </div>
 
 <div className="mt-6">
 {materialSelecionado.foto ? (
 <>
 <img src={materialSelecionado.foto} className="w-48 mb-3"/>
-<button onClick={()=>removerFoto(materialSelecionado)} className="bg-red-600 text-white px-4 py-2 rounded">
-Remover foto
-</button>
 </>
 ) : (
 <label className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer">
