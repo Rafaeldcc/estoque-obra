@@ -67,7 +67,6 @@ const [novoNomeSub, setNovoNomeSub] = useState("")
 // 🔥 INIT
 useEffect(()=>{
 carregarSubcategorias()
-carregarObras()
 },[])
 
 // 🔥 CARREGA MATERIAIS AO SELECIONAR SUB
@@ -165,6 +164,23 @@ id:docSnap.id,
 })
 
 setSubcategorias(lista)
+}
+
+// 🔥 OBRAS (ADICIONAR AQUI 👇)
+async function carregarObras(){
+
+const snap = await getDocs(collection(db,"obras"))
+
+const lista:any[] = []
+
+snap.forEach(docSnap=>{
+lista.push({
+id:docSnap.id,
+...docSnap.data()
+})
+})
+
+setObras(lista)
 }
 
 async function criarSubcategoria(){
