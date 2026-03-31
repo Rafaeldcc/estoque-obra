@@ -117,7 +117,6 @@ export default function CadastrarMaterial() {
     }));
 
     lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-
     setObras(lista);
   }
 
@@ -155,7 +154,6 @@ export default function CadastrarMaterial() {
     }));
 
     lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-
     setSetores(lista);
   }
 
@@ -213,63 +211,6 @@ export default function CadastrarMaterial() {
     setMostrarSugestoes(true);
   }
 
-  function filtrarSetores(valor: string) {
-    setNovoSetor(valor);
-
-    if (!valor.trim()) {
-      setSugestoesSetor([]);
-      setMostrarSugestoesSetor(false);
-      return;
-    }
-
-    const filtradas = todosSetores
-      .filter((s) =>
-        normalizarTexto(s).includes(normalizarTexto(valor))
-      )
-      .sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-    setSugestoesSetor(filtradas);
-    setMostrarSugestoesSetor(true);
-  }
-
-  async function criarSetor() {
-    if (!obraId) return alert("Selecione uma obra primeiro.");
-    if (!novoSetor.trim()) return alert("Digite o nome do setor.");
-
-    const nomeNormalizado = normalizarTexto(novoSetor);
-
-    const snap = await getDocs(
-      collection(db, "obras", obraId, "setores")
-    );
-
-    const existe = snap.docs.some((doc) => {
-      const data = doc.data() as any;
-      const bancoNormalizado =
-        data.nomeNormalizado || normalizarTexto(data.nome);
-      return bancoNormalizado === nomeNormalizado;
-    });
-
-    if (existe) return alert("Este setor já existe.");
-
-    const ref = await addDoc(
-      collection(db, "obras", obraId, "setores"),
-      {
-        nome: novoSetor.trim(),
-        nomeNormalizado,
-        criadoEm: serverTimestamp(),
-      }
-    );
-
-    setSetores((prev) => [...prev, {
-      id: ref.id,
-      nome: novoSetor.trim(),
-      nomeNormalizado
-    }]);
-
-    setSetorId(ref.id);
-    setNovoSetor("");
-  }
-
   async function salvarMaterial() {
 
     if (!user) return alert("Sessão expirou.");
@@ -300,11 +241,13 @@ export default function CadastrarMaterial() {
 
     try {
 
+      const unidadeFinal = unidade === "nova" ? novaUnidade : unidade;
+
       const newDoc = await addDoc(materiaisRef, {
         nome: nomeMaterial.trim(),
         nomeNormalizado,
         saldo: quantidade,
-        unidade,
+        unidade: unidadeFinal,
         criadoEm: serverTimestamp(),
       });
 
@@ -324,15 +267,13 @@ export default function CadastrarMaterial() {
         empresaId: empresaId!
       });
 
-      // ✅ CORREÇÃO AQUI (DENTRO DO TRY)
       setMensagem("Material salvo com sucesso!");
 
-      setTimeout(() => {
-        setMensagem("");
-      }, 3000);
+      setTimeout(() => setMensagem(""), 3000);
 
       setNomeMaterial("");
       setQuantidade(0);
+      setNovaUnidade("");
 
       carregarMateriais();
 
@@ -407,10 +348,7 @@ export default function CadastrarMaterial() {
         <input
           placeholder="Digite a nova unidade"
           value={novaUnidade}
-          onChange={(e)=>{
-            setNovaUnidade(e.target.value)
-            setUnidade(e.target.value)
-          }}
+          onChange={(e)=>setNovaUnidade(e.target.value)}
           className="w-full p-2 border rounded"
         />
       )}
