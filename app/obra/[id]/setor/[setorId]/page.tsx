@@ -801,9 +801,49 @@ className="mb-6 text-blue-600"
 ← Voltar
 </button>
 
-<h2 className="text-xl font-bold mb-4">
+<div className="flex items-center gap-3 mb-4">
+
+{editandoNome ? (
+<>
+<input
+value={novoNome}
+onChange={(e)=>setNovoNome(e.target.value)}
+className="border p-2 rounded"
+/>
+
+<button
+onClick={salvarNomeMaterial}
+className="bg-green-600 text-white px-3 py-1 rounded"
+>
+Salvar
+</button>
+
+<button
+onClick={()=>setEditandoNome(false)}
+className="bg-gray-400 text-white px-3 py-1 rounded"
+>
+Cancelar
+</button>
+</>
+) : (
+<>
+<h2 className="text-xl font-bold">
 {materialSelecionado.nome}
 </h2>
+
+<button
+onClick={()=>{
+setEditandoNome(true)
+setNovoNome(materialSelecionado.nome)
+}}
+className="text-blue-600"
+>
+✏️
+</button>
+</>
+)}
+
+</div>
 
 <p className="mb-4">
 Quantidade: <strong>{materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
@@ -862,7 +902,35 @@ Entrada
 
 </div>
 
+</div>  // botões
+
+{/* 📸 FOTO DO MATERIAL */}
+<div className="mt-6">
+
+{materialSelecionado.foto ? (
+<>
+<img src={materialSelecionado.foto} className="w-48 mb-3 rounded"/>
+
+<button
+onClick={()=>removerFoto(materialSelecionado)}
+className="bg-red-600 text-white px-4 py-2 rounded"
+>
+Remover foto
+</button>
+</>
+) : (
+<label className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer">
+Adicionar foto
+<input
+type="file"
+className="hidden"
+onChange={(e)=>uploadFoto(e,materialSelecionado)}
+/>
+</label>
+)}
+
 </div>
+
 )}
 
 {/* 🔥 MENSAGEM */}
