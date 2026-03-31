@@ -194,389 +194,234 @@ export default function CadastrarMaterial() {
     setMateriaisExistentes(lista);
   }
 
-function filtrarSugestoes(valor: string) {
+  function filtrarSugestoes(valor: string) {
+    setNomeMaterial(valor);
 
-  setNomeMaterial(valor);
-
-  if (!valor.trim()) {
-    setSugestoes([]);
-    setMostrarSugestoes(false);
-    return;
-  }
-
-  const filtradas = materiaisExistentes
-    .filter((m) =>
-      normalizarTexto(m).startsWith(normalizarTexto(valor))
-    )
-    .sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-  setSugestoes(filtradas);
-  setMostrarSugestoes(true);
-
-}
-
-function filtrarSetores(valor: string) {
-
-  setNovoSetor(valor);
-
-  if (!valor.trim()) {
-    setSugestoesSetor([]);
-    setMostrarSugestoesSetor(false);
-    return;
-  }
-
-  const filtradas = todosSetores
-    .filter((s) =>
-      normalizarTexto(s).includes(normalizarTexto(valor))
-    )
-    .sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-  setSugestoesSetor(filtradas);
-  setMostrarSugestoesSetor(true);
-
-}
-
-async function criarSetor() {
-
-  if (!obraId) {
-    alert("Selecione uma obra primeiro.");
-    return;
-  }
-
-  if (!novoSetor.trim()) {
-    alert("Digite o nome do setor.");
-    return;
-  }
-
-  const nomeNormalizado = normalizarTexto(novoSetor);
-
-  const snap = await getDocs(
-    collection(db, "obras", obraId, "setores")
-  );
-
-  const existe = snap.docs.some((doc) => {
-
-    const data = doc.data() as any;
-
-    const bancoNormalizado =
-      data.nomeNormalizado || normalizarTexto(data.nome);
-
-    return bancoNormalizado === nomeNormalizado;
-
-  });
-
-  if (existe) {
-    alert("Este setor já existe.");
-    return;
-  }
-
-  const ref = await addDoc(
-    collection(db, "obras", obraId, "setores"),
-    {
-      nome: novoSetor.trim(),
-      nomeNormalizado,
-      criadoEm: serverTimestamp(),
+    if (!valor.trim()) {
+      setSugestoes([]);
+      setMostrarSugestoes(false);
+      return;
     }
-  );
 
-  const novo: Setor = {
-    id: ref.id,
-    nome: novoSetor.trim(),
-    nomeNormalizado,
-  };
-
-  setSetores((prev) => [...prev, novo]);
-  setSetorId(ref.id);
-  setNovoSetor("");
-
-}
-
-async function salvarMaterial() {
-
-  if (!user) {
-    alert("Sessão expirou.");
-    return;
-  }
-
-  if (!nomeMaterial.trim() || quantidade <= 0 || !obraId || !setorId) {
-    alert("Preencha todos os campos.");
-    return;
-  }
-
-  if (!role) {
-    alert("Usuário sem permissão definida.");
-    return;
-  }
-
-  const nomeNormalizado = normalizarTexto(nomeMaterial);
-
-  // 🔥 CAMINHO CORRIGIDO (SUPORTA SUBCATEGORIA)
-  const materiaisRef = subParam
-    ? collection(
-        db,
-        "obras",
-        obraId,
-        "setores",
-        setorId,
-        "subcategorias",
-        subParam,
-        "materiais"
+    const filtradas = materiaisExistentes
+      .filter((m) =>
+        normalizarTexto(m).startsWith(normalizarTexto(valor))
       )
-    : collection(
-        db,
-        "obras",
-        obraId,
-        "setores",
-        setorId,
-        "materiais"
-      );
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-  const snap = await getDocs(materiaisRef);
-
-  let existe = false;
-
-  snap.forEach((doc) => {
-
-    const data = doc.data();
-
-    if (
-      normalizarTexto(data.nome) === nomeNormalizado
-    ) {
-      existe = true;
-    }
-
-  });
-
-  if (existe) {
-    alert("Este material já existe neste setor.");
-    return;
+    setSugestoes(filtradas);
+    setMostrarSugestoes(true);
   }
 
-  try {
+  function filtrarSetores(valor: string) {
+    setNovoSetor(valor);
 
-    const newDoc = await addDoc(materiaisRef, {
-      nome: nomeMaterial.trim(),
-      nomeNormalizado,
-      saldo: quantidade,
-      unidade,
-      criadoEm: serverTimestamp(),
+    if (!valor.trim()) {
+      setSugestoesSetor([]);
+      setMostrarSugestoesSetor(false);
+      return;
+    }
+
+    const filtradas = todosSetores
+      .filter((s) =>
+        normalizarTexto(s).includes(normalizarTexto(valor))
+      )
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    setSugestoesSetor(filtradas);
+    setMostrarSugestoesSetor(true);
+  }
+
+  async function criarSetor() {
+    if (!obraId) return alert("Selecione uma obra primeiro.");
+    if (!novoSetor.trim()) return alert("Digite o nome do setor.");
+
+    const nomeNormalizado = normalizarTexto(novoSetor);
+
+    const snap = await getDocs(
+      collection(db, "obras", obraId, "setores")
+    );
+
+    const existe = snap.docs.some((doc) => {
+      const data = doc.data() as any;
+      const bancoNormalizado =
+        data.nomeNormalizado || normalizarTexto(data.nome);
+      return bancoNormalizado === nomeNormalizado;
     });
 
-    const materialId = newDoc.id;
+    if (existe) return alert("Este setor já existe.");
 
-    await registrarMovimentacao({
+    const ref = await addDoc(
+      collection(db, "obras", obraId, "setores"),
+      {
+        nome: novoSetor.trim(),
+        nomeNormalizado,
+        criadoEm: serverTimestamp(),
+      }
+    );
 
-      materialId,
-      materialNome: nomeMaterial.trim(),
+    setSetores((prev) => [...prev, {
+      id: ref.id,
+      nome: novoSetor.trim(),
+      nomeNormalizado
+    }]);
 
-      tipo: "entrada",
+    setSetorId(ref.id);
+    setNovoSetor("");
+  }
 
-      quantidade,
+  async function salvarMaterial() {
 
-      obraId,
-      obraNome: obras.find((o) => o.id === obraId)?.nome || "",
+    if (!user) return alert("Sessão expirou.");
 
-      setorId,
-      setorNome: setores.find((s) => s.id === setorId)?.nome || "",
+    if (!nomeMaterial.trim() || quantidade <= 0 || !obraId || !setorId) {
+      return alert("Preencha todos os campos.");
+    }
 
-      usuarioId: user.uid,
-      usuarioNome: user.email || "",
+    if (!role) return alert("Usuário sem permissão.");
 
-      empresaId: empresaId!
+    const nomeNormalizado = normalizarTexto(nomeMaterial);
 
+    const materiaisRef = subParam
+      ? collection(db, "obras", obraId, "setores", setorId, "subcategorias", subParam, "materiais")
+      : collection(db, "obras", obraId, "setores", setorId, "materiais");
+
+    const snap = await getDocs(materiaisRef);
+
+    let existe = false;
+
+    snap.forEach((doc) => {
+      if (normalizarTexto(doc.data().nome) === nomeNormalizado) {
+        existe = true;
+      }
     });
-}
 
+    if (existe) return alert("Material já existe.");
+
+    try {
+
+      const newDoc = await addDoc(materiaisRef, {
+        nome: nomeMaterial.trim(),
+        nomeNormalizado,
+        saldo: quantidade,
+        unidade,
+        criadoEm: serverTimestamp(),
+      });
+
+      const materialId = newDoc.id;
+
+      await registrarMovimentacao({
+        materialId,
+        materialNome: nomeMaterial.trim(),
+        tipo: "entrada",
+        quantidade,
+        obraId,
+        obraNome: obras.find((o) => o.id === obraId)?.nome || "",
+        setorId,
+        setorNome: setores.find((s) => s.id === setorId)?.nome || "",
+        usuarioId: user.uid,
+        usuarioNome: user.email || "",
+        empresaId: empresaId!
+      });
+
+      // ✅ CORREÇÃO AQUI (DENTRO DO TRY)
       setMensagem("Material salvo com sucesso!");
 
-setTimeout(() => {
-  setMensagem("");
-}, 3000);
+      setTimeout(() => {
+        setMensagem("");
+      }, 3000);
 
-setNomeMaterial("");
-setQuantidade(0);
+      setNomeMaterial("");
+      setQuantidade(0);
 
-carregarMateriais();
+      carregarMateriais();
 
-} catch (error) {
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao salvar material.");
+    }
+  }
 
-  console.error(error);
-  alert("Erro ao salvar material.");
+  if (loading) return null;
 
-}
+  return (
+    <div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow space-y-4">
 
-}
+      <h2 className="text-center text-lg font-semibold">
+        Cadastrar Material
+      </h2>
 
-if (loading) return null;
+      {mensagem && (
+        <div className="bg-green-600 text-white p-2 rounded text-center">
+          {mensagem}
+        </div>
+      )}
 
-return (
+      {!obraParam && (
+        <select value={obraId} onChange={(e)=>setObraId(e.target.value)} className="w-full p-2 border rounded">
+          <option value="">Selecionar obra</option>
+          {obras.map(o=>(
+            <option key={o.id} value={o.id}>{o.nome}</option>
+          ))}
+        </select>
+      )}
 
-<div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow space-y-4">
+      {!setorParam && (
+        <select value={setorId} onChange={(e)=>setSetorId(e.target.value)} className="w-full p-2 border rounded">
+          <option value="">Selecionar setor</option>
+          {setores.map(s=>(
+            <option key={s.id} value={s.id}>{s.nome}</option>
+          ))}
+        </select>
+      )}
 
-  <h2 className="text-center text-lg font-semibold">
-    Cadastrar Material
-  </h2>
+      <input
+        placeholder="Nome do material"
+        value={nomeMaterial}
+        onChange={(e)=>filtrarSugestoes(e.target.value)}
+        className="w-full p-2 border rounded"
+      />
 
-  {mensagem && (
-    <div className="bg-green-600 text-white p-2 rounded text-center">
-      {mensagem}
-    </div>
-  )}
+      <input
+        type="number"
+        placeholder="Quantidade"
+        value={quantidade}
+        onChange={(e)=>setQuantidade(Number(e.target.value))}
+        className="w-full p-2 border rounded"
+      />
 
-  {/* 🔥 MOSTRA OBRA SÓ SE NÃO VEIO DA URL */}
-  {!obraParam && (
-    <select
-      value={obraId}
-      onChange={(e) => setObraId(e.target.value)}
-      className="w-full p-2 border rounded"
-    >
-      <option value="">Selecionar obra</option>
+      <select value={unidade} onChange={(e)=>setUnidade(e.target.value)} className="w-full p-2 border rounded">
+        <option value="un">Unidade</option>
+        <option value="m">Metro</option>
+        <option value="pc">Peça</option>
+        <option value="rolo">Rolo</option>
+        <option value="cx">Caixa</option>
+        <option value="barra">Barra</option>
+        <option value="kg">Kg</option>
+        <option value="l">Litro</option>
+        <option value="pct">Pacote</option>
+        <option value="nova">➕ Nova unidade</option>
+      </select>
 
-      {obras.map((obra) => (
-        <option key={obra.id} value={obra.id}>
-          {obra.nome}
-        </option>
-      ))}
-    </select>
-  )}
-
-  {/* 🔥 MOSTRA SETOR SÓ SE NÃO VEIO DA URL */}
-  {!setorParam && (
-    <select
-      value={setorId}
-      onChange={(e) => setSetorId(e.target.value)}
-      className="w-full p-2 border rounded"
-    >
-      <option value="">Selecionar setor</option>
-
-      {setores.map((setor) => (
-        <option key={setor.id} value={setor.id}>
-          {setor.nome}
-        </option>
-      ))}
-    </select>
-  )}
-
-  {/* 🔥 CRIAR SETOR (SÓ SE NÃO VEIO PRONTO) */}
-  {!setorParam && obraId && (
-    <div className="relative flex gap-2">
-
-      <div className="flex-1 relative">
-
+      {unidade === "nova" && (
         <input
-          placeholder="Novo setor"
-          value={novoSetor}
-          onChange={(e) => filtrarSetores(e.target.value)}
+          placeholder="Digite a nova unidade"
+          value={novaUnidade}
+          onChange={(e)=>{
+            setNovaUnidade(e.target.value)
+            setUnidade(e.target.value)
+          }}
           className="w-full p-2 border rounded"
         />
-
-        {mostrarSugestoesSetor && sugestoesSetor.length > 0 && (
-          <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto z-10">
-
-            {sugestoesSetor.map((item, index) => (
-              <div
-                key={index}
-                onClick={() => {
-                  setNovoSetor(item)
-                  setMostrarSugestoesSetor(false)
-                }}
-                className="p-2 cursor-pointer hover:bg-gray-100"
-              >
-                {item}
-              </div>
-            ))}
-
-          </div>
-        )}
-
-      </div>
+      )}
 
       <button
-        onClick={criarSetor}
-        className="bg-gray-800 text-white px-4 rounded"
+        onClick={salvarMaterial}
+        className="w-full bg-blue-600 text-white py-2 rounded"
       >
-        Criar
+        Salvar Material
       </button>
 
     </div>
-  )}
-
-  {/* 🔥 MATERIAL */}
-  <div className="relative">
-
-    <input
-      placeholder="Nome do material"
-      value={nomeMaterial}
-      onChange={(e) => filtrarSugestoes(e.target.value)}
-      className="w-full p-2 border rounded"
-    />
-
-    {mostrarSugestoes && sugestoes.length > 0 && (
-      <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto z-10">
-
-        {sugestoes.map((item, index) => (
-          <div
-            key={index}
-            onClick={() => {
-              setNomeMaterial(item)
-              setMostrarSugestoes(false)
-            }}
-            className="p-2 cursor-pointer hover:bg-gray-100"
-          >
-            {item}
-          </div>
-        ))}
-
-      </div>
-    )}
-
-  </div>
-
-  <input
-    type="number"
-    placeholder="Quantidade"
-    value={quantidade}
-    onChange={(e) => setQuantidade(Number(e.target.value))}
-    className="w-full p-2 border rounded"
-  />
-
-  <select
-    value={unidade}
-    onChange={(e) => setUnidade(e.target.value)}
-    className="w-full p-2 border rounded"
-  >
-    <option value="un">Unidade</option>
-    <option value="m">Metro</option>
-    <option value="pc">Peça</option>
-    <option value="rolo">Rolo</option>
-    <option value="cx">Caixa</option>
-    <option value="barra">Barra</option>
-    <option value="kg">Kg</option>
-    <option value="l">Litro</option>
-    <option value="pct">Pacote</option>
-    <option value="nova">➕ Nova unidade</option>
-  </select>
-
-  {unidade === "nova" && (
-    <input
-      placeholder="Digite a nova unidade (ex: bobina)"
-      value={novaUnidade}
-      onChange={(e) => {
-        setNovaUnidade(e.target.value)
-        setUnidade(e.target.value)
-      }}
-      className="w-full p-2 border rounded mt-2"
-    />
-  )}
-
-  <button
-    onClick={salvarMaterial}
-    className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-  >
-    Salvar Material
-  </button>
-
-</div>
-
-);
+  );
 }
