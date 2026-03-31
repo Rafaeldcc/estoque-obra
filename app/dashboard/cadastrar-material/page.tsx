@@ -194,14 +194,6 @@ export default function CadastrarMaterial() {
     setMateriaisExistentes(lista);
   }
 
-  lista = [...new Set(lista)];
-
-lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-setMateriaisExistentes(lista);
-
-}
-
 function filtrarSugestoes(valor: string) {
 
   setNomeMaterial(valor);
@@ -393,25 +385,6 @@ async function salvarMaterial() {
       empresaId: empresaId!
 
     });
-
-    setMensagem("Material salvo com sucesso!");
-
-    setTimeout(() => {
-      setMensagem("");
-    }, 3000);
-
-    setNomeMaterial("");
-    setQuantidade(0);
-
-    carregarMateriais();
-
-  } catch (error) {
-
-    console.error(error);
-    alert("Erro ao salvar material.");
-
-  }
-
 }
 
       setMensagem("Material salvo com sucesso!");
