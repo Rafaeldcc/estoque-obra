@@ -566,6 +566,9 @@ const filtrados = materiais.filter(m =>
 normalizar(m.nome).startsWith(normalizar(busca))
 )
 
+return(
+<div className="max-w-6xl mx-auto p-8">
+
 {subSelecionada?.id && (
 <button
 onClick={()=>router.push(`/dashboard/cadastrar-material?obra=${obraId}&setor=${setorId}&sub=${subSelecionada.id}`)}
@@ -597,7 +600,6 @@ className="border p-3 rounded mb-6 w-full"
 </thead>
 
 <tbody>
-
 {filtrados.map(material=>(
 
 <tr
@@ -634,7 +636,6 @@ className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded transition
 </tr>
 
 ))}
-
 </tbody>
 </table>
 
@@ -654,95 +655,23 @@ className="mb-6 text-blue-600"
 ← Voltar
 </button>
 
-<div className="flex items-center gap-3 mb-4">
-
-{editandoNome ? (
-<>
-<input
-value={novoNome}
-onChange={(e)=>setNovoNome(e.target.value)}
-className="border p-2 rounded"
-/>
-
-<button
-onClick={salvarNomeMaterial}
-className="bg-green-600 text-white px-3 py-1 rounded"
->
-Salvar
-</button>
-
-<button
-onClick={()=>setEditandoNome(false)}
-className="bg-gray-400 text-white px-3 py-1 rounded"
->
-Cancelar
-</button>
-</>
-) : (
-<>
-<h2 className="text-xl font-bold">
+<h2 className="text-xl font-bold mb-4">
 {materialSelecionado.nome}
 </h2>
 
-<button
-onClick={()=>{
-setEditandoNome(true)
-setNovoNome(materialSelecionado.nome)
-}}
-className="text-blue-600"
->
-✏️
-</button>
-</>
-)}
-
-</div>
-
-<p className="mb-2 text-lg">
-Quantidade atual:
-<strong> {materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
+<p className="mb-4">
+Quantidade: <strong>{materialSelecionado.saldo}</strong>
 </p>
-
-<div className="mt-6 flex gap-3 flex-wrap">
 
 <input
 type="number"
 value={quantidade}
 onChange={(e)=>setQuantidade(Number(e.target.value))}
-className="border p-2 rounded w-28"
+className="border p-2 rounded mb-4"
 />
 
-<select
-value={tipoMov}
-onChange={(e)=>setTipoMov(e.target.value)}
-className="border p-2 rounded"
->
-<option value="uso">Uso na obra</option>
-<option value="transferencia">Transferência</option>
-<option value="descarte">Descarte</option>
-</select>
-
-{tipoMov === "transferencia" && (
-<select
-value={obraDestino}
-onChange={(e)=>setObraDestino(e.target.value)}
-className="border p-2 rounded"
->
-<option value="">Selecionar obra destino</option>
-
-{obras
-.filter(o => o.id !== obraId)
-.map((obra)=>(
-<option key={obra.id} value={obra.id}>
-{obra.nome}
-</option>
-))}
-
-</select>
-)}
-
-<button onClick={registrarSaida} className="bg-red-600 text-white px-4 py-2 rounded">
-Confirmar
+<button onClick={registrarSaida} className="bg-red-600 text-white px-4 py-2 rounded mr-2">
+Saída
 </button>
 
 <button onClick={registrarEntrada} className="bg-green-600 text-white px-4 py-2 rounded">
@@ -751,46 +680,12 @@ Entrada
 
 </div>
 
-<div className="mt-6">
-<input
-type="number"
-value={materialSelecionado.estoqueMinimo ?? 0}
-onChange={(e)=>setMaterialSelecionado({
-...materialSelecionado,
-estoqueMinimo:Number(e.target.value)
-})}
-className="border p-2 rounded w-32"
-/>
-
-<button onClick={salvarEstoqueMinimo} className="ml-3 bg-blue-600 text-white px-4 py-2 rounded">
-Salvar mínimo
-</button>
-</div>
-
-<div className="mt-6">
-{materialSelecionado?.foto ? (
-<>
-<img src={materialSelecionado.foto} className="w-48 mb-3"/>
-<button onClick={()=>removerFoto(materialSelecionado)} className="bg-red-600 text-white px-4 py-2 rounded">
-Remover foto
-</button>
-</>
-) : (
-<label className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer">
-Adicionar foto
-<input 
-type="file" 
-className="hidden" 
-onChange={(e)=> materialSelecionado && uploadFoto(e,materialSelecionado)} 
-/>
-</label>
 )}
-</div>
 
 {mensagem && (
-  <div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded">
-    {mensagem}
-  </div>
+<div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded">
+{mensagem}
+</div>
 )}
 
 </div>
