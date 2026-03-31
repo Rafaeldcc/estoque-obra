@@ -155,11 +155,10 @@ carregarMateriais()
 // 🔥 SUBCATEGORIAS
 async function carregarSubcategorias(){
 
-const snap = await getDocs(
-collection(db,"obras",obraId,"setores",setorId,"subcategorias")
-)
+const subRef = collection(db,"obras",obraId,"setores",setorId,"subcategorias")
+const snap = await getDocs(subRef)
 
-const lista:any[] = []
+let lista:any[] = []
 
 snap.forEach(docSnap=>{
 lista.push({
@@ -168,17 +167,54 @@ id:docSnap.id,
 })
 })
 
-// 🔥 ORDENAÇÃO INTELIGENTE
+/* 🔥 SE NÃO EXISTE SUB → CRIA E MIGRA */
+if(lista.length === 0){
+
+// cria subcategoria padrão
+const novaSub = await addDoc(subRef,{
+nome:"Geral"
+})
+
+// pega materiais antigos
+const materiaisAntigosRef = collection(
+db,"obras",obraId,"setores",setorId,"materiais"
+)
+
+const materiaisSnap = await getDocs(materiaisAntigosRef)
+
+for(const docMat of materiaisSnap.docs){
+
+const data = docMat.data()
+
+await addDoc(
+collection(
+db,
+"obras",
+obraId,
+"setores",
+setorId,
+"subcategorias",
+novaSub.id,
+"materiais"
+),
+data
+)
+
+// remove antigo
+await deleteDoc(docMat.ref)
+}
+
+// adiciona na lista
+lista.push({
+id:novaSub.id,
+nome:"Geral"
+})
+}
+
+/* 🔥 ORDENAÇÃO */
 lista.sort((a,b)=>{
-
-const numA = parseFloat(
-a.nome.replace(",", ".").match(/\d+(\.\d+)?/)[0]
-)
-
-const numB = parseFloat(
-b.nome.replace(",", ".").match(/\d+(\.\d+)?/)[0]
-)
-
+const numA = parseFloat(a.nome.replace(",", ".").match(/\d+(\.\d+)?/)?.[0] || "0")
+const numB = parseFloat(b.nome.replace(",", ".").match(/\d+(\.\d+)?/)?.[0] || "0")
 return numA - numB
 })
 
