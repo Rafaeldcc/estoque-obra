@@ -163,6 +163,13 @@ id:docSnap.id,
 })
 })
 
+// 🔥 ORDENAÇÃO INTELIGENTE
+lista.sort((a,b)=>{
+const numA = parseFloat(a.nome.replace(",", "."))
+const numB = parseFloat(b.nome.replace(",", "."))
+return numA - numB
+})
+
 setSubcategorias(lista)
 }
 
