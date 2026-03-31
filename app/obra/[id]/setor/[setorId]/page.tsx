@@ -585,6 +585,47 @@ normalizar(m.nome).startsWith(normalizar(busca))
 return(
 <div className="max-w-6xl mx-auto p-8">
 
+{/* 🔥 CRIAR SUBCATEGORIA */}
+<div className="flex gap-2 mb-4">
+
+<input
+placeholder="Nome da subcategoria"
+value={nomeSub}
+onChange={(e)=>setNomeSub(e.target.value)}
+className="border p-2 rounded"
+/>
+
+<button
+onClick={criarSubcategoria}
+className="bg-green-600 text-white px-4 rounded"
+>
++ Subcategoria
+</button>
+
+</div>
+
+{/* 🔥 LISTAR SUBCATEGORIAS */}
+<div className="flex gap-2 flex-wrap mb-6">
+
+{subcategorias.map(sub => (
+
+<div
+key={sub.id}
+onClick={()=>setSubSelecionada(sub)}
+className={`px-3 py-1 rounded cursor-pointer ${
+subSelecionada?.id === sub.id
+? "bg-blue-600 text-white"
+: "bg-gray-200"
+}`}
+>
+{sub.nome}
+</div>
+
+))}
+
+</div>
+
+{/* 🔥 BOTÃO CADASTRAR MATERIAL */}
 {subSelecionada?.id && (
 <button
 onClick={()=>router.push(`/dashboard/cadastrar-material?obra=${obraId}&setor=${setorId}&sub=${subSelecionada.id}`)}
@@ -594,6 +635,7 @@ className="bg-green-700 text-white px-4 py-2 rounded mb-6"
 </button>
 )}
 
+{/* 🔥 LISTA DE MATERIAIS */}
 {subSelecionada?.id && !materialSelecionado && (
 <>
 <input
@@ -659,6 +701,7 @@ className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded transition
 </>
 )}
 
+{/* 🔥 DETALHE DO MATERIAL */}
 {materialSelecionado && (
 <div className="bg-white border rounded-xl p-8 shadow-md">
 
@@ -695,6 +738,7 @@ Entrada
 </div>
 )}
 
+{/* 🔥 MENSAGEM */}
 {mensagem && (
 <div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded">
 {mensagem}
