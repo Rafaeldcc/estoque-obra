@@ -165,8 +165,15 @@ id:docSnap.id,
 
 // 🔥 ORDENAÇÃO INTELIGENTE
 lista.sort((a,b)=>{
-const numA = parseFloat(a.nome.replace(",", "."))
-const numB = parseFloat(b.nome.replace(",", "."))
+
+const numA = parseFloat(
+a.nome.replace(",", ".").match(/\d+(\.\d+)?/)[0]
+)
+
+const numB = parseFloat(
+b.nome.replace(",", ".").match(/\d+(\.\d+)?/)[0]
+)
+
 return numA - numB
 })
 
