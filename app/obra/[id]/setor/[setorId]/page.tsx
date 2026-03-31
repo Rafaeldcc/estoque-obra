@@ -900,8 +900,6 @@ className="bg-green-600 text-white px-4 py-2 rounded"
 Entrada
 </button>
 
-</div>
-
 </div>  // botões
 
 {/* 📸 FOTO DO MATERIAL */}
@@ -928,6 +926,8 @@ onChange={(e)=>uploadFoto(e,materialSelecionado)}
 />
 </label>
 )}
+
+</div>
 
 </div>
 
