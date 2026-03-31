@@ -787,8 +787,6 @@ onChange={(e)=> materialSelecionado && uploadFoto(e,materialSelecionado)}
 )}
 </div>
 
-)}
-
 {mensagem && (
   <div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded">
     {mensagem}
