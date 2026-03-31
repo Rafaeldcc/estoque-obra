@@ -787,7 +787,7 @@ onChange={(e)=> materialSelecionado && uploadFoto(e,materialSelecionado)}
 )}
 </div>
 
-)} {/* fecha materialSelecionado */}
+)}
 
 {mensagem && (
   <div className="fixed top-6 right-6 bg-green-600 text-white px-6 py-3 rounded">
@@ -795,6 +795,6 @@ onChange={(e)=> materialSelecionado && uploadFoto(e,materialSelecionado)}
   </div>
 )}
 
-</div> {/* container principal */}
+</div>
 )
 }
