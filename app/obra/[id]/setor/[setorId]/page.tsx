@@ -625,14 +625,48 @@ className="bg-green-600 text-white px-4 rounded"
 
 <div
 key={sub.id}
-onClick={()=>setSubSelecionada(sub)}
-className={`px-3 py-1 rounded cursor-pointer ${
+className={`flex items-center gap-2 px-3 py-1 rounded cursor-pointer ${
 subSelecionada?.id === sub.id
 ? "bg-blue-600 text-white"
 : "bg-gray-200"
 }`}
 >
+
+{editandoSub?.id === sub.id ? (
+<>
+<input
+value={novoNomeSub}
+onChange={(e)=>setNovoNomeSub(e.target.value)}
+className="text-black px-1 border rounded"
+/>
+
+<button onClick={salvarEdicaoSub}>💾</button>
+</>
+) : (
+<span onClick={()=>setSubSelecionada(sub)}>
 {sub.nome}
+</span>
+)}
+
+<button
+onClick={(e)=>{
+e.stopPropagation()
+setEditandoSub(sub)
+setNovoNomeSub(sub.nome)
+}}
+>
+✏️
+</button>
+
+<button
+onClick={(e)=>{
+e.stopPropagation()
+excluirSubcategoria(sub.id)
+}}
+>
+🗑
+</button>
+
 </div>
 
 ))}
