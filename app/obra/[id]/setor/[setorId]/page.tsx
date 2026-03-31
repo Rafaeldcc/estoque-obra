@@ -601,7 +601,6 @@ className="border p-3 rounded mb-6 w-full"
 
 <tbody>
 {filtrados.map(material=>(
-
 <tr
 key={material.id}
 className="border-t hover:bg-gray-50 cursor-pointer"
@@ -634,9 +633,9 @@ className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded transition
 </td>
 
 </tr>
-
 ))}
 </tbody>
+
 </table>
 
 </div>
@@ -645,7 +644,6 @@ className="text-red-500 hover:text-white hover:bg-red-500 p-2 rounded transition
 )}
 
 {materialSelecionado && (
-
 <div className="bg-white border rounded-xl p-8 shadow-md">
 
 <button
@@ -679,7 +677,6 @@ Entrada
 </button>
 
 </div>
-
 )}
 
 {mensagem && (
