@@ -65,6 +65,11 @@ const [editandoSub, setEditandoSub] = useState<any>(null)
 const [novoNomeSub, setNovoNomeSub] = useState("")
 
 // 🔥 INIT
+
+useEffect(()=>{
+carregarObras()
+},[])
+
 useEffect(()=>{
 carregarSubcategorias()
 },[])
@@ -765,23 +770,61 @@ className="mb-6 text-blue-600"
 </h2>
 
 <p className="mb-4">
-Quantidade: <strong>{materialSelecionado.saldo}</strong>
+Quantidade: <strong>{materialSelecionado.saldo} {materialSelecionado.unidade}</strong>
 </p>
+
+<div className="flex gap-3 flex-wrap items-center">
 
 <input
 type="number"
 value={quantidade}
 onChange={(e)=>setQuantidade(Number(e.target.value))}
-className="border p-2 rounded mb-4"
+className="border p-2 rounded w-28"
 />
 
-<button onClick={registrarSaida} className="bg-red-600 text-white px-4 py-2 rounded mr-2">
-Saída
+<select
+value={tipoMov}
+onChange={(e)=>setTipoMov(e.target.value)}
+className="border p-2 rounded"
+>
+<option value="uso">Uso na obra</option>
+<option value="transferencia">Transferência</option>
+<option value="descarte">Descarte</option>
+</select>
+
+{tipoMov === "transferencia" && (
+<select
+value={obraDestino}
+onChange={(e)=>setObraDestino(e.target.value)}
+className="border p-2 rounded"
+>
+<option value="">Selecionar obra destino</option>
+
+{obras
+.filter(o => o.id !== obraId)
+.map((obra)=>(
+<option key={obra.id} value={obra.id}>
+{obra.nome}
+</option>
+))}
+</select>
+)}
+
+<button
+onClick={registrarSaida}
+className="bg-red-600 text-white px-4 py-2 rounded"
+>
+Confirmar
 </button>
 
-<button onClick={registrarEntrada} className="bg-green-600 text-white px-4 py-2 rounded">
+<button
+onClick={registrarEntrada}
+className="bg-green-600 text-white px-4 py-2 rounded"
+>
 Entrada
 </button>
+
+</div>
 
 </div>
 )}
