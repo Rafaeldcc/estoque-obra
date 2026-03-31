@@ -13,6 +13,7 @@ import {
 import { db } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useAuth } from "@/lib/useAuth";
+import { useSearchParams } from "next/navigation"; // 🔥 ADICIONADO
 
 /* TIPOS */
 
@@ -30,6 +31,13 @@ type Setor = {
 export default function CadastrarMaterial() {
 
   const { user, loading } = useAuth();
+
+  // 🔥 NOVO (PEGA PARAMS DA URL)
+  const searchParams = useSearchParams();
+
+  const obraParam = searchParams.get("obra");
+  const setorParam = searchParams.get("setor");
+  const subParam = searchParams.get("sub");
 
   const [role, setRole] = useState<string | null>(null);
   const [empresaId, setEmpresaId] = useState<string | null>(null);
@@ -75,6 +83,12 @@ export default function CadastrarMaterial() {
     carregarObras();
     carregarTodosSetores();
   }, []);
+
+  // 🔥 NOVO (AUTO PREENCHER)
+  useEffect(() => {
+    if (obraParam) setObraId(obraParam);
+    if (setorParam) setSetorId(setorParam);
+  }, [obraParam, setorParam]);
 
   useEffect(() => {
     if (obraId) carregarSetores();
@@ -180,179 +194,163 @@ export default function CadastrarMaterial() {
             "setores",
             setor.id,
             "materiais"
-        )
-      );
+          )
+        );
 
-      materiaisSnap.forEach((doc) => {
-        const data = doc.data();
-        if (data?.nome) {
-          lista.push(data.nome);
-        }
-      });
+        materiaisSnap.forEach((doc) => {
+          const data = doc.data();
+          if (data?.nome) {
+            lista.push(data.nome);
+          }
+        });
+
+      }
 
     }
 
+    lista = [...new Set(lista)];
+    lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    setMateriaisExistentes(lista);
   }
 
   lista = [...new Set(lista)];
 
-  lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
+lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-  setMateriaisExistentes(lista);
+setMateriaisExistentes(lista);
 
 }
 
-  function filtrarSugestoes(valor: string) {
+function filtrarSugestoes(valor: string) {
 
-    setNomeMaterial(valor);
+  setNomeMaterial(valor);
 
-    if (!valor.trim()) {
-      setSugestoes([]);
-      setMostrarSugestoes(false);
-      return;
-    }
-
-    const filtradas = materiaisExistentes
-      .filter((m) =>
-       normalizarTexto(m).startsWith(normalizarTexto(valor))
-   )
-      .sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-    setSugestoes(filtradas);
-    setMostrarSugestoes(true);
-
+  if (!valor.trim()) {
+    setSugestoes([]);
+    setMostrarSugestoes(false);
+    return;
   }
 
-  function filtrarSetores(valor: string) {
+  const filtradas = materiaisExistentes
+    .filter((m) =>
+      normalizarTexto(m).startsWith(normalizarTexto(valor))
+    )
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-    setNovoSetor(valor);
+  setSugestoes(filtradas);
+  setMostrarSugestoes(true);
 
-    if (!valor.trim()) {
-      setSugestoesSetor([]);
-      setMostrarSugestoesSetor(false);
-      return;
-    }
+}
 
-    const filtradas = todosSetores
-      .filter((s) =>
-        normalizarTexto(s).includes(normalizarTexto(valor))
-      )
-      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+function filtrarSetores(valor: string) {
 
-    setSugestoesSetor(filtradas);
-    setMostrarSugestoesSetor(true);
+  setNovoSetor(valor);
 
+  if (!valor.trim()) {
+    setSugestoesSetor([]);
+    setMostrarSugestoesSetor(false);
+    return;
   }
 
-  async function criarSetor() {
+  const filtradas = todosSetores
+    .filter((s) =>
+      normalizarTexto(s).includes(normalizarTexto(valor))
+    )
+    .sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-    if (!obraId) {
-      alert("Selecione uma obra primeiro.");
-      return;
-    }
+  setSugestoesSetor(filtradas);
+  setMostrarSugestoesSetor(true);
 
-    if (!novoSetor.trim()) {
-      alert("Digite o nome do setor.");
-      return;
-    }
+}
 
-    const nomeNormalizado = normalizarTexto(novoSetor);
+async function criarSetor() {
 
-    const snap = await getDocs(
-      collection(db, "obras", obraId, "setores")
-    );
+  if (!obraId) {
+    alert("Selecione uma obra primeiro.");
+    return;
+  }
 
-    const existe = snap.docs.some((doc) => {
+  if (!novoSetor.trim()) {
+    alert("Digite o nome do setor.");
+    return;
+  }
 
-      const data = doc.data() as any;
+  const nomeNormalizado = normalizarTexto(novoSetor);
 
-      const bancoNormalizado =
-        data.nomeNormalizado || normalizarTexto(data.nome);
+  const snap = await getDocs(
+    collection(db, "obras", obraId, "setores")
+  );
 
-      return bancoNormalizado === nomeNormalizado;
+  const existe = snap.docs.some((doc) => {
 
-    });
+    const data = doc.data() as any;
 
-    if (existe) {
-      alert("Este setor já existe.");
-      return;
-    }
+    const bancoNormalizado =
+      data.nomeNormalizado || normalizarTexto(data.nome);
 
-    const ref = await addDoc(
-      collection(db, "obras", obraId, "setores"),
-      {
-        nome: novoSetor.trim(),
-        nomeNormalizado,
-        criadoEm: serverTimestamp(),
-      }
-    );
+    return bancoNormalizado === nomeNormalizado;
 
-    const novo: Setor = {
-      id: ref.id,
+  });
+
+  if (existe) {
+    alert("Este setor já existe.");
+    return;
+  }
+
+  const ref = await addDoc(
+    collection(db, "obras", obraId, "setores"),
+    {
       nome: novoSetor.trim(),
       nomeNormalizado,
-    };
+      criadoEm: serverTimestamp(),
+    }
+  );
 
-    setSetores((prev) => [...prev, novo]);
-    setSetorId(ref.id);
-    setNovoSetor("");
+  const novo: Setor = {
+    id: ref.id,
+    nome: novoSetor.trim(),
+    nomeNormalizado,
+  };
 
+  setSetores((prev) => [...prev, novo]);
+  setSetorId(ref.id);
+  setNovoSetor("");
+
+}
+
+async function salvarMaterial() {
+
+  if (!user) {
+    alert("Sessão expirou.");
+    return;
   }
 
-  async function salvarMaterial() {
+  if (!nomeMaterial.trim() || quantidade <= 0 || !obraId || !setorId) {
+    alert("Preencha todos os campos.");
+    return;
+  }
 
-    if (!user) {
-      alert("Sessão expirou.");
-      return;
-    }
+  if (!role) {
+    alert("Usuário sem permissão definida.");
+    return;
+  }
 
-    if (!nomeMaterial.trim() || quantidade <= 0 || !obraId || !setorId) {
-      alert("Preencha todos os campos.");
-      return;
-    }
+  const nomeNormalizado = normalizarTexto(nomeMaterial);
 
-    /* PERMISSÃO ATUALIZADA */
-
-    if (!role) {
-      alert("Usuário sem permissão definida.");
-      return;
-    }
-
-    const nomeNormalizado = normalizarTexto(nomeMaterial);
-
-    const materiaisRef = collection(
-      db,
-      "obras",
-      obraId,
-      "setores",
-      setorId,
-      "materiais"
-    );
-
-    const snap = await getDocs(materiaisRef);
-
-    let existe = false;
-
-    snap.forEach((doc) => {
-
-      const data = doc.data();
-
-      if (
-        normalizarTexto(data.nome) === nomeNormalizado
-      ) {
-        existe = true;
-     }
-
-    });
-
-    if (existe) {
-      alert("Este material já existe neste setor.");
-      return;
-    }
-
-    try {
-
-      const materiaisRef = collection(
+  // 🔥 CAMINHO CORRIGIDO (SUPORTA SUBCATEGORIA)
+  const materiaisRef = subParam
+    ? collection(
+        db,
+        "obras",
+        obraId,
+        "setores",
+        setorId,
+        "subcategorias",
+        subParam,
+        "materiais"
+      )
+    : collection(
         db,
         "obras",
         obraId,
@@ -361,239 +359,271 @@ export default function CadastrarMaterial() {
         "materiais"
       );
 
-      const newDoc = await addDoc(materiaisRef, {
-        nome: nomeMaterial.trim(),
-        nomeNormalizado,
-        saldo: quantidade,
-        unidade,
-        criadoEm: serverTimestamp(),
-      });
+  const snap = await getDocs(materiaisRef);
 
-      const materialId = newDoc.id;
+  let existe = false;
 
-      await registrarMovimentacao({
+  snap.forEach((doc) => {
 
-        materialId,
-        materialNome: nomeMaterial.trim(),
+    const data = doc.data();
 
-        tipo: "entrada",
-
-        quantidade,
-
-        obraId,
-        obraNome: obras.find((o) => o.id === obraId)?.nome || "",
-
-        setorId,
-        setorNome: setores.find((s) => s.id === setorId)?.nome || "",
-
-        usuarioId: user.uid,
-        usuarioNome: user.email || "",
-
-        empresaId: empresaId!
-
-      });
-
-      setMensagem("Material salvo com sucesso!");
-
-      setTimeout(() => {
-        setMensagem("");
-      }, 3000);
-
-      setNomeMaterial("");
-      setQuantidade(0);
-
-      carregarMateriais();
-
-    } catch (error) {
-
-      console.error(error);
-      alert("Erro ao salvar material.");
-
+    if (
+      normalizarTexto(data.nome) === nomeNormalizado
+    ) {
+      existe = true;
     }
+
+  });
+
+  if (existe) {
+    alert("Este material já existe neste setor.");
+    return;
+  }
+
+  try {
+
+    const newDoc = await addDoc(materiaisRef, {
+      nome: nomeMaterial.trim(),
+      nomeNormalizado,
+      saldo: quantidade,
+      unidade,
+      criadoEm: serverTimestamp(),
+    });
+
+    const materialId = newDoc.id;
+
+    await registrarMovimentacao({
+
+      materialId,
+      materialNome: nomeMaterial.trim(),
+
+      tipo: "entrada",
+
+      quantidade,
+
+      obraId,
+      obraNome: obras.find((o) => o.id === obraId)?.nome || "",
+
+      setorId,
+      setorNome: setores.find((s) => s.id === setorId)?.nome || "",
+
+      usuarioId: user.uid,
+      usuarioNome: user.email || "",
+
+      empresaId: empresaId!
+
+    });
+
+    setMensagem("Material salvo com sucesso!");
+
+    setTimeout(() => {
+      setMensagem("");
+    }, 3000);
+
+    setNomeMaterial("");
+    setQuantidade(0);
+
+    carregarMateriais();
+
+  } catch (error) {
+
+    console.error(error);
+    alert("Erro ao salvar material.");
 
   }
 
-  if (loading) return null;
+}
 
-  return (
+      setMensagem("Material salvo com sucesso!");
 
-    <div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow space-y-4">
+setTimeout(() => {
+  setMensagem("");
+}, 3000);
 
-      <h2 className="text-center text-lg font-semibold">
-        Cadastrar Material
-      </h2>
+setNomeMaterial("");
+setQuantidade(0);
 
-      {mensagem && (
-        <div className="bg-green-600 text-white p-2 rounded text-center">
-          {mensagem}
-        </div>
-      )}
+carregarMateriais();
 
-      <select
-        value={obraId}
-        onChange={(e) => setObraId(e.target.value)}
-        className="w-full p-2 border rounded"
-      >
-        <option value="">Selecionar obra</option>
+} catch (error) {
 
-        {obras.map((obra) => (
-          <option key={obra.id} value={obra.id}>
-            {obra.nome}
-          </option>
-        ))}
+  console.error(error);
+  alert("Erro ao salvar material.");
 
-      </select>
+}
 
-      <select
-        value={setorId}
-        onChange={(e) => setSetorId(e.target.value)}
-        className="w-full p-2 border rounded"
-      >
+}
 
-        <option value="">Selecionar setor</option>
+if (loading) return null;
 
-        {setores.map((setor) => (
-          <option key={setor.id} value={setor.id}>
-            {setor.nome}
-          </option>
-        ))}
+return (
 
-      </select>
+<div className="max-w-md mx-auto bg-white p-6 rounded-xl shadow space-y-4">
 
-      {obraId && (
+  <h2 className="text-center text-lg font-semibold">
+    Cadastrar Material
+  </h2>
 
-        <div className="relative flex gap-2">
+  {mensagem && (
+    <div className="bg-green-600 text-white p-2 rounded text-center">
+      {mensagem}
+    </div>
+  )}
 
-          <div className="flex-1 relative">
+  {/* 🔥 MOSTRA OBRA SÓ SE NÃO VEIO DA URL */}
+  {!obraParam && (
+    <select
+      value={obraId}
+      onChange={(e) => setObraId(e.target.value)}
+      className="w-full p-2 border rounded"
+    >
+      <option value="">Selecionar obra</option>
 
-            <input
-              placeholder="Novo setor"
-              value={novoSetor}
-              onChange={(e) => filtrarSetores(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
+      {obras.map((obra) => (
+        <option key={obra.id} value={obra.id}>
+          {obra.nome}
+        </option>
+      ))}
+    </select>
+  )}
 
-            {mostrarSugestoesSetor && sugestoesSetor.length > 0 && (
+  {/* 🔥 MOSTRA SETOR SÓ SE NÃO VEIO DA URL */}
+  {!setorParam && (
+    <select
+      value={setorId}
+      onChange={(e) => setSetorId(e.target.value)}
+      className="w-full p-2 border rounded"
+    >
+      <option value="">Selecionar setor</option>
 
-              <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto z-10">
+      {setores.map((setor) => (
+        <option key={setor.id} value={setor.id}>
+          {setor.nome}
+        </option>
+      ))}
+    </select>
+  )}
 
-                {sugestoesSetor.map((item, index) => (
+  {/* 🔥 CRIAR SETOR (SÓ SE NÃO VEIO PRONTO) */}
+  {!setorParam && obraId && (
+    <div className="relative flex gap-2">
 
-                  <div
-                    key={index}
-                    onClick={() => {
-                      setNovoSetor(item)
-                      setMostrarSugestoesSetor(false)
-                    }}
-                    className="p-2 cursor-pointer hover:bg-gray-100"
-                  >
-                    {item}
-                  </div>
-
-                ))}
-
-              </div>
-
-            )}
-
-          </div>
-
-          <button
-            onClick={criarSetor}
-            className="bg-gray-800 text-white px-4 rounded"
-          >
-            Criar
-          </button>
-
-        </div>
-
-      )}
-
-      <div className="relative">
+      <div className="flex-1 relative">
 
         <input
-          placeholder="Nome do material"
-          value={nomeMaterial}
-          onChange={(e) => filtrarSugestoes(e.target.value)}
+          placeholder="Novo setor"
+          value={novoSetor}
+          onChange={(e) => filtrarSetores(e.target.value)}
           className="w-full p-2 border rounded"
         />
 
-        {mostrarSugestoes && sugestoes.length > 0 && (
-
+        {mostrarSugestoesSetor && sugestoesSetor.length > 0 && (
           <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto z-10">
 
-            {sugestoes.map((item, index) => (
-
+            {sugestoesSetor.map((item, index) => (
               <div
                 key={index}
                 onClick={() => {
-                  setNomeMaterial(item)
-                  setMostrarSugestoes(false)
+                  setNovoSetor(item)
+                  setMostrarSugestoesSetor(false)
                 }}
                 className="p-2 cursor-pointer hover:bg-gray-100"
               >
                 {item}
               </div>
-
             ))}
 
           </div>
-
         )}
 
       </div>
 
-      <input
-        type="number"
-        placeholder="Quantidade"
-        value={quantidade}
-        onChange={(e) => setQuantidade(Number(e.target.value))}
-        className="w-full p-2 border rounded"
-      />
-
-      <select
-        value={unidade}
-        onChange={(e) => setUnidade(e.target.value)}
-        className="w-full p-2 border rounded"
-      >
-
-        <option value="un">Unidade</option>
-        <option value="m">Metro</option>
-        <option value="pc">Peça</option>
-
-        <option value="rolo">Rolo</option>
-        <option value="cx">Caixa</option>
-        <option value="barra">Barra</option>
-        <option value="kg">Kg</option>
-        <option value="l">Litro</option>
-        <option value="pct">Pacote</option>
-
-        <option value="nova">➕ Nova unidade</option>
-
-      </select>
-
-      {unidade === "nova" && (
-
-      <input
-        placeholder="Digite a nova unidade (ex: bobina)"
-        value={novaUnidade}
-        onChange={(e) => {
-          setNovaUnidade(e.target.value)
-          setUnidade(e.target.value)
-        }}
-       className="w-full p-2 border rounded mt-2"
-      />
-
-      )}
       <button
-        onClick={salvarMaterial}
-        className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+        onClick={criarSetor}
+        className="bg-gray-800 text-white px-4 rounded"
       >
-        Salvar Material
+        Criar
       </button>
 
     </div>
+  )}
 
-  );
+  {/* 🔥 MATERIAL */}
+  <div className="relative">
 
+    <input
+      placeholder="Nome do material"
+      value={nomeMaterial}
+      onChange={(e) => filtrarSugestoes(e.target.value)}
+      className="w-full p-2 border rounded"
+    />
+
+    {mostrarSugestoes && sugestoes.length > 0 && (
+      <div className="absolute left-0 right-0 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto z-10">
+
+        {sugestoes.map((item, index) => (
+          <div
+            key={index}
+            onClick={() => {
+              setNomeMaterial(item)
+              setMostrarSugestoes(false)
+            }}
+            className="p-2 cursor-pointer hover:bg-gray-100"
+          >
+            {item}
+          </div>
+        ))}
+
+      </div>
+    )}
+
+  </div>
+
+  <input
+    type="number"
+    placeholder="Quantidade"
+    value={quantidade}
+    onChange={(e) => setQuantidade(Number(e.target.value))}
+    className="w-full p-2 border rounded"
+  />
+
+  <select
+    value={unidade}
+    onChange={(e) => setUnidade(e.target.value)}
+    className="w-full p-2 border rounded"
+  >
+    <option value="un">Unidade</option>
+    <option value="m">Metro</option>
+    <option value="pc">Peça</option>
+    <option value="rolo">Rolo</option>
+    <option value="cx">Caixa</option>
+    <option value="barra">Barra</option>
+    <option value="kg">Kg</option>
+    <option value="l">Litro</option>
+    <option value="pct">Pacote</option>
+    <option value="nova">➕ Nova unidade</option>
+  </select>
+
+  {unidade === "nova" && (
+    <input
+      placeholder="Digite a nova unidade (ex: bobina)"
+      value={novaUnidade}
+      onChange={(e) => {
+        setNovaUnidade(e.target.value)
+        setUnidade(e.target.value)
+      }}
+      className="w-full p-2 border rounded mt-2"
+    />
+  )}
+
+  <button
+    onClick={salvarMaterial}
+    className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+  >
+    Salvar Material
+  </button>
+
+</div>
+
+);
 }
