@@ -8,7 +8,7 @@ import {
   updateDoc,
   addDoc,
   getDoc,
-  deleteDoc, // ✅ CORRIGIDO
+  deleteDoc,
   serverTimestamp
 } from "firebase/firestore";
 
@@ -57,45 +57,84 @@ const [obraDestino,setObraDestino] = useState("")
 const [editandoNome, setEditandoNome] = useState(false)
 const [novoNome, setNovoNome] = useState("")
 
+const [subcategorias, setSubcategorias] = useState<any[]>([])
+const [subSelecionada, setSubSelecionada] = useState<any>(null)
+const [nomeSub, setNomeSub] = useState("")
+
+const [editandoSub, setEditandoSub] = useState<any>(null)
+const [novoNomeSub, setNovoNomeSub] = useState("")
+
+// 🔥 INIT
 useEffect(()=>{
-carregarMateriais()
+carregarSubcategorias()
 carregarObras()
 },[])
 
+// 🔥 CARREGA MATERIAIS AO SELECIONAR SUB
+useEffect(()=>{
+if(subSelecionada){
+carregarMateriais()
+}
+},[subSelecionada])
+
+// 🔥 SELEÇÃO VIA URL
 useEffect(() => {
 
-  if (!materialUrl || materiais.length === 0) return;
+if (!materialUrl || materiais.length === 0) return;
 
-  const encontrado = materiais.find(m =>
-    m.nome.toLowerCase().trim() === materialUrl.toLowerCase().trim()
-  );
+const encontrado = materiais.find(m =>
+m.nome.toLowerCase().trim() === materialUrl.toLowerCase().trim()
+);
 
-  if (encontrado) {
-    setMaterialSelecionado(encontrado);
-  }
+if (encontrado) {
+setMaterialSelecionado(encontrado);
+}
 
 }, [materialUrl, materiais]);
 
-// 🔥 EXCLUIR MATERIAL (ADICIONADO)
+// 🔥 EXCLUIR MATERIAL
 async function excluirMaterial(material: Material){
+
+if(!subSelecionada) return
 
 const confirmar = confirm(`Excluir ${material.nome}?`)
 if (!confirmar) return
 
 await deleteDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",material.id)
+doc(
+db,
+"obras",
+obraId,
+"setores",
+setorId,
+"subcategorias",
+subSelecionada.id,
+"materiais",
+material.id
+)
 )
 
 mostrarMensagem("Material excluído")
 carregarMateriais()
 }
 
+// 🔥 EDITAR NOME MATERIAL
 async function salvarNomeMaterial(){
 
-if(!materialSelecionado || !novoNome.trim()) return
+if(!materialSelecionado || !novoNome.trim() || !subSelecionada) return
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+doc(
+db,
+"obras",
+obraId,
+"setores",
+setorId,
+"subcategorias",
+subSelecionada.id,
+"materiais",
+materialSelecionado.id
+),
 { nome: novoNome }
 )
 
@@ -109,26 +148,78 @@ mostrarMensagem("Nome atualizado")
 carregarMateriais()
 }
 
-// 🔥 OBRAS
-async function carregarObras(){
-const snap = await getDocs(collection(db,"obras"))
+// 🔥 SUBCATEGORIAS
+async function carregarSubcategorias(){
+
+const snap = await getDocs(
+collection(db,"obras",obraId,"setores",setorId,"subcategorias")
+)
+
 const lista:any[] = []
 
 snap.forEach(docSnap=>{
 lista.push({
 id:docSnap.id,
-nome:docSnap.data().nome
+...docSnap.data()
 })
 })
 
-setObras(lista)
+setSubcategorias(lista)
+}
+
+async function criarSubcategoria(){
+
+if(!nomeSub.trim()) return
+
+await addDoc(
+collection(db,"obras",obraId,"setores",setorId,"subcategorias"),
+{ nome: nomeSub }
+)
+
+setNomeSub("")
+carregarSubcategorias()
+}
+
+async function salvarEdicaoSub(){
+
+if(!novoNomeSub.trim()) return
+
+await updateDoc(
+doc(db,"obras",obraId,"setores",setorId,"subcategorias",editandoSub.id),
+{ nome: novoNomeSub }
+)
+
+setEditandoSub(null)
+carregarSubcategorias()
+}
+
+async function excluirSubcategoria(id:string){
+
+if(!confirm("Excluir subcategoria?")) return
+
+await deleteDoc(
+doc(db,"obras",obraId,"setores",setorId,"subcategorias",id)
+)
+
+carregarSubcategorias()
 }
 
 // 🔥 MATERIAIS
 async function carregarMateriais(){
 
+if(!subSelecionada) return
+
 const snapshot = await getDocs(
-collection(db,"obras",obraId,"setores",setorId,"materiais")
+collection(
+db,
+"obras",
+obraId,
+"setores",
+setorId,
+"subcategorias",
+subSelecionada.id,
+"materiais"
+)
 )
 
 const lista:Material[] = []
@@ -150,6 +241,7 @@ lista.sort((a,b)=>a.nome.localeCompare(b.nome))
 setMateriais(lista)
 }
 
+// 🔥 MENSAGEM
 function mostrarMensagem(texto:string){
 setMensagem(texto)
 setTimeout(()=>setMensagem(""),3000)
@@ -163,7 +255,7 @@ alert("Usuário não autenticado")
 return
 }
 
-if(!materialSelecionado) return
+if(!materialSelecionado || !subSelecionada) return
 if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
 if(quantidade > materialSelecionado.saldo){
@@ -180,9 +272,19 @@ const empresaId = userSnap.data()?.empresaId || null
 const obraSnap = await getDoc(doc(db,"obras",obraId))
 const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
 
-// remove da origem
+// 🔻 REMOVE DA ORIGEM
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+doc(
+db,
+"obras",
+obraId,
+"setores",
+setorId,
+"subcategorias",
+subSelecionada.id,
+"materiais",
+materialSelecionado.id
+),
 {saldo: materialSelecionado.saldo - quantidade}
 )
 
@@ -212,8 +314,43 @@ criadoEm: serverTimestamp()
 setorDestinoId = novoSetor.id
 }
 
+// 🔥 AGORA COM SUBCATEGORIA
+const subRef = collection(
+db,
+"obras",
+obraDestino,
+"setores",
+setorDestinoId,
+"subcategorias"
+)
+
+const subSnap = await getDocs(subRef)
+
+let subDestinoId = ""
+
+const subExistente = subSnap.docs.find(
+s => s.data().nome === subSelecionada.nome
+)
+
+if(subExistente){
+subDestinoId = subExistente.id
+}else{
+const novaSub = await addDoc(subRef,{
+nome: subSelecionada.nome
+})
+subDestinoId = novaSub.id
+}
+
+// 🔥 MATERIAIS DENTRO DA SUB
 const materiaisDestinoRef = collection(
-db,"obras",obraDestino,"setores",setorDestinoId,"materiais"
+db,
+"obras",
+obraDestino,
+"setores",
+setorDestinoId,
+"subcategorias",
+subDestinoId,
+"materiais"
 )
 
 const materiaisSnap = await getDocs(materiaisDestinoRef)
@@ -290,7 +427,7 @@ alert("Usuário não autenticado")
 return
 }
 
-if(!materialSelecionado) return
+if(!materialSelecionado || !subSelecionada) return
 if(quantidade <= 0) return alert("Digite uma quantidade válida")
 
 const userSnap = await getDoc(doc(db,"usuarios",user.uid))
@@ -300,7 +437,17 @@ const obraSnap = await getDoc(doc(db,"obras",obraId))
 const obraNome = obraSnap.data()?.nome || `Obra ${obraId}`
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+doc(
+db,
+"obras",
+obraId,
+"setores",
+setorId,
+"subcategorias",
+subSelecionada.id,
+"materiais",
+materialSelecionado.id
+),
 {saldo: materialSelecionado.saldo + quantidade}
 )
 
@@ -321,8 +468,10 @@ setQuantidade(0)
 carregarMateriais()
 }
 
-// 🔥 FOTO (mantido igual)
+// 🔥 FOTO
 async function uploadFoto(e:any,material:Material){
+
+if(!subSelecionada) return
 
 const file = e.target.files[0]
 if(!file) return
@@ -336,7 +485,17 @@ await uploadBytes(storageRef,file)
 const url = await getDownloadURL(storageRef)
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+doc(
+db,
+"obras",
+obraId,
+"setores",
+setorId,
+"subcategorias",
+subSelecionada.id,
+"materiais",
+material.id // ✅ CORRIGIDO
+),
 {foto:url}
 )
 
@@ -350,8 +509,20 @@ mostrarMensagem("Foto salva")
 // 🔥 REMOVER FOTO
 async function removerFoto(material:Material){
 
+if(!subSelecionada) return
+
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",material.id),
+doc(
+db,
+"obras",
+obraId,
+"setores",
+setorId,
+"subcategorias",
+subSelecionada.id,
+"materiais",
+material.id // ✅ CORRIGIDO
+),
 {foto:""}
 )
 
@@ -365,10 +536,20 @@ mostrarMensagem("Foto removida")
 // 🔥 ESTOQUE MÍNIMO
 async function salvarEstoqueMinimo(){
 
-if(!materialSelecionado) return
+if(!materialSelecionado || !subSelecionada) return
 
 await updateDoc(
-doc(db,"obras",obraId,"setores",setorId,"materiais",materialSelecionado.id),
+doc(
+db,
+"obras",
+obraId,
+"setores",
+setorId,
+"subcategorias",
+subSelecionada.id,
+"materiais",
+materialSelecionado.id
+),
 {estoqueMinimo: materialSelecionado.estoqueMinimo ?? 0}
 )
 
@@ -376,6 +557,7 @@ mostrarMensagem("Estoque mínimo salvo")
 carregarMateriais()
 }
 
+// 🔥 UTIL
 function normalizar(texto:string){
 return texto.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()
 }
@@ -384,21 +566,16 @@ const filtrados = materiais.filter(m =>
 normalizar(m.nome).startsWith(normalizar(busca))
 )
 
-return(
-<div className="max-w-6xl mx-auto p-8">
-
+{subSelecionada?.id && (
 <button
-onClick={()=>router.push(`/obra/${obraId}`)}
-className="bg-gray-600 text-white px-4 py-2 rounded mb-6"
+onClick={()=>router.push(`/dashboard/cadastrar-material?obra=${obraId}&setor=${setorId}&sub=${subSelecionada.id}`)}
+className="bg-green-700 text-white px-4 py-2 rounded mb-6"
 >
-← Voltar
++ Cadastrar Material
 </button>
+)}
 
-<h1 className="text-3xl font-bold mb-6">
-Controle de Estoque
-</h1>
-
-{!materialSelecionado && (
+{subSelecionada?.id && !materialSelecionado && (
 <>
 <input
 placeholder="Buscar material..."
@@ -591,7 +768,7 @@ Salvar mínimo
 </div>
 
 <div className="mt-6">
-{materialSelecionado.foto ? (
+{materialSelecionado?.foto ? (
 <>
 <img src={materialSelecionado.foto} className="w-48 mb-3"/>
 <button onClick={()=>removerFoto(materialSelecionado)} className="bg-red-600 text-white px-4 py-2 rounded">
@@ -601,7 +778,11 @@ Remover foto
 ) : (
 <label className="bg-green-600 text-white px-4 py-2 rounded cursor-pointer">
 Adicionar foto
-<input type="file" className="hidden" onChange={(e)=>uploadFoto(e,materialSelecionado)} />
+<input 
+type="file" 
+className="hidden" 
+onChange={(e)=> materialSelecionado && uploadFoto(e,materialSelecionado)} 
+/>
 </label>
 )}
 </div>
@@ -614,7 +795,3 @@ Adicionar foto
 {mensagem}
 </div>
 )}
-
-</div>
-)
-}
