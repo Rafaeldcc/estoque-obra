@@ -13,7 +13,7 @@ import {
 import { db } from "@/lib/firebase";
 import { registrarMovimentacao } from "@/lib/movimentacoes";
 import { useAuth } from "@/lib/useAuth";
-import { useSearchParams } from "next/navigation"; // 🔥 ADICIONADO
+import { useSearchParams } from "next/navigation";
 
 /* TIPOS */
 
@@ -32,7 +32,6 @@ export default function CadastrarMaterial() {
 
   const { user, loading } = useAuth();
 
-  // 🔥 NOVO (PEGA PARAMS DA URL)
   const searchParams = useSearchParams();
 
   const obraParam = searchParams.get("obra");
@@ -84,7 +83,6 @@ export default function CadastrarMaterial() {
     carregarTodosSetores();
   }, []);
 
-  // 🔥 NOVO (AUTO PREENCHER)
   useEffect(() => {
     if (obraParam) setObraId(obraParam);
     if (setorParam) setSetorId(setorParam);
@@ -99,7 +97,6 @@ export default function CadastrarMaterial() {
   }, []);
 
   async function carregarUsuario() {
-
     if (!user) return;
 
     const snap = await getDoc(doc(db, "usuarios", user.uid));
@@ -109,11 +106,9 @@ export default function CadastrarMaterial() {
       setRole(data.role);
       setEmpresaId(data.empresaId);
     }
-
   }
 
   async function carregarObras() {
-
     const snap = await getDocs(collection(db, "obras"));
 
     const lista: Obra[] = snap.docs.map((doc) => ({
@@ -124,17 +119,14 @@ export default function CadastrarMaterial() {
     lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
     setObras(lista);
-
   }
 
   async function carregarTodosSetores() {
-
     const obrasSnap = await getDocs(collection(db, "obras"));
 
     let lista: string[] = [];
 
     for (const obra of obrasSnap.docs) {
-
       const setoresSnap = await getDocs(
         collection(db, "obras", obra.id, "setores")
       );
@@ -142,19 +134,15 @@ export default function CadastrarMaterial() {
       setoresSnap.forEach((setor) => {
         lista.push(setor.data().nome);
       });
-
     }
 
     lista = [...new Set(lista)];
-
     lista.sort((a, b) => a.localeCompare(b, "pt-BR"));
 
     setTodosSetores(lista);
-
   }
 
   async function carregarSetores() {
-
     if (!obraId) return;
 
     const snap = await getDocs(
@@ -169,23 +157,19 @@ export default function CadastrarMaterial() {
     lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
     setSetores(lista);
-
   }
 
   async function carregarMateriais() {
-
     const obrasSnap = await getDocs(collection(db, "obras"));
 
     let lista: string[] = [];
 
     for (const obra of obrasSnap.docs) {
-
       const setoresSnap = await getDocs(
         collection(db, "obras", obra.id, "setores")
       );
 
       for (const setor of setoresSnap.docs) {
-
         const materiaisSnap = await getDocs(
           collection(
             db,
@@ -199,13 +183,9 @@ export default function CadastrarMaterial() {
 
         materiaisSnap.forEach((doc) => {
           const data = doc.data();
-          if (data?.nome) {
-            lista.push(data.nome);
-          }
+          if (data?.nome) lista.push(data.nome);
         });
-
       }
-
     }
 
     lista = [...new Set(lista)];
