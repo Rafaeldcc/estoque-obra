@@ -313,8 +313,8 @@ export default function Controle() {
     }
 
     // 🧾 REGISTRO (mantive seu padrão)
-    const obraNome =
-      obras.find(o=>o.id === obraSelecionada)?.nome || "";
+    const obraDestinoNome =
+      obras.find(o => o.id === obraDestino)?.nome || "";
 
     await registrarMovimentacao({
 
@@ -322,9 +322,10 @@ export default function Controle() {
       materialNome: material.nome,
       tipo: "transferencia",
       quantidade: qtd,
-      obraId: obraSelecionada,
-      obraNome: obraNome,
-      destino: "transferencia",
+
+      obraOrigem: obraNome,
+      obraDestino: obraDestinoNome,
+
       usuarioId: user.uid,
       usuarioNome: user.email || "",
       empresaId: empresaId
