@@ -19,8 +19,7 @@ type Movimentacao = {
   materialNome: string;
   tipo: "entrada" | "saida" | "transferencia";
   quantidade: number;
-  obraNome?: string;
-  obraOrigem?: string;
+  obraNome: string;
   obraDestino?: string | null;
   destino?: "uso" | "transferencia" | "descarte";
   usuarioNome: string;
@@ -281,25 +280,9 @@ async function carregarMovimentacoes(){
               Quantidade: <b>{mov.quantidade}</b>
             </div>
 
-            {mov.tipo === "transferencia" ? (
-              <>
-                <div>
-                  Obra origem: <b>{mov.obraOrigem}</b>
-                </div>
-
-                <div>
-                  Obra destino: <b>{mov.obraDestino}</b>
-                </div>
-
-                <div className="mt-1 font-semibold">
-                  {mov.obraOrigem} → {mov.obraDestino}
-                </div>
-              </>
-            ) : (
-              <div>
-                Obra: <b>{mov.obraNome}</b>
-              </div>
-           )}
+            <div>
+              Obra origem: <b>{mov.obraNome}</b>
+            </div>
 
             {mov.tipo === "entrada" && <div>Em estoque</div>}
 
