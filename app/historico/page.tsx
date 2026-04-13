@@ -12,9 +12,13 @@ import {
 type Movimentacao = {
   id: string;
   materialNome: string;
-  tipo: "entrada" | "saida";
+  tipo: "entrada" | "saida" | "transferencia";
   quantidade: number;
-  obraNome: string;
+
+  obraNome?: string;
+  obraOrigem?: string;
+  obraDestino?: string;
+
   usuarioNome: string;
   createdAt: any;
 };
@@ -76,14 +80,20 @@ export default function Historico() {
               marginBottom: 15,
               borderRadius: 8,
               backgroundColor:
-                mov.tipo === "entrada" ? "#ecfdf5" : "#fef2f2",
+                mov.tipo === "entrada"
+                  ? "#ecfdf5"
+                  : mov.tipo === "saida"
+                  ? "#fef2f2"
+                  : "#eff6ff",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <strong>{mov.materialNome}</strong>
 
               <span>
-                {mov.tipo === "entrada" ? "🟢 Entrada" : "🔴 Saída"}
+                {mov.tipo === "entrada" && "🟢 Entrada"}
+                {mov.tipo === "saida" && "🔴 Saída"}
+                {mov.tipo === "transferencia" && "🔵 Transferência"}
               </span>
             </div>
 
@@ -91,9 +101,27 @@ export default function Historico() {
               Quantidade: <b>{mov.quantidade}</b>
             </div>
 
-            <div>
-              Obra: <b>{mov.obraNome}</b>
-            </div>
+            {mov.tipo === "transferencia" ? (
+              <>
+                <div>
+                  Obra origem: <b>{mov.obraOrigem}</b>
+                </div>
+
+                <div>
+                  Obra destino: <b>{mov.obraDestino}</b>
+                </div>
+
+                <div style={{ marginTop: 5 }}>
+                  <b>
+                    {mov.obraOrigem} → {mov.obraDestino}
+                  </b>
+                </div>
+              </>
+            ) : (
+              <div>
+                Obra: <b>{mov.obraNome}</b>
+              </div>
+            )}
 
             <div>
               Usuário: <b>{mov.usuarioNome}</b>
