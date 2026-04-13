@@ -317,7 +317,6 @@ export default function Controle() {
       obras.find(o => o.id === obraDestino)?.nome || "";
 
     await registrarMovimentacao({
-
       materialId: material.id,
       materialNome: material.nome,
       tipo: "transferencia",
@@ -329,7 +328,6 @@ export default function Controle() {
       usuarioId: user.uid,
       usuarioNome: user.email || "",
       empresaId: empresaId
-
     });
 
     mostrarMensagem("Transferência realizada com sucesso 🚀");

@@ -9,14 +9,16 @@ type MovimentacaoProps = {
 
   quantidade: number;
 
-  obraId: string;
-  obraNome: string;
+  obraId?: string;
+  obraNome?: string;
+
+  obraOrigem?: string;
+  obraDestino?: string | null;
 
   setorId?: string;
   setorNome?: string;
 
   destino?: "entrada" | "uso" | "transferencia" | "descarte";
-  obraDestino?: string | null;
 
   usuarioId?: string;
   usuarioNome?: string;
@@ -34,25 +36,23 @@ export async function registrarMovimentacao(data: MovimentacaoProps) {
       tipo: data.tipo,
       quantidade: data.quantidade,
 
-      obraId: data.obraId,
-      obraNome: data.obraNome,
+      obraId: data.obraId ?? null,
+      obraNome: data.obraNome ?? null,
+
+      obraOrigem: data.obraOrigem ?? null,
+      obraDestino: data.obraDestino ?? null,
 
       setorId: data.setorId ?? null,
       setorNome: data.setorNome ?? null,
 
       destino: data.destino ?? "uso",
 
-      obraDestino: data.obraDestino ?? null,
-
       usuarioId: data.usuarioId ?? "",
       usuarioNome: data.usuarioNome ?? "",
 
       empresaId: data.empresaId ?? "",
 
-      // 🔥 importante para o histórico funcionar
       createdAt: serverTimestamp(),
-
-      // mantém seu campo antigo também
       criadoEm: serverTimestamp()
     };
 
@@ -62,9 +62,7 @@ export async function registrarMovimentacao(data: MovimentacaoProps) {
     );
 
   } catch (error) {
-
     console.error("Erro ao registrar movimentação:", error);
     throw error;
-
   }
 }
