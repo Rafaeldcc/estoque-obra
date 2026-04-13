@@ -22,7 +22,6 @@ type Movimentacao = {
   obraNome?: string;
   obraOrigem?: string;
   obraDestino?: string | null;
-  obraDestino?: string | null;
   destino?: "uso" | "transferencia" | "descarte";
   usuarioNome: string;
   createdAt?: any;
