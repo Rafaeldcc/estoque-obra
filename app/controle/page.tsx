@@ -314,23 +314,21 @@ export default function Controle() {
 
     // 🧾 REGISTRO (mantive seu padrão)
     const obraNome =
-      obras.find(o => o.id === obraSelecionada)?.nome || "";
-
-    const obraDestinoNome =
-      obras.find(o => o.id === obraDestino)?.nome || "";
+      obras.find(o=>o.id === obraSelecionada)?.nome || "";
 
     await registrarMovimentacao({
+
       materialId: material.id,
       materialNome: material.nome,
       tipo: "transferencia",
       quantidade: qtd,
-
-      obraOrigem: obraNome,
-      obraDestino: obraDestinoNome,
-
+      obraId: obraSelecionada,
+      obraNome: obraNome,
+      destino: "transferencia",
       usuarioId: user.uid,
       usuarioNome: user.email || "",
       empresaId: empresaId
+
     });
 
     mostrarMensagem("Transferência realizada com sucesso 🚀");
