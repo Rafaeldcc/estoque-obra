@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 type Material = {
   id: string;
   nome: string;
+  nomePadrao: string;
   obra: string;
   setor: string;
   saldo: number;
@@ -33,154 +34,154 @@ export default function BuscarMaterial() {
     carregarMateriais();
   }, []);
 
-  function normalizarTexto(texto: string) {
+  // 🔥 NORMALIZAÇÃO FORTE
+  function normalizar(texto: string) {
     return texto
       ?.normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/mm/g, "")
       .trim();
+  }
+
+  // 🔥 DISTÂNCIA (ERRO DE DIGITAÇÃO)
+  function similaridade(a: string, b: string) {
+    let matches = 0;
+    for (let i = 0; i < Math.min(a.length, b.length); i++) {
+      if (a[i] === b[i]) matches++;
+    }
+    return matches / Math.max(a.length, b.length);
   }
 
   async function carregarMateriais() {
 
-  const lista: Material[] = [];
+    const lista: Material[] = [];
 
-  const obrasSnap = await getDocs(collection(db, "obras"));
+    const obrasSnap = await getDocs(collection(db, "obras"));
 
-  for (const obra of obrasSnap.docs) {
+    await Promise.all(
+      obrasSnap.docs.map(async (obra) => {
 
-    const obraNome = obra.data().nome;
+        const obraNome = obra.data().nome;
 
-    const setoresSnap = await getDocs(
-      collection(db, "obras", obra.id, "setores")
-    );
-
-    for (const setor of setoresSnap.docs) {
-
-      const setorNome = setor.data().nome;
-
-      const subcategoriasSnap = await getDocs(
-        collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
-      );
-
-      for (const sub of subcategoriasSnap.docs) {
-
-        const materiaisSnap = await getDocs(
-          collection(
-            db,
-            "obras",
-            obra.id,
-            "setores",
-            setor.id,
-            "subcategorias",
-            sub.id,
-            "materiais"
-          )
+        const setoresSnap = await getDocs(
+          collection(db, "obras", obra.id, "setores")
         );
 
-        materiaisSnap.forEach((docSnap) => {
+        await Promise.all(
+          setoresSnap.docs.map(async (setor) => {
 
-          const data = docSnap.data();
+            const setorNome = setor.data().nome;
 
-          if (!data?.nome) return;
+            const subcategoriasSnap = await getDocs(
+              collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
+            );
 
-          lista.push({
-            id: docSnap.id,
-            nome: data.nome,
-            saldo: data.saldo ?? 0,
-            unidade: data.unidade ?? "un",
-            obra: obraNome,
-            setor: setorNome,
-            obraId: obra.id,
-            setorId: setor.id
-          });
+            await Promise.all(
+              subcategoriasSnap.docs.map(async (sub) => {
 
-        });
+                const materiaisSnap = await getDocs(
+                  collection(
+                    db,
+                    "obras",
+                    obra.id,
+                    "setores",
+                    setor.id,
+                    "subcategorias",
+                    sub.id,
+                    "materiais"
+                  )
+                );
 
-      }
-    }
+                materiaisSnap.forEach((docSnap) => {
+
+                  const data = docSnap.data();
+
+                  if (!data?.nome) return;
+
+                  lista.push({
+                    id: docSnap.id,
+                    nome: data.nome,
+                    nomePadrao: normalizar(data.nome),
+                    saldo: data.saldo ?? 0,
+                    unidade: data.unidade ?? "un",
+                    obra: obraNome,
+                    setor: setorNome,
+                    obraId: obra.id,
+                    setorId: setor.id
+                  });
+
+                });
+
+              })
+            );
+
+          })
+        );
+
+      })
+    );
+
+    setMateriais(lista);
   }
-
-  // ✅ AGORA SIM fora de todos os loops
-  lista.sort((a, b) =>
-    a.nome.localeCompare(b.nome, "pt-BR")
-  );
-
-  setMateriais(lista);
-}
 
   function pesquisar(valor: string) {
 
-  setBusca(valor);
+    setBusca(valor);
 
-  if (!valor.trim()) {
-    setSugestoes([]);
-    return;
-  }
+    if (!valor.trim()) {
+      setSugestoes([]);
+      return;
+    }
 
-  if (materiais.length === 0) {
-    return;
-  }
+    const termo = normalizar(valor);
 
-  const termo = normalizarTexto(valor);
-  const palavras = termo.split(" ").filter(Boolean);
+    const resultados = materiais.map((m) => {
 
-  const resultados = materiais.map((m) => {
+      const nome = m.nomePadrao;
 
-    const nome = normalizarTexto(m.nome);
+      let score = 0;
 
-    let score = 0;
+      if (nome === termo) score += 100;
+      if (nome.startsWith(termo)) score += 60;
+      if (nome.includes(termo)) score += 40;
 
-    // 🔥 match exato
-    if (nome === termo) score += 100;
+      // 🔥 tolerância erro digitação
+      const sim = similaridade(nome, termo);
+      if (sim > 0.6) score += sim * 50;
 
-    // 🔥 começa com termo
-    if (nome.startsWith(termo)) score += 50;
+      return { ...m, score };
 
-    // 🔥 contém termo
-    if (nome.includes(termo)) score += 30;
-
-    // 🔥 palavras separadas
-    palavras.forEach(p => {
-      if (nome.startsWith(p)) score += 20;
-      else if (nome.includes(p)) score += 10;
     });
 
-    return { ...m, score };
+    const filtrados = resultados
+      .filter(r => r.score > 10 && r.saldo > 0)
+      .sort((a, b) => b.score - a.score);
 
-  });
+    // 🔥 AGRUPAMENTO PERFEITO
+    const mapa = new Map<string, GrupoMaterial>();
 
-  const filtrados = resultados
-  .filter(r => r.score > 0 && r.saldo > 0)
-  .sort((a, b) => b.score - a.score);
+    filtrados.forEach(item => {
 
-// 🔥 AGRUPAR POR MATERIAL
-const mapa = new Map<string, any>();
+      const chave = item.nomePadrao;
 
-filtrados.forEach(item => {
+      if (!mapa.has(chave)) {
+        mapa.set(chave, {
+          nome: item.nome,
+          itens: []
+        });
+      }
 
-  const chave = normalizarTexto(item.nome);
+      mapa.get(chave)!.itens.push(item);
 
-  if (!mapa.has(chave)) {
-    mapa.set(chave, {
-      nome: item.nome,
-      itens: []
     });
+
+    setSugestoes(Array.from(mapa.values()).slice(0, 10));
   }
-
-  mapa.get(chave).itens.push(item);
-
-});
-
-setSugestoes(Array.from(mapa.values()).slice(0, 10));
-}
 
   function abrirMaterial(material: Material) {
-
-    router.push(
-      `/resultado-busca?material=${encodeURIComponent(material.nome)}`
-    );
-
+    router.push(`/material/${material.id}`); // 🔥 agora usa ID (nunca erra)
   }
 
   return (
@@ -198,22 +199,22 @@ setSugestoes(Array.from(mapa.values()).slice(0, 10));
         className="w-full p-3 border rounded"
       />
 
-            {sugestoes.length > 0 && (
+      {sugestoes.length > 0 && (
 
         <div className="mt-2 border rounded bg-white shadow max-h-[420px] overflow-y-auto">
 
           {sugestoes.map((grupo, index) => (
 
-            <div
-              key={index}
-              className="border-b"
-            >
+            <div key={index} className="border-b">
 
-              <div className="p-3 font-bold bg-gray-50">
-                {grupo.nome}
+              <div className="p-3 font-bold bg-gray-50 flex justify-between">
+                <span>{grupo.nome}</span>
+                <span className="text-blue-600">
+                  Total: {grupo.itens.reduce((acc, i) => acc + i.saldo, 0)}
+                </span>
               </div>
 
-              {grupo.itens.map((mat: Material, i: number) => (
+              {grupo.itens.map((mat, i) => (
 
                 <div
                   key={i}
