@@ -15,6 +15,7 @@ type Material = {
   unidade: string;
   obraId: string;
   setorId: string;
+  subId: string; // 🔥 NOVO
 };
 
 type GrupoMaterial = {
@@ -44,80 +45,67 @@ export default function BuscarMaterial() {
       .trim();
   }
 
-  function similaridade(a: string, b: string) {
-    let matches = 0;
-    for (let i = 0; i < Math.min(a.length, b.length); i++) {
-      if (a[i] === b[i]) matches++;
-    }
-    return matches / Math.max(a.length, b.length);
-  }
-
   async function carregarMateriais() {
 
     const lista: Material[] = [];
 
     const obrasSnap = await getDocs(collection(db, "obras"));
 
-    await Promise.all(
-      obrasSnap.docs.map(async (obra) => {
+    for (const obra of obrasSnap.docs) {
 
-        const obraNome = obra.data().nome;
+      const obraNome = obra.data().nome;
 
-        const setoresSnap = await getDocs(
-          collection(db, "obras", obra.id, "setores")
+      const setoresSnap = await getDocs(
+        collection(db, "obras", obra.id, "setores")
+      );
+
+      for (const setor of setoresSnap.docs) {
+
+        const setorNome = setor.data().nome;
+
+        const subSnap = await getDocs(
+          collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
         );
 
-        await Promise.all(
-          setoresSnap.docs.map(async (setor) => {
+        for (const sub of subSnap.docs) {
 
-            const setorNome = setor.data().nome;
+          const matSnap = await getDocs(
+            collection(
+              db,
+              "obras",
+              obra.id,
+              "setores",
+              setor.id,
+              "subcategorias",
+              sub.id,
+              "materiais"
+            )
+          );
 
-            const subSnap = await getDocs(
-              collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
-            );
+          matSnap.forEach(docSnap => {
 
-            await Promise.all(
-              subSnap.docs.map(async (sub) => {
+            const data = docSnap.data();
 
-                const matSnap = await getDocs(
-                  collection(
-                    db,
-                    "obras",
-                    obra.id,
-                    "setores",
-                    setor.id,
-                    "subcategorias",
-                    sub.id,
-                    "materiais"
-                  )
-                );
+            if (!data?.nome) return;
 
-                matSnap.forEach(docSnap => {
-                  const data = docSnap.data();
+            lista.push({
+              id: docSnap.id,
+              nome: data.nome,
+              nomePadrao: normalizar(data.nome),
+              saldo: data.saldo ?? 0,
+              unidade: data.unidade ?? "un",
+              obra: obraNome,
+              setor: setorNome,
+              obraId: obra.id,
+              setorId: setor.id,
+              subId: sub.id // 🔥 IMPORTANTE
+            });
 
-                  if (!data?.nome) return;
+          });
 
-                  lista.push({
-                    id: docSnap.id,
-                    nome: data.nome,
-                    nomePadrao: normalizar(data.nome),
-                    saldo: data.saldo ?? 0,
-                    unidade: data.unidade ?? "un",
-                    obra: obraNome,
-                    setor: setorNome,
-                    obraId: obra.id,
-                    setorId: setor.id
-                  });
-                });
-
-              })
-            );
-
-          })
-        );
-
-      })
-    );
+        }
+      }
+    }
 
     setMateriais(lista);
   }
@@ -126,36 +114,22 @@ export default function BuscarMaterial() {
 
     setBusca(valor);
 
-    if (!valor.trim() || !materiais.length) {
+    if (!valor.trim()) {
       setSugestoes([]);
       return;
     }
 
     const termo = normalizar(valor);
 
-    const resultados = materiais.map((m) => {
-
-      const nome = m.nomePadrao;
-      let score = 0;
-
-      if (nome === termo) score += 100;
-      if (nome.startsWith(termo)) score += 60;
-      if (nome.includes(termo)) score += 40;
-
-      const sim = similaridade(nome, termo);
-      if (sim > 0.6) score += sim * 50;
-
-      return { ...m, score };
-
-    });
-
-    const filtrados = resultados
-      .filter(r => r.score > 10 && r.saldo > 0)
-      .sort((a, b) => b.score - a.score);
+    const filtrados = materiais
+      .filter(m =>
+        m.nomePadrao.includes(termo) && m.saldo > 0
+      );
 
     const mapa = new Map<string, GrupoMaterial>();
 
     filtrados.forEach(item => {
+
       const chave = item.nomePadrao;
 
       if (!mapa.has(chave)) {
@@ -173,14 +147,17 @@ export default function BuscarMaterial() {
 
   function abrirMaterial(material: Material) {
     router.push(
-      `/obra/${material.obraId}/setor/${material.setorId}?material=${material.id}`
+      `/obra/${material.obraId}/setor/${material.setorId}?sub=${material.subId}&material=${material.id}`
     );
   }
 
   return (
+
     <div className="max-w-xl mx-auto p-8">
 
-      <h1 className="text-2xl font-bold mb-6">🔎 Buscar Material</h1>
+      <h1 className="text-2xl font-bold mb-6">
+        🔎 Buscar Material
+      </h1>
 
       <input
         placeholder="Digite o nome do material..."
@@ -197,28 +174,26 @@ export default function BuscarMaterial() {
 
             <div key={index} className="border-b">
 
-              <div className="p-3 font-bold bg-gray-50 flex justify-between">
-                <span>{grupo.nome}</span>
-                <span className="text-blue-600">
-                  Total: {grupo.itens.reduce((acc, i) => acc + i.saldo, 0)}
-                </span>
+              <div className="p-3 font-bold bg-gray-50">
+                {grupo.nome}
               </div>
 
               {grupo.itens.map((mat, i) => (
 
                 <div
                   key={i}
-                  id={mat.id}
                   onClick={() => abrirMaterial(mat)}
                   className="p-3 cursor-pointer hover:bg-gray-100 pl-6"
                 >
-                  <div className="text-sm text-gray-700">
+
+                  <div className="text-sm">
                     {mat.setor} • {mat.obra}
                   </div>
 
                   <div className="text-xs text-gray-500">
-                    Estoque: {mat.saldo} {mat.unidade}
+                    {mat.saldo} {mat.unidade}
                   </div>
+
                 </div>
 
               ))}
@@ -232,5 +207,6 @@ export default function BuscarMaterial() {
       )}
 
     </div>
+
   );
 }
