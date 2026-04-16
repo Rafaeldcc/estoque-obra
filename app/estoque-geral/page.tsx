@@ -93,12 +93,12 @@ export default function EstoqueGeral() {
         nome: doc.data().nome
       }));
 
-      const listaSetores: string[] = [];
-
       setObras(listaObras);
 
+      const listaSetores: string[] = [];
       const mapa: Record<string, LinhaEstoque> = {};
 
+      // 🔥 LOOP PRINCIPAL CORRETO
       for (const obra of listaObras) {
 
         const setoresSnap = await getDocs(
@@ -107,144 +107,64 @@ export default function EstoqueGeral() {
 
         for (const setor of setoresSnap.docs) {
 
-          const setorData = setor.data();
-          const setorNome = setorData.nome || setor.id;
+          const setorNome = setor.data().nome || setor.id;
 
-          // 🔥 GUARDA TODOS OS SETORES
-         // 🔥 garante que não duplica setor
-if (!listaSetores.includes(setorNome)) {
-  listaSetores.push(setorNome);
-}
-
-// 🔥 busca subcategorias
-const subcategoriasSnap = await getDocs(
-  collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
-);
-
-// 🔥 se não tiver subcategoria, evita erro
-if (subcategoriasSnap.empty) continue;
-
-for (const sub of subcategoriasSnap.docs) {
-
-  // 🔥 busca materiais dentro da subcategoria
-  const materiaisSnap = await getDocs(
-    collection(
-      db,
-      "obras",
-      obra.id,
-      "setores",
-      setor.id,
-      "subcategorias",
-      sub.id,
-      "materiais"
-    )
-  );
-
-  // 🔥 evita loop vazio desnecessário
-  if (materiaisSnap.empty) continue;
-
-  for (const mat of materiaisSnap.docs) {
-
-    const data = mat.data();
-
-    const materialNomeBruto = data?.nome || "Material";
-
-    const materialNome = materialNomeBruto
-      .replace(/\s+/g, " ")
-      .trim();
-
-    const saldo = Number(data?.saldo || 0);
-
-    // 🔥 ignora lixo
-    if (!materialNome) continue;
-
-    // 🔥 se quiser mostrar setores mesmo zerados, comenta essa linha
-    if (saldo === 0) continue;
-
-    const chave = normalizar(materialNome + "_" + setorNome);
-
-    if (!mapa[chave]) {
-      mapa[chave] = {
-        material: materialNome,
-        setor: setorNome,
-        total: 0,
-        obras: {}
-      };
-    }
-
-    // 🔥 soma por obra
-    mapa[chave].obras[obra.nome] =
-      (mapa[chave].obras[obra.nome] || 0) + saldo;
-
-    // 🔥 soma total
-    mapa[chave].total += saldo;
-  }
-}
-
-   for (const obra of listaObras) {
-
-     const setoresSnap = await getDocs(
-      collection(db, "obras", obra.id, "setores")
-    );
-
-    for (const setor of setoresSnap.docs) {
-
-      const setorNome = setor.data().nome || setor.id;
-
-      if (!listaSetores.includes(setorNome)) {
-        listaSetores.push(setorNome);
-      }
-
-      const subcategoriasSnap = await getDocs(
-        collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
-      );
-
-      for (const sub of subcategoriasSnap.docs) {
-
-        const materiaisSnap = await getDocs(
-          collection(
-            db,
-            "obras",
-            obra.id,
-            "setores",
-            setor.id,
-            "subcategorias",
-            sub.id,
-            "materiais"
-          )
-        );
-
-        for (const mat of materiaisSnap.docs) {
-
-          const data = mat.data();
-
-          const materialNome = (data.nome || "Material")
-            .replace(/\s+/g, " ")
-            .trim();
-
-          const saldo = Number(data.saldo || 0);
-
-          if (saldo === 0) continue;
-
-          const chave = normalizar(materialNome + "_" + setorNome);
-
-          if (!mapa[chave]) {
-            mapa[chave] = {
-              material: materialNome,
-              setor: setorNome,
-              total: 0,
-              obras: {}
-            };
+          // guarda setor
+          if (!listaSetores.includes(setorNome)) {
+            listaSetores.push(setorNome);
           }
 
-          mapa[chave].obras[obra.nome] =
-            (mapa[chave].obras[obra.nome] || 0) + saldo;
+          const subcategoriasSnap = await getDocs(
+            collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
+          );
 
-          mapa[chave].total += saldo;
+          for (const sub of subcategoriasSnap.docs) {
+
+            const materiaisSnap = await getDocs(
+              collection(
+                db,
+                "obras",
+                obra.id,
+                "setores",
+                setor.id,
+                "subcategorias",
+                sub.id,
+                "materiais"
+              )
+            );
+
+            for (const mat of materiaisSnap.docs) {
+
+              const data = mat.data();
+
+              const materialNome = (data.nome || "Material")
+                .replace(/\s+/g, " ")
+                .trim();
+
+              const saldo = Number(data.saldo || 0);
+
+              if (!materialNome) continue;
+              if (saldo === 0) continue;
+
+              const chave = normalizar(materialNome + "_" + setorNome);
+
+              if (!mapa[chave]) {
+                mapa[chave] = {
+                  material: materialNome,
+                  setor: setorNome,
+                  total: 0,
+                  obras: {}
+                };
+              }
+
+              mapa[chave].obras[obra.nome] =
+                (mapa[chave].obras[obra.nome] || 0) + saldo;
+
+              mapa[chave].total += saldo;
+            }
+          }
         }
       }
-    }
-  }
 
       setTodosSetores(listaSetores);
       setTabela(Object.values(mapa));
@@ -254,7 +174,6 @@ for (const sub of subcategoriasSnap.docs) {
       console.error("Erro ao carregar estoque:", error);
       setLoading(false);
     }
-
   }
 
   async function abrirControle(linha: LinhaEstoque, obraNome: string) {
@@ -289,7 +208,6 @@ for (const sub of subcategoriasSnap.docs) {
     } catch (error) {
       console.error("Erro ao abrir controle:", error);
     }
-
   }
 
   if (loading) {
@@ -352,25 +270,11 @@ for (const sub of subcategoriasSnap.docs) {
 
   }
 
-  // 🔥 BUSCA INTELIGENTE (PRIORIDADE PRA QUEM COMEÇA)
   const termo = normalizar(busca);
 
   const materiais = tabela
     .filter(l => l.setor === setorSelecionado)
-    .filter(l => normalizar(l.material).includes(termo))
-    .sort((a, b) => {
-
-      const nomeA = normalizar(a.material);
-      const nomeB = normalizar(b.material);
-
-      const aComeca = nomeA.startsWith(termo);
-      const bComeca = nomeB.startsWith(termo);
-
-      if (aComeca && !bComeca) return -1;
-      if (!aComeca && bComeca) return 1;
-
-      return nomeA.localeCompare(nomeB);
-    });
+    .filter(l => normalizar(l.material).includes(termo));
 
   return (
 
@@ -401,13 +305,11 @@ for (const sub of subcategoriasSnap.docs) {
           <thead className="bg-gray-100">
             <tr>
               <th className="p-3 border text-left">Material</th>
-
               {obras.map((obra) => (
                 <th key={obra.id} className="p-3 border">
                   {obra.nome}
                 </th>
               ))}
-
               <th className="p-3 border">Total</th>
             </tr>
           </thead>
@@ -416,9 +318,9 @@ for (const sub of subcategoriasSnap.docs) {
 
             {materiais.map((linha, index) => (
 
-              <tr key={index} className="border hover:bg-gray-50">
+              <tr key={index} className="border">
 
-                <td className="p-3 border font-semibold text-black">
+                <td className="p-3 border font-semibold">
                   {linha.material}
                 </td>
 
@@ -429,10 +331,8 @@ for (const sub of subcategoriasSnap.docs) {
                   return (
                     <td
                       key={obra.id}
-                      className="p-3 border text-center cursor-pointer hover:bg-blue-100 text-blue-600 font-bold"
-                      onClick={() => {
-                        abrirControle(linha, obra.nome);
-                      }}
+                      className="p-3 border text-center cursor-pointer"
+                      onClick={() => abrirControle(linha, obra.nome)}
                     >
                       {valor}
                     </td>
@@ -440,7 +340,7 @@ for (const sub of subcategoriasSnap.docs) {
 
                 })}
 
-                <td className="p-3 border font-bold text-center">
+                <td className="p-3 border text-center font-bold">
                   {linha.total}
                 </td>
 
