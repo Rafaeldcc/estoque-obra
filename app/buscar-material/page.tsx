@@ -72,14 +72,14 @@ export default function BuscarMaterial() {
 
             const setorNome = setor.data().nome;
 
-            const subcategoriasSnap = await getDocs(
+            const subSnap = await getDocs(
               collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
             );
 
             await Promise.all(
-              subcategoriasSnap.docs.map(async (sub) => {
+              subSnap.docs.map(async (sub) => {
 
-                const materiaisSnap = await getDocs(
+                const matSnap = await getDocs(
                   collection(
                     db,
                     "obras",
@@ -92,8 +92,7 @@ export default function BuscarMaterial() {
                   )
                 );
 
-                materiaisSnap.forEach((docSnap) => {
-
+                matSnap.forEach(docSnap => {
                   const data = docSnap.data();
 
                   if (!data?.nome) return;
@@ -109,7 +108,6 @@ export default function BuscarMaterial() {
                     obraId: obra.id,
                     setorId: setor.id
                   });
-
                 });
 
               })
@@ -128,7 +126,7 @@ export default function BuscarMaterial() {
 
     setBusca(valor);
 
-    if (!valor.trim()) {
+    if (!valor.trim() || !materiais.length) {
       setSugestoes([]);
       return;
     }
@@ -138,7 +136,6 @@ export default function BuscarMaterial() {
     const resultados = materiais.map((m) => {
 
       const nome = m.nomePadrao;
-
       let score = 0;
 
       if (nome === termo) score += 100;
@@ -159,7 +156,6 @@ export default function BuscarMaterial() {
     const mapa = new Map<string, GrupoMaterial>();
 
     filtrados.forEach(item => {
-
       const chave = item.nomePadrao;
 
       if (!mapa.has(chave)) {
@@ -170,13 +166,11 @@ export default function BuscarMaterial() {
       }
 
       mapa.get(chave)!.itens.push(item);
-
     });
 
     setSugestoes(Array.from(mapa.values()).slice(0, 10));
   }
 
-  // 🔥 ALTERAÇÃO PRINCIPAL AQUI
   function abrirMaterial(material: Material) {
     router.push(
       `/obra/${material.obraId}/setor/${material.setorId}?material=${material.id}`
@@ -184,12 +178,9 @@ export default function BuscarMaterial() {
   }
 
   return (
-
     <div className="max-w-xl mx-auto p-8">
 
-      <h1 className="text-2xl font-bold mb-6">
-        🔎 Buscar Material
-      </h1>
+      <h1 className="text-2xl font-bold mb-6">🔎 Buscar Material</h1>
 
       <input
         placeholder="Digite o nome do material..."
@@ -217,10 +208,10 @@ export default function BuscarMaterial() {
 
                 <div
                   key={i}
+                  id={mat.id}
                   onClick={() => abrirMaterial(mat)}
                   className="p-3 cursor-pointer hover:bg-gray-100 pl-6"
                 >
-
                   <div className="text-sm text-gray-700">
                     {mat.setor} • {mat.obra}
                   </div>
@@ -228,7 +219,6 @@ export default function BuscarMaterial() {
                   <div className="text-xs text-gray-500">
                     Estoque: {mat.saldo} {mat.unidade}
                   </div>
-
                 </div>
 
               ))}
@@ -242,7 +232,5 @@ export default function BuscarMaterial() {
       )}
 
     </div>
-
   );
-
 }
