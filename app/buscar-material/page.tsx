@@ -105,13 +105,18 @@ export default function BuscarMaterial() {
       return;
     }
 
+    if (materiais.length === 0) {
+      console.log("Materiais ainda não carregados");
+      return;
+    }
+
     const buscaNormalizada = normalizarTexto(valor);
 
     const filtrados = materiais.filter((m) => {
 
       const nomeNormalizado = normalizarTexto(m.nome);
 
-      return nomeNormalizado.startsWith(buscaNormalizada) && m.saldo > 0;
+      return nomeNormalizado.includes(buscaNormalizada) && m.saldo > 0;
 
     });
 
@@ -122,7 +127,7 @@ export default function BuscarMaterial() {
       const chave = normalizarTexto(item.nome);
 
       if (!mapa.has(chave)) {
-        mapa.set(chave, item);
+      mapa.set(chave, item);
       }
 
     });
