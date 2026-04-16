@@ -38,21 +38,27 @@ export default function BuscarMaterial() {
 
   async function carregarMateriais() {
 
-    const lista: Material[] = [];
+  const lista: Material[] = [];
 
-    const obrasSnap = await getDocs(collection(db, "obras"));
+  const obrasSnap = await getDocs(collection(db, "obras"));
 
-    for (const obra of obrasSnap.docs) {
+  for (const obra of obrasSnap.docs) {
 
-      const obraNome = obra.data().nome;
+    const obraNome = obra.data().nome;
 
-      const setoresSnap = await getDocs(
-        collection(db, "obras", obra.id, "setores")
+    const setoresSnap = await getDocs(
+      collection(db, "obras", obra.id, "setores")
+    );
+
+    for (const setor of setoresSnap.docs) {
+
+      const setorNome = setor.data().nome;
+
+      const subcategoriasSnap = await getDocs(
+        collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
       );
 
-      for (const setor of setoresSnap.docs) {
-
-        const setorNome = setor.data().nome;
+      for (const sub of subcategoriasSnap.docs) {
 
         const materiaisSnap = await getDocs(
           collection(
@@ -61,6 +67,8 @@ export default function BuscarMaterial() {
             obra.id,
             "setores",
             setor.id,
+            "subcategorias",
+            sub.id,
             "materiais"
           )
         );
@@ -85,62 +93,74 @@ export default function BuscarMaterial() {
         });
 
       }
-
     }
-
-    lista.sort((a, b) =>
-      a.nome.localeCompare(b.nome, "pt-BR")
-    );
-
-    setMateriais(lista);
-
   }
+
+  // ✅ AGORA SIM fora de todos os loops
+  lista.sort((a, b) =>
+    a.nome.localeCompare(b.nome, "pt-BR")
+  );
+
+  setMateriais(lista);
+}
 
   function pesquisar(valor: string) {
 
-    setBusca(valor);
+  setBusca(valor);
 
-    if (!valor.trim()) {
-      setSugestoes([]);
-      return;
-    }
-
-    if (materiais.length === 0) {
-      console.log("Materiais ainda não carregados");
-      return;
-    }
-
-    const buscaNormalizada = normalizarTexto(valor);
-
-    const filtrados = materiais.filter((m) => {
-
-      const nomeNormalizado = normalizarTexto(m.nome);
-
-      return nomeNormalizado.includes(buscaNormalizada) && m.saldo > 0;
-
-    });
-
-    const mapa = new Map<string, Material>();
-
-    filtrados.forEach((item) => {
-
-      const chave = normalizarTexto(item.nome);
-
-      if (!mapa.has(chave)) {
-      mapa.set(chave, item);
-      }
-
-    });
-
-    const unicos = Array.from(mapa.values());
-
-    unicos.sort((a, b) =>
-      a.nome.localeCompare(b.nome, "pt-BR")
-    );
-
-    setSugestoes(unicos.slice(0, 12));
-
+  if (!valor.trim()) {
+    setSugestoes([]);
+    return;
   }
+
+  if (materiais.length === 0) {
+    return;
+  }
+
+  const termo = normalizarTexto(valor);
+  const palavras = termo.split(" ").filter(Boolean);
+
+  const resultados = materiais.map((m) => {
+
+    const nome = normalizarTexto(m.nome);
+
+    let score = 0;
+
+    // 🔥 match exato
+    if (nome === termo) score += 100;
+
+    // 🔥 começa com termo
+    if (nome.startsWith(termo)) score += 50;
+
+    // 🔥 contém termo
+    if (nome.includes(termo)) score += 30;
+
+    // 🔥 palavras separadas
+    palavras.forEach(p => {
+      if (nome.startsWith(p)) score += 20;
+      else if (nome.includes(p)) score += 10;
+    });
+
+    return { ...m, score };
+
+  });
+
+  const filtrados = resultados
+    .filter(r => r.score > 0 && r.saldo > 0)
+    .sort((a, b) => b.score - a.score);
+
+  // 🔥 remove duplicados
+  const mapa = new Map<string, typeof filtrados[0]>();
+
+  filtrados.forEach(item => {
+    const chave = normalizarTexto(item.nome);
+    if (!mapa.has(chave)) {
+      mapa.set(chave, item);
+    }
+  });
+
+  setSugestoes(Array.from(mapa.values()).slice(0, 10));
+}
 
   function abrirMaterial(material: Material) {
 
