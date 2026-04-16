@@ -35,6 +35,7 @@ export default function EstoqueGeral() {
   const [loading, setLoading] = useState(true);
   const [setorSelecionado, setSetorSelecionado] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
+  const [todosSetores, setTodosSetores] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -92,6 +93,8 @@ export default function EstoqueGeral() {
         nome: doc.data().nome
       }));
 
+      const listaSetores: string[] = [];
+
       setObras(listaObras);
 
       const mapa: Record<string, LinhaEstoque> = {};
@@ -106,6 +109,11 @@ export default function EstoqueGeral() {
 
           const setorData = setor.data();
           const setorNome = setorData.nome || setor.id;
+
+          // 🔥 GUARDA TODOS OS SETORES
+         if (!listaSetores.includes(setorNome)) {
+           listaSetores.push(setorNome);
+         }
 
           const materiaisSnap = await getDocs(
             collection(
@@ -158,6 +166,7 @@ export default function EstoqueGeral() {
 
       }
 
+      setTodosSetores(listaSetores);
       setTabela(Object.values(mapa));
       setLoading(false);
 
@@ -211,7 +220,7 @@ export default function EstoqueGeral() {
     );
   }
 
-  const setores = Array.from(new Set(tabela.map(l => l.setor)));
+  const setores = todosSetores;
 
   if (!setorSelecionado) {
 
