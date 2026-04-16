@@ -87,7 +87,7 @@ useEffect(() => {
 if (!materialUrl || materiais.length === 0) return;
 
 const encontrado = materiais.find(m =>
-m.nome.toLowerCase().trim() === materialUrl.toLowerCase().trim()
+  m.id === materialUrl
 );
 
 if (encontrado) {
