@@ -183,68 +183,68 @@ for (const sub of subcategoriasSnap.docs) {
 
    for (const obra of listaObras) {
 
-  const setoresSnap = await getDocs(
-    collection(db, "obras", obra.id, "setores")
-  );
-
-  for (const setor of setoresSnap.docs) {
-
-    const setorNome = setor.data().nome || setor.id;
-
-    if (!listaSetores.includes(setorNome)) {
-      listaSetores.push(setorNome);
-    }
-
-    const subcategoriasSnap = await getDocs(
-      collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
+     const setoresSnap = await getDocs(
+      collection(db, "obras", obra.id, "setores")
     );
 
-    for (const sub of subcategoriasSnap.docs) {
+    for (const setor of setoresSnap.docs) {
 
-      const materiaisSnap = await getDocs(
-        collection(
-          db,
-          "obras",
-          obra.id,
-          "setores",
-          setor.id,
-          "subcategorias",
-          sub.id,
-          "materiais"
-        )
+      const setorNome = setor.data().nome || setor.id;
+
+      if (!listaSetores.includes(setorNome)) {
+        listaSetores.push(setorNome);
+      }
+
+      const subcategoriasSnap = await getDocs(
+        collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
       );
 
-      for (const mat of materiaisSnap.docs) {
+      for (const sub of subcategoriasSnap.docs) {
 
-        const data = mat.data();
+        const materiaisSnap = await getDocs(
+          collection(
+            db,
+            "obras",
+            obra.id,
+            "setores",
+            setor.id,
+            "subcategorias",
+            sub.id,
+            "materiais"
+          )
+        );
 
-        const materialNome = (data.nome || "Material")
-          .replace(/\s+/g, " ")
-          .trim();
+        for (const mat of materiaisSnap.docs) {
 
-        const saldo = Number(data.saldo || 0);
+          const data = mat.data();
 
-        if (saldo === 0) continue;
+          const materialNome = (data.nome || "Material")
+            .replace(/\s+/g, " ")
+            .trim();
 
-        const chave = normalizar(materialNome + "_" + setorNome);
+          const saldo = Number(data.saldo || 0);
 
-        if (!mapa[chave]) {
-          mapa[chave] = {
-            material: materialNome,
-            setor: setorNome,
-            total: 0,
-            obras: {}
-          };
+          if (saldo === 0) continue;
+
+          const chave = normalizar(materialNome + "_" + setorNome);
+
+          if (!mapa[chave]) {
+            mapa[chave] = {
+              material: materialNome,
+              setor: setorNome,
+              total: 0,
+              obras: {}
+            };
+          }
+
+          mapa[chave].obras[obra.nome] =
+            (mapa[chave].obras[obra.nome] || 0) + saldo;
+
+          mapa[chave].total += saldo;
         }
-
-        mapa[chave].obras[obra.nome] =
-          (mapa[chave].obras[obra.nome] || 0) + saldo;
-
-        mapa[chave].total += saldo;
       }
     }
   }
-}
 
       setTodosSetores(listaSetores);
       setTabela(Object.values(mapa));
