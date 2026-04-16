@@ -181,45 +181,60 @@ for (const sub of subcategoriasSnap.docs) {
   }
 }
 
-          for (const mat of materiaisSnap.docs) {
+          for (const setor of setoresSnap.docs) {
 
-            const data = mat.data();
+  const setorNome = setor.data().nome || setor.id;
 
-            const materialNomeBruto = data.nome || "Material";
+  const subcategoriasSnap = await getDocs(
+    collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
+  );
 
-            // 🔥 REMOVE espaços duplicados + limpa
-            const materialNome = materialNomeBruto
-              .replace(/\s+/g, " ")
-              .trim();
+  for (const sub of subcategoriasSnap.docs) {
 
-            const saldo = Number(data.saldo || 0);
+    const materiaisSnap = await getDocs(
+      collection(
+        db,
+        "obras",
+        obra.id,
+        "setores",
+        setor.id,
+        "subcategorias",
+        sub.id,
+        "materiais"
+      )
+    );
 
-            if (saldo === 0) continue;
+    // ✅ ÚNICO lugar correto
+    for (const mat of materiaisSnap.docs) {
 
-            // 🔥 chave normalizada PERFEITA
-            const chave = normalizar(materialNome + "_" + setorNome);;
+      const data = mat.data();
 
-            if (!mapa[chave]) {
-              mapa[chave] = {
-                material: materialNome, // 👈 agora padronizado
-                setor: setorNome,
-                total: 0,
-                obras: {}
-              };
-            }
+      const materialNome = (data.nome || "Material")
+        .replace(/\s+/g, " ")
+        .trim();
 
-            // 🔥 soma correta
-            mapa[chave].obras[obra.nome] =
-              (mapa[chave].obras[obra.nome] || 0) + saldo;
+      const saldo = Number(data.saldo || 0);
 
-            // 🔥 soma total
-            mapa[chave].total += saldo;
+      if (saldo === 0) continue;
 
-          }
+      const chave = normalizar(materialNome + "_" + setorNome);
 
-        }
-
+      if (!mapa[chave]) {
+        mapa[chave] = {
+          material: materialNome,
+          setor: setorNome,
+          total: 0,
+          obras: {}
+        };
       }
+
+      mapa[chave].obras[obra.nome] =
+        (mapa[chave].obras[obra.nome] || 0) + saldo;
+
+      mapa[chave].total += saldo;
+    }
+  }
+}
 
       setTodosSetores(listaSetores);
       setTabela(Object.values(mapa));
