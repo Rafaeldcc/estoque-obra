@@ -111,62 +111,75 @@ export default function EstoqueGeral() {
           const setorNome = setorData.nome || setor.id;
 
           // 🔥 GUARDA TODOS OS SETORES
-         if (!listaSetores.includes(setorNome)) {
-           listaSetores.push(setorNome);
-         }
+         // 🔥 garante que não duplica setor
+if (!listaSetores.includes(setorNome)) {
+  listaSetores.push(setorNome);
+}
 
-         const subcategoriasSnap = await getDocs(
-          collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
-         );
+// 🔥 busca subcategorias
+const subcategoriasSnap = await getDocs(
+  collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
+);
 
-         for (const sub of subcategoriasSnap.docs) {
+// 🔥 se não tiver subcategoria, evita erro
+if (subcategoriasSnap.empty) continue;
 
-           const materiaisSnap = await getDocs(
-             collection(
-              db,
-              "obras",
-              obra.id,
-              "setores",
-              setor.id,
-              "subcategorias",
-              sub.id,
-              "materiais"
-             )
-            );
+for (const sub of subcategoriasSnap.docs) {
 
-            for (const mat of materiaisSnap.docs) {
+  // 🔥 busca materiais dentro da subcategoria
+  const materiaisSnap = await getDocs(
+    collection(
+      db,
+      "obras",
+      obra.id,
+      "setores",
+      setor.id,
+      "subcategorias",
+      sub.id,
+      "materiais"
+    )
+  );
 
-              const data = mat.data();
+  // 🔥 evita loop vazio desnecessário
+  if (materiaisSnap.empty) continue;
 
-              const materialNomeBruto = data.nome || "Material";
+  for (const mat of materiaisSnap.docs) {
 
-              const materialNome = materialNomeBruto
-                .replace(/\s+/g, " ")
-                .trim();
+    const data = mat.data();
 
-              const saldo = Number(data.saldo || 0);
+    const materialNomeBruto = data?.nome || "Material";
 
-              if (saldo === 0) continue;
+    const materialNome = materialNomeBruto
+      .replace(/\s+/g, " ")
+      .trim();
 
-              const chave = normalizar(materialNome + "_" + setorNome);
+    const saldo = Number(data?.saldo || 0);
 
-              if (!mapa[chave]) {
-                mapa[chave] = {
-                  material: materialNome,
-                  setor: setorNome,
-                  total: 0,
-                  obras: {}
-                };
-              }
+    // 🔥 ignora lixo
+    if (!materialNome) continue;
 
-              mapa[chave].obras[obra.nome] =
-                (mapa[chave].obras[obra.nome] || 0) + saldo;
+    // 🔥 se quiser mostrar setores mesmo zerados, comenta essa linha
+    if (saldo === 0) continue;
 
-              mapa[chave].total += saldo;
+    const chave = normalizar(materialNome + "_" + setorNome);
 
-            }
+    if (!mapa[chave]) {
+      mapa[chave] = {
+        material: materialNome,
+        setor: setorNome,
+        total: 0,
+        obras: {}
+      };
+    }
 
-          }
+    // 🔥 soma por obra
+    mapa[chave].obras[obra.nome] =
+      (mapa[chave].obras[obra.nome] || 0) + saldo;
+
+    // 🔥 soma total
+    mapa[chave].total += saldo;
+  }
+}
 
           for (const mat of materiaisSnap.docs) {
 
