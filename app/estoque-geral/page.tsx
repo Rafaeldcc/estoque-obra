@@ -115,16 +115,58 @@ export default function EstoqueGeral() {
            listaSetores.push(setorNome);
          }
 
-          const materiaisSnap = await getDocs(
-            collection(
+         const subcategoriasSnap = await getDocs(
+          collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
+         );
+
+         for (const sub of subcategoriasSnap.docs) {
+
+           const materiaisSnap = await getDocs(
+             collection(
               db,
               "obras",
               obra.id,
               "setores",
               setor.id,
+              "subcategorias",
+              sub.id,
               "materiais"
-            )
-          );
+             )
+            );
+
+            for (const mat of materiaisSnap.docs) {
+
+              const data = mat.data();
+
+              const materialNomeBruto = data.nome || "Material";
+
+              const materialNome = materialNomeBruto
+                .replace(/\s+/g, " ")
+                .trim();
+
+              const saldo = Number(data.saldo || 0);
+
+              if (saldo === 0) continue;
+
+              const chave = normalizar(materialNome + "_" + setorNome);
+
+              if (!mapa[chave]) {
+                mapa[chave] = {
+                  material: materialNome,
+                  setor: setorNome,
+                  total: 0,
+                  obras: {}
+                };
+              }
+
+              mapa[chave].obras[obra.nome] =
+                (mapa[chave].obras[obra.nome] || 0) + saldo;
+
+              mapa[chave].total += saldo;
+
+            }
+
+          }
 
           for (const mat of materiaisSnap.docs) {
 
