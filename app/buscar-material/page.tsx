@@ -22,7 +22,7 @@ export default function BuscarMaterial() {
 
   const [busca, setBusca] = useState("");
   const [materiais, setMateriais] = useState<Material[]>([]);
-  const [sugestoes, setSugestoes] = useState<Material[]>([]);
+  const [sugestoes, setSugestoes] = useState<any[]>([]);
 
   useEffect(() => {
     carregarMateriais();
@@ -146,20 +146,28 @@ export default function BuscarMaterial() {
   });
 
   const filtrados = resultados
-    .filter(r => r.score > 0 && r.saldo > 0)
-    .sort((a, b) => b.score - a.score);
+  .filter(r => r.score > 0 && r.saldo > 0)
+  .sort((a, b) => b.score - a.score);
 
-  // 🔥 remove duplicados
-  const mapa = new Map<string, typeof filtrados[0]>();
+// 🔥 AGRUPAR POR MATERIAL
+const mapa = new Map<string, any>();
 
-  filtrados.forEach(item => {
-    const chave = normalizarTexto(item.nome);
-    if (!mapa.has(chave)) {
-      mapa.set(chave, item);
-    }
-  });
+filtrados.forEach(item => {
 
-  setSugestoes(Array.from(mapa.values()).slice(0, 10));
+  const chave = normalizarTexto(item.nome);
+
+  if (!mapa.has(chave)) {
+    mapa.set(chave, {
+      nome: item.nome,
+      itens: []
+    });
+  }
+
+  mapa.get(chave).itens.push(item);
+
+});
+
+setSugestoes(Array.from(mapa.values()).slice(0, 10));
 }
 
   function abrirMaterial(material: Material) {
@@ -185,28 +193,40 @@ export default function BuscarMaterial() {
         className="w-full p-3 border rounded"
       />
 
-      {sugestoes.length > 0 && (
+            {sugestoes.length > 0 && (
 
         <div className="mt-2 border rounded bg-white shadow max-h-[420px] overflow-y-auto">
 
-          {sugestoes.map((mat, index) => (
+          {sugestoes.map((grupo, index) => (
 
             <div
               key={index}
-              onClick={() => abrirMaterial(mat)}
-              className="p-3 cursor-pointer hover:bg-gray-100 border-b"
+              className="border-b"
             >
 
-              <div className="font-medium">
-                {mat.nome}
+              <div className="p-3 font-bold bg-gray-50">
+                {grupo.nome}
               </div>
 
-              <div className="text-xs text-gray-500">
+              {grupo.itens.map((mat: Material, i: number) => (
 
-                {mat.setor} • {mat.obra}
-                • Estoque: {mat.saldo} {mat.unidade}
+                <div
+                  key={i}
+                  onClick={() => abrirMaterial(mat)}
+                  className="p-3 cursor-pointer hover:bg-gray-100 pl-6"
+                >
 
-              </div>
+                  <div className="text-sm text-gray-700">
+                    {mat.setor} • {mat.obra}
+                  </div>
+
+                  <div className="text-xs text-gray-500">
+                    Estoque: {mat.saldo} {mat.unidade}
+                  </div>
+
+                </div>
+
+              ))}
 
             </div>
 
