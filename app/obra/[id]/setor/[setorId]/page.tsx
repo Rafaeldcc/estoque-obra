@@ -759,6 +759,7 @@ className="border p-3 rounded mb-6 w-full"
 {filtrados.map(material=>(
 <tr
 key={material.id}
+id={material.id} // 👈 ADICIONA ISSO AQUI
 className="border-t hover:bg-gray-50 cursor-pointer"
 onClick={()=>setMaterialSelecionado(material)}
 >
