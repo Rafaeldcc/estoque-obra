@@ -16,13 +16,18 @@ type Material = {
   setorId: string;
 };
 
+type GrupoMaterial = {
+  nome: string;
+  itens: Material[];
+};
+
 export default function BuscarMaterial() {
 
   const router = useRouter();
 
   const [busca, setBusca] = useState("");
   const [materiais, setMateriais] = useState<Material[]>([]);
-  const [sugestoes, setSugestoes] = useState<any[]>([]);
+  const [sugestoes, setSugestoes] = useState<GrupoMaterial[]>([]);
 
   useEffect(() => {
     carregarMateriais();
