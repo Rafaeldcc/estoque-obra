@@ -134,7 +134,7 @@ export default function EstoqueGeral() {
             if (saldo === 0) continue;
 
             // 🔥 chave normalizada PERFEITA
-            const chave = normalizar(materialNome);
+            const chave = normalizar(materialNome + "_" + setorNome);;
 
             if (!mapa[chave]) {
               mapa[chave] = {
