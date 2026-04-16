@@ -34,7 +34,6 @@ export default function BuscarMaterial() {
     carregarMateriais();
   }, []);
 
-  // 🔥 NORMALIZAÇÃO FORTE
   function normalizar(texto: string) {
     return texto
       ?.normalize("NFD")
@@ -45,7 +44,6 @@ export default function BuscarMaterial() {
       .trim();
   }
 
-  // 🔥 DISTÂNCIA (ERRO DE DIGITAÇÃO)
   function similaridade(a: string, b: string) {
     let matches = 0;
     for (let i = 0; i < Math.min(a.length, b.length); i++) {
@@ -147,7 +145,6 @@ export default function BuscarMaterial() {
       if (nome.startsWith(termo)) score += 60;
       if (nome.includes(termo)) score += 40;
 
-      // 🔥 tolerância erro digitação
       const sim = similaridade(nome, termo);
       if (sim > 0.6) score += sim * 50;
 
@@ -159,7 +156,6 @@ export default function BuscarMaterial() {
       .filter(r => r.score > 10 && r.saldo > 0)
       .sort((a, b) => b.score - a.score);
 
-    // 🔥 AGRUPAMENTO PERFEITO
     const mapa = new Map<string, GrupoMaterial>();
 
     filtrados.forEach(item => {
@@ -180,8 +176,11 @@ export default function BuscarMaterial() {
     setSugestoes(Array.from(mapa.values()).slice(0, 10));
   }
 
+  // 🔥 ALTERAÇÃO PRINCIPAL AQUI
   function abrirMaterial(material: Material) {
-    router.push(`/material/${material.id}`); // 🔥 agora usa ID (nunca erra)
+    router.push(
+      `/obra/${material.obraId}/setor/${material.setorId}?material=${material.id}`
+    );
   }
 
   return (
