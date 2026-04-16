@@ -3,26 +3,25 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 
 export default function MaterialDetalhe() {
 
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
 
   const [material, setMaterial] = useState<any>(null);
 
   useEffect(() => {
-    carregar();
-  }, []);
+    if (id) {
+      carregar();
+    }
+  }, [id]);
 
   async function carregar() {
 
     try {
 
-      // 🔥 COMO SEU MATERIAL ESTÁ EM SUBCOLEÇÃO
-      // você precisa saber o caminho completo
-
-      // 👉 solução simples (varrer tudo)
       const obrasSnap = await getDocs(collection(db, "obras"));
 
       for (const obra of obrasSnap.docs) {
@@ -34,7 +33,14 @@ export default function MaterialDetalhe() {
         for (const setor of setoresSnap.docs) {
 
           const subsSnap = await getDocs(
-            collection(db, "obras", obra.id, "setores", setor.id, "subcategorias")
+            collection(
+              db,
+              "obras",
+              obra.id,
+              "setores",
+              setor.id,
+              "subcategorias"
+            )
           );
 
           for (const sub of subsSnap.docs) {
@@ -48,7 +54,7 @@ export default function MaterialDetalhe() {
               "subcategorias",
               sub.id,
               "materiais",
-              id as string
+              id
             );
 
             const snap = await getDoc(ref);
@@ -71,7 +77,7 @@ export default function MaterialDetalhe() {
       }
 
     } catch (e) {
-      console.error(e);
+      console.error("Erro ao carregar material:", e);
     }
 
   }
