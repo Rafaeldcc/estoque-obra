@@ -84,15 +84,24 @@ carregarMateriais()
 // 🔥 SELEÇÃO VIA URL
 useEffect(() => {
 
-if (!materialUrl || materiais.length === 0) return;
+  if (!materialUrl || materiais.length === 0) return;
 
-const encontrado = materiais.find(m =>
-  m.id === materialUrl
-);
+  const encontrado = materiais.find(m => m.id === materialUrl);
 
-if (encontrado) {
-setMaterialSelecionado(encontrado);
-}
+  if (encontrado) {
+    setMaterialSelecionado(encontrado);
+
+    // 🔥 SCROLL AUTOMÁTICO
+    setTimeout(() => {
+      const el = document.getElementById(encontrado.id);
+      if (el) {
+        el.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+      }
+    }, 300);
+  }
 
 }, [materialUrl, materiais]);
 
