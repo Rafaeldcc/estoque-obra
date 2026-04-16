@@ -84,26 +84,68 @@ carregarMateriais()
 // 🔥 SELEÇÃO VIA URL
 useEffect(() => {
 
-  if (!materialUrl || materiais.length === 0) return;
+  if (!materialUrl || subcategorias.length === 0) return;
 
-  const encontrado = materiais.find(m => m.id === materialUrl);
+  async function abrirMaterialDireto() {
 
-  if (encontrado) {
-    setMaterialSelecionado(encontrado);
+    for (const sub of subcategorias) {
 
-    // 🔥 SCROLL AUTOMÁTICO
-    setTimeout(() => {
-      const el = document.getElementById(encontrado.id);
-      if (el) {
-        el.scrollIntoView({
-          behavior: "smooth",
-          block: "center"
-        });
+      const snap = await getDocs(
+        collection(
+          db,
+          "obras",
+          obraId,
+          "setores",
+          setorId,
+          "subcategorias",
+          sub.id,
+          "materiais"
+        )
+      );
+
+      const encontrado = snap.docs.find(doc => doc.id === materialUrl);
+
+      if (encontrado) {
+
+        // 🔥 seleciona subcategoria
+        setSubSelecionada(sub);
+
+        // 🔥 monta material
+        const data = encontrado.data();
+
+        const materialObj = {
+          id: encontrado.id,
+          nome: data.nome,
+          saldo: data.saldo ?? 0,
+          unidade: data.unidade ?? "",
+          foto: data.foto ?? "",
+          estoqueMinimo: data.estoqueMinimo ?? 0
+        };
+
+        // 🔥 espera carregar materiais
+        setTimeout(() => {
+          setMaterialSelecionado(materialObj);
+
+          setTimeout(() => {
+            const el = document.getElementById(materialObj.id);
+            if (el) {
+              el.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+              });
+            }
+          }, 300);
+
+        }, 300);
+
+        return;
       }
-    }, 300);
+    }
   }
 
-}, [materialUrl, materiais]);
+  abrirMaterialDireto();
+
+}, [materialUrl, subcategorias]);
 
 // 🔥 EXCLUIR MATERIAL
 async function excluirMaterial(material: Material){
