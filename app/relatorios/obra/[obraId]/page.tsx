@@ -140,35 +140,71 @@ export default function RelatorioObra() {
 
   }
 
-  return(
+  return (
 
-    <div className="p-10">
+  <div className="p-10 h-screen flex flex-col">
 
-      {/* BOTÃO VOLTAR */}
-      <button
-        onClick={() => router.push(`/obra/${obraId}`)}
-        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded mb-6"
-      >
-        ← Voltar
-      </button>
+    {/* BOTÃO VOLTAR */}
+    <button
+      onClick={() => router.push(`/obra/${obraId}`)}
+      className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded mb-6 w-fit"
+    >
+      ← Voltar
+    </button>
 
-      <h1 className="text-3xl font-bold mb-4">
-        Relatório Geral da Obra
-      </h1>
+    <h1 className="text-3xl font-bold mb-2">
+      Relatório Geral da Obra
+    </h1>
 
-      <p className="mb-6">
-        Obra: <b>{obraNome}</b>
-      </p>
+    <p className="mb-4">
+      Obra: <b>{obraNome}</b>
+    </p>
 
-      <button
-        onClick={gerarPDF}
-        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded"
-      >
-        Gerar PDF da Obra
-      </button>
+    <button
+      onClick={gerarPDF}
+      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded mb-6 w-fit"
+    >
+      Gerar PDF da Obra
+    </button>
+
+    {/* 🔥 CONTAINER COM SCROLL */}
+    <div className="flex-1 overflow-y-auto pr-2 border rounded p-4">
+
+      {setores.map((setor:any)=>(
+        <div key={setor.id} className="mb-6 border-b pb-4">
+
+          <h2 className="text-xl font-semibold mb-2">
+            {setor.nome}
+          </h2>
+
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left border-b">
+                <th>Material</th>
+                <th className="text-right">Quantidade</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {setor.materiais.map((m:any)=>(
+                <tr key={m.id} className="border-b">
+                  <td>{m.nome}</td>
+                  <td className="text-right">
+                    {(m.saldo ?? 0)} {m.unidade || ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+
+          </table>
+
+        </div>
+      ))}
 
     </div>
 
-  );
+  </div>
+
+);
 
 }
