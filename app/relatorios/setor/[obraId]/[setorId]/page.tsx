@@ -17,7 +17,6 @@ export default function RelatorioSetor() {
   const [materiais, setMateriais] = useState<any[]>([]);
   const [nomeObra, setNomeObra] = useState("");
   const [nomeSetor, setNomeSetor] = useState("");
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     carregarDados();
@@ -25,178 +24,140 @@ export default function RelatorioSetor() {
 
   async function carregarDados() {
 
-    try {
+    const obraSnap = await getDoc(
+      doc(db,"obras",obraId)
+    );
 
-      const obraSnap = await getDoc(
-        doc(db,"obras",obraId)
-      );
-
-      if(obraSnap.exists()){
-        setNomeObra(obraSnap.data().nome);
-      }
-
-      const setorSnap = await getDoc(
-        doc(db,"obras",obraId,"setores",setorId)
-      );
-
-      if(setorSnap.exists()){
-        setNomeSetor(setorSnap.data().nome);
-      }
-
-      const snap = await getDocs(
-        collection(
-          db,
-          "obras",
-          obraId,
-          "setores",
-          setorId,
-          "materiais"
-        )
-      );
-
-      const lista = snap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      setMateriais(lista);
-
-    } catch (e) {
-      console.error("Erro ao carregar materiais:", e);
+    if(obraSnap.exists()){
+      setNomeObra(obraSnap.data().nome);
     }
 
-    setLoading(false);
+    const setorSnap = await getDoc(
+      doc(db,"obras",obraId,"setores",setorId)
+    );
+
+    if(setorSnap.exists()){
+      setNomeSetor(setorSnap.data().nome);
+    }
+
+    const snap = await getDocs(
+      collection(
+        db,
+        "obras",
+        obraId,
+        "setores",
+        setorId,
+        "materiais"
+      )
+    );
+
+    const lista = snap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    setMateriais(lista);
+
   }
 
-  // 🔥 PDF PROFISSIONAL
   function gerarPDF(){
 
-    if(materiais.length === 0){
-      alert("Nenhum material encontrado!");
-      return;
-    }
+    const pdf = new jsPDF();
 
-    const pdf = new jsPDF("p","mm","a4");
+    let y = 20;
 
-    let y = 15;
-    const pageHeight = 270;
+    pdf.setFontSize(20);
+    pdf.text("Relatório de Estoque",20,y);
 
-    function cabecalho(){
+    y += 10;
 
-      pdf.setFont("helvetica","bold");
-      pdf.setFontSize(16);
-      pdf.text("RELATÓRIO DE ESTOQUE",105,10,{align:"center"});
+    pdf.setFontSize(12);
+    pdf.text(`Obra: ${nomeObra}`,20,y);
 
-      pdf.setFontSize(10);
-      pdf.setFont("helvetica","normal");
+    y += 8;
 
-      pdf.text(`Obra: ${nomeObra}`,20,18);
-      pdf.text(`Setor: ${nomeSetor}`,20,24);
+    pdf.text(`Setor: ${nomeSetor}`,20,y);
 
-      const data = new Date().toLocaleDateString();
-      pdf.text(`Data: ${data}`,150,18);
+    y += 12;
 
-      pdf.line(20,28,190,28);
-
-      y = 35;
-    }
-
-    function novaPagina(){
-      pdf.addPage();
-      cabecalho();
-    }
-
-    cabecalho();
-
-    pdf.setFont("helvetica","bold");
+    pdf.setFontSize(12);
     pdf.text("Material",20,y);
-    pdf.text("Unid.",130,y);
-    pdf.text("Qtd.",170,y,{align:"right"});
+    pdf.text("Quantidade",150,y);
 
-    y += 2;
+    y += 3;
+
     pdf.line(20,y,190,y);
-    y += 6;
 
-    let total = 0;
-
-    pdf.setFont("helvetica","normal");
+    y += 8;
 
     materiais.forEach((m:any)=>{
 
-      const saldo = Number(m.saldo ?? 0);
       const unidade = m.unidade || "";
 
-      total += saldo;
+      pdf.text(
+        m.nome,
+        20,
+        y
+      );
 
-      if(y + 8 > pageHeight){
-        novaPagina();
+      pdf.text(
+        `${m.saldo} ${unidade}`,
+        150,
+        y
+      );
+
+      y += 8;
+
+      if(y > 270){
+        pdf.addPage();
+        y = 20;
       }
-
-      pdf.text(String(m.nome || "-"),20,y);
-      pdf.text(unidade,130,y);
-      pdf.text(saldo.toString(),170,y,{align:"right"});
-
-      y += 6;
 
     });
 
-    // TOTAL
-    y += 4;
+    y += 10;
 
-    pdf.setFont("helvetica","bold");
-    pdf.line(130,y,190,y);
+    const data = new Date().toLocaleDateString();
 
-    y += 6;
-
-    pdf.text("TOTAL:",130,y);
-    pdf.text(total.toString(),170,y,{align:"right"});
+    pdf.setFontSize(10);
+    pdf.text(`Gerado em: ${data}`,20,y);
 
     pdf.save(`relatorio-${nomeSetor}.pdf`);
+
   }
 
   return(
 
-    <div className="p-10 flex flex-col h-[calc(100vh-80px)]">
+    <div className="p-10">
 
+      {/* BOTÃO VOLTAR */}
       <button
         onClick={() => router.push(`/obra/${obraId}/setor/${setorId}`)}
-        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded mb-6 w-fit"
+        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded mb-6"
       >
         ← Voltar
       </button>
 
-      <h1 className="text-3xl font-bold mb-4">
+      <h1 className="text-3xl font-bold mb-6">
         Relatório do Setor
       </h1>
 
-      <p className="mb-4">
+      <p className="mb-6">
         Obra: <b>{nomeObra}</b><br/>
         Setor: <b>{nomeSetor}</b>
       </p>
 
       <button
         onClick={gerarPDF}
-        disabled={loading}
-        className={`px-6 py-3 rounded text-white mb-6 w-fit ${
-          loading
-            ? "bg-gray-400"
-            : "bg-green-600 hover:bg-green-700"
-        }`}
+        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded"
       >
-        {loading ? "Carregando..." : "Gerar PDF"}
+        Gerar PDF
       </button>
 
-      {/* 🔥 SCROLL FUNCIONANDO */}
-      <div className="flex-1 min-h-0 overflow-y-auto border rounded p-4 bg-white shadow">
-
-        {loading && <p>Carregando materiais...</p>}
-
-        {!loading && materiais.length === 0 && (
-          <p>Nenhum material encontrado.</p>
-        )}
+      <div className="mt-10 space-y-2">
 
         {materiais.map((m)=>(
-          <div key={m.id} className="border-b py-2">
+          <div key={m.id}>
             {m.nome} — {m.saldo} {m.unidade || ""}
           </div>
         ))}
