@@ -25,184 +25,155 @@ export default function RelatorioSetor() {
 
   async function carregarDados() {
 
-  try {
+    try {
 
-    const obraSnap = await getDoc(doc(db,"obras",obraId));
-    if(obraSnap.exists()){
-      setNomeObra(obraSnap.data().nome);
-    }
-
-    const setorSnap = await getDoc(
-      doc(db,"obras",obraId,"setores",setorId)
-    );
-
-    if(setorSnap.exists()){
-      setNomeSetor(setorSnap.data().nome);
-    }
-
-    let lista:any[] = [];
-
-    const subcategoriasSnap = await getDocs(
-      collection(
-        db,
-        "obras",
-        obraId,
-        "setores",
-        setorId,
-        "subcategorias"
-      )
-    );
-
-    for(const sub of subcategoriasSnap.docs){
-
-      const materiaisSnap = await getDocs(
-        collection(
-          db,
-          "obras",
-          obraId,
-          "setores",
-          setorId,
-          "subcategorias",
-          sub.id,
-          "materiais"
-        )
+      const obraSnap = await getDoc(
+        doc(db,"obras",obraId)
       );
 
-      const materiais = materiaisSnap.docs.map(doc=>({
-        id: doc.id,
-        ...doc.data()
-      }));
+      if(obraSnap.exists()){
+        setNomeObra(obraSnap.data().nome);
+      }
 
-      lista.push({
-        id: sub.id,
-        nome: sub.data().nome,
-        materiais
-      });
+      const setorSnap = await getDoc(
+        doc(db,"obras",obraId,"setores",setorId)
+      );
 
+      if(setorSnap.exists()){
+        setNomeSetor(setorSnap.data().nome);
+      }
+
+      let lista:any[] = [];
+
+const subcategoriasSnap = await getDocs(
+  collection(
+    db,
+    "obras",
+    obraId,
+    "setores",
+    setorId,
+    "subcategorias"
+  )
+);
+
+for(const sub of subcategoriasSnap.docs){
+
+  const materiaisSnap = await getDocs(
+    collection(
+      db,
+      "obras",
+      obraId,
+      "setores",
+      setorId,
+      "subcategorias",
+      sub.id,
+      "materiais"
+    )
+  );
+
+  const materiais = materiaisSnap.docs.map(doc=>({
+    id: doc.id,
+    ...doc.data()
+  }));
+
+  lista.push(...materiais);
+
+}
+
+setMateriais(lista);
+
+    } catch (e) {
+      console.error("Erro ao carregar materiais:", e);
     }
 
-    setMateriais(lista);
-
-  } catch (e) {
-    console.error("Erro ao carregar:", e);
+    setLoading(false);
   }
-
-  setLoading(false);
-}
 
   // 🔥 PDF PROFISSIONAL
   function gerarPDF(){
 
-  if(materiais.length === 0){
-    alert("Nenhum material encontrado!");
-    return;
-  }
+    if(materiais.length === 0){
+      alert("Nenhum material encontrado!");
+      return;
+    }
 
-  const pdf = new jsPDF("p","mm","a4");
+    const pdf = new jsPDF("p","mm","a4");
 
-  let y = 15;
-  const pageHeight = 270;
+    let y = 15;
+    const pageHeight = 270;
 
-  function cabecalho(){
+    function cabecalho(){
 
-    pdf.setFont("helvetica","bold");
-    pdf.setFontSize(16);
-    pdf.text("RELATÓRIO DE ESTOQUE",105,10,{align:"center"});
+      pdf.setFont("helvetica","bold");
+      pdf.setFontSize(16);
+      pdf.text("RELATÓRIO DE ESTOQUE",105,10,{align:"center"});
 
-    pdf.setFontSize(10);
-    pdf.setFont("helvetica","normal");
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica","normal");
 
-    pdf.text(`Obra: ${nomeObra}`,20,18);
-    pdf.text(`Setor: ${nomeSetor}`,20,24);
+      pdf.text(`Obra: ${nomeObra}`,20,18);
+      pdf.text(`Setor: ${nomeSetor}`,20,24);
 
-    const data = new Date().toLocaleDateString();
-    pdf.text(`Data: ${data}`,150,18);
+      const data = new Date().toLocaleDateString();
+      pdf.text(`Data: ${data}`,150,18);
 
-    pdf.line(20,28,190,28);
+      pdf.line(20,28,190,28);
 
-    y = 35;
-  }
+      y = 35;
+    }
 
-  function novaPagina(){
-    pdf.addPage();
+    function novaPagina(){
+      pdf.addPage();
+      cabecalho();
+    }
+
     cabecalho();
-  }
 
-  cabecalho();
-
-  let totalGeral = 0;
-
-  materiais.forEach((sub:any)=>{
-
-    if(y + 10 > pageHeight) novaPagina();
-
-    // 🔹 SUBCATEGORIA
     pdf.setFont("helvetica","bold");
-    pdf.setFontSize(12);
-    pdf.text(`SUBCATEGORIA: ${sub.nome}`,20,y);
-
-    y += 6;
-
-    pdf.setFontSize(10);
     pdf.text("Material",20,y);
     pdf.text("Unid.",130,y);
     pdf.text("Qtd.",170,y,{align:"right"});
 
     y += 2;
     pdf.line(20,y,190,y);
-    y += 5;
+    y += 6;
 
-    let totalSub = 0;
+    let total = 0;
 
     pdf.setFont("helvetica","normal");
 
-    sub.materiais.forEach((m:any)=>{
+    materiais.forEach((m:any)=>{
 
       const saldo = Number(m.saldo ?? 0);
       const unidade = m.unidade || "";
 
-      totalSub += saldo;
-      totalGeral += saldo;
+      total += saldo;
 
       if(y + 8 > pageHeight){
         novaPagina();
       }
 
-      pdf.text(m.nome,20,y);
+      pdf.text(String(m.nome || "-"),20,y);
       pdf.text(unidade,130,y);
       pdf.text(saldo.toString(),170,y,{align:"right"});
 
       y += 6;
+
     });
 
-    // TOTAL SUBCATEGORIA
-    y += 2;
+    // TOTAL
+    y += 4;
 
     pdf.setFont("helvetica","bold");
     pdf.line(130,y,190,y);
 
     y += 6;
 
-    pdf.text("TOTAL SUBCATEGORIA:",130,y);
-    pdf.text(totalSub.toString(),170,y,{align:"right"});
+    pdf.text("TOTAL:",130,y);
+    pdf.text(total.toString(),170,y,{align:"right"});
 
-    y += 10;
-
-  });
-
-  // 🔥 TOTAL GERAL
-  pdf.setFont("helvetica","bold");
-
-  if(y + 10 > pageHeight) novaPagina();
-
-  pdf.line(20,y,190,y);
-  y += 8;
-
-  pdf.text("TOTAL GERAL DO SETOR:",20,y);
-  pdf.text(totalGeral.toString(),170,y,{align:"right"});
-
-  pdf.save(`relatorio-${nomeSetor}.pdf`);
-}
+    pdf.save(`relatorio-${nomeSetor}.pdf`);
+  }
 
   return(
 
