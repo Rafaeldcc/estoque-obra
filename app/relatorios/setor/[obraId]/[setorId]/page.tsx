@@ -25,69 +25,70 @@ export default function RelatorioSetor() {
 
   async function carregarDados() {
 
-    try {
+  try {
 
-      const obraSnap = await getDoc(
-        doc(db,"obras",obraId)
-      );
-
-      if(obraSnap.exists()){
-        setNomeObra(obraSnap.data().nome);
-      }
-
-      const setorSnap = await getDoc(
-        doc(db,"obras",obraId,"setores",setorId)
-      );
-
-      if(setorSnap.exists()){
-        setNomeSetor(setorSnap.data().nome);
-      }
-
-      let lista:any[] = [];
-
-const subcategoriasSnap = await getDocs(
-  collection(
-    db,
-    "obras",
-    obraId,
-    "setores",
-    setorId,
-    "subcategorias"
-  )
-);
-
-for(const sub of subcategoriasSnap.docs){
-
-  const materiaisSnap = await getDocs(
-    collection(
-      db,
-      "obras",
-      obraId,
-      "setores",
-      setorId,
-      "subcategorias",
-      sub.id,
-      "materiais"
-    )
-  );
-
-  const materiais = materiaisSnap.docs.map(doc=>({
-    id: doc.id,
-    ...doc.data()
-  }));
-
-  lista.push(...materiais);
-
-}
-
-setMateriais(lista);
-
-    } catch (e) {
-      console.error("Erro ao carregar materiais:", e);
+    const obraSnap = await getDoc(doc(db,"obras",obraId));
+    if(obraSnap.exists()){
+      setNomeObra(obraSnap.data().nome);
     }
 
-    setLoading(false);
+    const setorSnap = await getDoc(
+      doc(db,"obras",obraId,"setores",setorId)
+    );
+
+    if(setorSnap.exists()){
+      setNomeSetor(setorSnap.data().nome);
+    }
+
+    let lista:any[] = [];
+
+    const subcategoriasSnap = await getDocs(
+      collection(
+        db,
+        "obras",
+        obraId,
+        "setores",
+        setorId,
+        "subcategorias"
+      )
+    );
+
+    for(const sub of subcategoriasSnap.docs){
+
+      const materiaisSnap = await getDocs(
+        collection(
+          db,
+          "obras",
+          obraId,
+          "setores",
+          setorId,
+          "subcategorias",
+          sub.id,
+          "materiais"
+        )
+      );
+
+      const materiais = materiaisSnap.docs.map(doc=>({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      lista.push({
+        id: sub.id,
+        nome: sub.data().nome,
+        materiais
+      });
+
+    }
+
+    setMateriais(lista);
+
+  } catch (e) {
+    console.error("Erro ao carregar:", e);
   }
+
+  setLoading(false);
+}
 
   // 🔥 PDF PROFISSIONAL
   function gerarPDF(){
