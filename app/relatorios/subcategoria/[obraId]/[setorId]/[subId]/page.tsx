@@ -67,7 +67,7 @@ export default function RelatorioSubcategoria(){
       return;
     }
 
-    const pdf = new jsPDF();
+    const pdf = new jsPDF("p","mm","a4");
 
     let y = 20;
 
@@ -98,10 +98,12 @@ export default function RelatorioSubcategoria(){
     materiais.forEach((m:any)=>{
 
       const saldo = Number(m.saldo ?? 0);
+      const unidade = m.unidade || "";
+
       total += saldo;
 
       pdf.text(m.nome,20,y);
-      pdf.text(m.unidade || "",130,y);
+      pdf.text(unidade,130,y);
       pdf.text(saldo.toString(),170,y,{align:"right"});
 
       y += 6;
@@ -147,7 +149,7 @@ export default function RelatorioSubcategoria(){
 
       {materiais.map(m=>(
         <div key={m.id}>
-          {m.nome} — {m.saldo}
+          {m.nome} — {m.saldo} {m.unidade || ""}
         </div>
       ))}
 
