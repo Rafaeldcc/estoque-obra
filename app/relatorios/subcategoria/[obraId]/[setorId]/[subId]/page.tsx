@@ -147,11 +147,35 @@ export default function RelatorioSubcategoria(){
         Gerar PDF
       </button>
 
-      {materiais.map(m=>(
-        <div key={m.id}>
-          {m.nome} — {m.saldo} {m.unidade || ""}
-        </div>
-      ))}
+      {materiais.map((sub:any)=>(
+  <div key={sub.id} className="mb-4 border-b pb-3">
+
+    <div className="flex justify-between items-center">
+      <span className="font-semibold">
+        {sub.nome}
+      </span>
+
+      <button
+        onClick={() =>
+          window.open(
+            `/relatorios/subcategoria/${obraId}/${setorId}/${sub.id}`,
+            "_blank"
+          )
+        }
+        className="bg-blue-600 text-white px-3 py-1 rounded"
+      >
+        PDF
+      </button>
+    </div>
+
+    {sub.materiais.map((m:any)=>(
+      <div key={m.id} className="text-sm ml-3">
+        {m.nome} — {m.saldo} {m.unidade || ""}
+      </div>
+    ))}
+
+  </div>
+))}
 
     </div>
   );
