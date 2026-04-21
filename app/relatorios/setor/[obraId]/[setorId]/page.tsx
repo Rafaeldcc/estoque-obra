@@ -175,7 +175,7 @@ export default function RelatorioSetor() {
       y += 6;
     });
 
-    // TOTAL SUBCATEGORIA
+    // TOTAL SUB
     y += 2;
 
     pdf.setFont("helvetica","bold");
