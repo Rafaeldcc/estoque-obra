@@ -86,7 +86,8 @@ export default function RelatorioSubcategoria(){
     y += 10;
 
     pdf.text("Material",20,y);
-    pdf.text("Qtd.",170,y);
+    pdf.text("Unid.",130,y);
+    pdf.text("Qtd.",170,y,{align:"right"});
 
     y += 4;
     pdf.line(20,y,190,y);
@@ -100,7 +101,8 @@ export default function RelatorioSubcategoria(){
       total += saldo;
 
       pdf.text(m.nome,20,y);
-      pdf.text(saldo.toString(),170,y);
+      pdf.text(m.unidade || "",130,y);
+      pdf.text(saldo.toString(),170,y,{align:"right"});
 
       y += 6;
 
