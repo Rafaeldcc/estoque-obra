@@ -50,8 +50,8 @@ export default function Relatorios() {
               {obra.nome}
             </strong>
 
-            <Link
-              href={`/relatorios/${obra.id}`}
+             <Link
+              href={`/relatorios/obra/${obra.id}`} // ✅ CORRIGIDO AQUI
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
             >
               Gerar PDF
