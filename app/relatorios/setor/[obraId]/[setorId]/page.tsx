@@ -93,88 +93,116 @@ export default function RelatorioSetor() {
   // 🔥 PDF PROFISSIONAL
   function gerarPDF(){
 
-    if(materiais.length === 0){
-      alert("Nenhum material encontrado!");
-      return;
-    }
+  if(materiais.length === 0){
+    alert("Nenhum material encontrado!");
+    return;
+  }
 
-    const pdf = new jsPDF("p","mm","a4");
+  const pdf = new jsPDF("p","mm","a4");
 
-    let y = 15;
-    const pageHeight = 270;
+  let y = 15;
+  const pageHeight = 270;
 
-    function cabecalho(){
-
-      pdf.setFont("helvetica","bold");
-      pdf.setFontSize(16);
-      pdf.text("RELATÓRIO DE ESTOQUE",105,10,{align:"center"});
-
-      pdf.setFontSize(10);
-      pdf.setFont("helvetica","normal");
-
-      pdf.text(`Obra: ${nomeObra}`,20,18);
-      pdf.text(`Setor: ${nomeSetor}`,20,24);
-
-      const data = new Date().toLocaleDateString();
-      pdf.text(`Data: ${data}`,150,18);
-
-      pdf.line(20,28,190,28);
-
-      y = 35;
-    }
-
-    function novaPagina(){
-      pdf.addPage();
-      cabecalho();
-    }
-
-    cabecalho();
+  function cabecalho(){
 
     pdf.setFont("helvetica","bold");
+    pdf.setFontSize(16);
+    pdf.text("RELATÓRIO DE ESTOQUE",105,10,{align:"center"});
+
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica","normal");
+
+    pdf.text(`Obra: ${nomeObra}`,20,18);
+    pdf.text(`Setor: ${nomeSetor}`,20,24);
+
+    const data = new Date().toLocaleDateString();
+    pdf.text(`Data: ${data}`,150,18);
+
+    pdf.line(20,28,190,28);
+
+    y = 35;
+  }
+
+  function novaPagina(){
+    pdf.addPage();
+    cabecalho();
+  }
+
+  cabecalho();
+
+  let totalGeral = 0;
+
+  materiais.forEach((sub:any)=>{
+
+    if(y + 10 > pageHeight) novaPagina();
+
+    // 🔹 SUBCATEGORIA
+    pdf.setFont("helvetica","bold");
+    pdf.setFontSize(12);
+    pdf.text(`SUBCATEGORIA: ${sub.nome}`,20,y);
+
+    y += 6;
+
+    pdf.setFontSize(10);
     pdf.text("Material",20,y);
     pdf.text("Unid.",130,y);
     pdf.text("Qtd.",170,y,{align:"right"});
 
     y += 2;
     pdf.line(20,y,190,y);
-    y += 6;
+    y += 5;
 
-    let total = 0;
+    let totalSub = 0;
 
     pdf.setFont("helvetica","normal");
 
-    materiais.forEach((m:any)=>{
+    sub.materiais.forEach((m:any)=>{
 
       const saldo = Number(m.saldo ?? 0);
       const unidade = m.unidade || "";
 
-      total += saldo;
+      totalSub += saldo;
+      totalGeral += saldo;
 
       if(y + 8 > pageHeight){
         novaPagina();
       }
 
-      pdf.text(String(m.nome || "-"),20,y);
+      pdf.text(m.nome,20,y);
       pdf.text(unidade,130,y);
       pdf.text(saldo.toString(),170,y,{align:"right"});
 
       y += 6;
-
     });
 
-    // TOTAL
-    y += 4;
+    // TOTAL SUBCATEGORIA
+    y += 2;
 
     pdf.setFont("helvetica","bold");
     pdf.line(130,y,190,y);
 
     y += 6;
 
-    pdf.text("TOTAL:",130,y);
-    pdf.text(total.toString(),170,y,{align:"right"});
+    pdf.text("TOTAL SUBCATEGORIA:",130,y);
+    pdf.text(totalSub.toString(),170,y,{align:"right"});
 
-    pdf.save(`relatorio-${nomeSetor}.pdf`);
-  }
+    y += 10;
+
+  });
+
+  // 🔥 TOTAL GERAL
+  pdf.setFont("helvetica","bold");
+
+  if(y + 10 > pageHeight) novaPagina();
+
+  pdf.line(20,y,190,y);
+  y += 8;
+
+  pdf.text("TOTAL GERAL DO SETOR:",20,y);
+  pdf.text(totalGeral.toString(),170,y,{align:"right"});
+
+  pdf.save(`relatorio-${nomeSetor}.pdf`);
+}
 
   return(
 
