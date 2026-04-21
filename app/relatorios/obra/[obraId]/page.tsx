@@ -74,13 +74,13 @@ export default function RelatorioObra() {
     setLoading(false);
   }
 
-  // 🔥 PDF PROFISSIONAL
+  // 🔥 PDF PROFISSIONAL CORRIGIDO
   function gerarPDF(){
 
     const pdf = new jsPDF("p","mm","a4");
 
     let y = 15;
-    const pageHeight = 280;
+    const pageHeight = 270;
 
     function cabecalho(){
 
@@ -98,7 +98,7 @@ export default function RelatorioObra() {
 
       pdf.line(20,22,190,22);
 
-      y = 28;
+      y = 30;
     }
 
     function novaPagina(){
@@ -106,67 +106,62 @@ export default function RelatorioObra() {
       cabecalho();
     }
 
-    function rodape(){
-
-      const total = pdf.getNumberOfPages();
-
-      for(let i=1;i<=total;i++){
-        pdf.setPage(i);
-
-        pdf.setFontSize(8);
-
-        pdf.text(`Página ${i} de ${total}`,105,290,{align:"center"});
-
-        pdf.text("Sistema de Controle de Estoque de Obras",20,290);
-      }
-    }
-
     cabecalho();
 
     setores.forEach((setor:any)=>{
 
-      if(y > pageHeight) novaPagina();
+      if(y + 10 > pageHeight) novaPagina();
 
       pdf.setFont("helvetica","bold");
       pdf.setFontSize(12);
       pdf.text(`SETOR: ${setor.nome}`,20,y);
 
-      y += 6;
+      y += 8;
 
       pdf.setFontSize(10);
+
       pdf.text("Material",20,y);
       pdf.text("Unid.",130,y);
       pdf.text("Qtd.",170,y,{align:"right"});
 
       y += 2;
       pdf.line(20,y,190,y);
-
-      y += 5;
+      y += 6;
 
       let totalSetor = 0;
 
       pdf.setFont("helvetica","normal");
 
-      setor.materiais.forEach((m:any)=>{
+      if(!setor.materiais || setor.materiais.length === 0){
 
-        const saldo = m.saldo ?? 0;
-        const unidade = m.unidade || "";
+        pdf.text("Sem materiais cadastrados",20,y);
+        y += 8;
 
-        totalSetor += saldo;
+      } else {
 
-        if(y > pageHeight){
-          novaPagina();
-        }
+        setor.materiais.forEach((m:any)=>{
 
-        pdf.text(m.nome,20,y);
-        pdf.text(unidade,130,y);
-        pdf.text(saldo.toString(),170,y,{align:"right"});
+          const saldo = Number(m.saldo ?? 0);
+          const unidade = m.unidade || "";
 
-        y += 6;
-      });
+          totalSetor += saldo;
 
-      // TOTAL DO SETOR
-      y += 2;
+          // 🔥 CORREÇÃO PRINCIPAL
+          if(y + 8 > pageHeight){
+            novaPagina();
+          }
+
+          pdf.text(String(m.nome || "-"),20,y);
+          pdf.text(unidade,130,y);
+          pdf.text(saldo.toString(),170,y,{align:"right"});
+
+          y += 6;
+
+        });
+
+      }
+
+      y += 4;
 
       pdf.setFont("helvetica","bold");
 
@@ -174,21 +169,19 @@ export default function RelatorioObra() {
 
       y += 6;
 
-      pdf.text("TOTAL DO SETOR:",130,y);
+      pdf.text("TOTAL:",130,y);
       pdf.text(totalSetor.toString(),170,y,{align:"right"});
 
-      y += 10;
+      y += 12;
 
     });
-
-    rodape();
 
     pdf.save(`relatorio-${obraNome}.pdf`);
   }
 
   return (
 
-    <div className="p-10 h-screen flex flex-col">
+    <div className="p-10 flex flex-col h-[calc(100vh-80px)]">
 
       <button
         onClick={() => router.push(`/obra/${obraId}`)}
@@ -212,7 +205,8 @@ export default function RelatorioObra() {
         Gerar PDF da Obra
       </button>
 
-      <div className="flex-1 overflow-y-auto pr-2 border rounded p-4 bg-white shadow">
+      {/* 🔥 SCROLL CORRIGIDO */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-2 border rounded p-4 bg-white shadow">
 
         {loading && <p>Carregando...</p>}
 
