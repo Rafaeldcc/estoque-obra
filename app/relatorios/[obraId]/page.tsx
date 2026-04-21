@@ -23,11 +23,8 @@ export default function RelatorioObra() {
   const [erro, setErro] = useState("");
 
   useEffect(() => {
-
     if (!obraId) return;
-
     carregar();
-
   }, [obraId]);
 
   async function carregar() {
@@ -36,7 +33,6 @@ export default function RelatorioObra() {
 
       setCarregando(true);
 
-      // 🔹 buscar obra
       const obraRef = doc(db, "obras", obraId);
       const obraSnap = await getDoc(obraRef);
 
@@ -44,7 +40,6 @@ export default function RelatorioObra() {
         setNomeObra(obraSnap.data().nome);
       }
 
-      // 🔹 buscar setores
       const q = query(
         collection(db, "obras", obraId, "setores"),
         orderBy("nome")
@@ -60,73 +55,52 @@ export default function RelatorioObra() {
       setSetores(lista);
 
     } catch (error) {
-
       console.error("Erro ao carregar setores:", error);
       setErro("Erro ao carregar dados da obra.");
-
     }
 
     setCarregando(false);
-
   }
 
   function abrirPDF(setorId: string) {
-
-    window.open(
-      `/relatorios/setor/${obraId}/${setorId}`,
-      "_blank"
-    );
-
+    window.open(`/relatorios/setor/${obraId}/${setorId}`, "_blank");
   }
 
   function abrirPDFObra() {
-
-    window.open(
-      `/relatorios/obra/${obraId}`,
-      "_blank"
-    );
-
+    window.open(`/relatorios/obra/${obraId}`, "_blank");
   }
 
   if (carregando) {
-
     return (
       <div className="p-10 text-center">
         Carregando relatório...
       </div>
     );
-
   }
 
   if (erro) {
-
     return (
       <div className="p-10 text-red-600">
         {erro}
       </div>
     );
-
   }
 
   return (
 
-    <div className="max-w-4xl mx-auto p-10 space-y-8">
+    <div className="p-6 flex flex-col h-[calc(100vh-80px)]">
 
-      <div>
-
+      <div className="mb-6">
         <h1 className="text-3xl font-bold">
           Relatórios da Obra
         </h1>
-
-        <p className="text-gray-500 mt-2">
+        <p className="text-gray-500 mt-1">
           {nomeObra}
         </p>
-
       </div>
 
       {/* RELATÓRIO COMPLETO */}
-
-      <div className="bg-white border rounded-xl p-6 shadow-sm">
+      <div className="bg-white border rounded-xl p-6 shadow-sm mb-6">
 
         <h2 className="text-xl font-semibold mb-4">
           📄 Relatório completo da obra
@@ -141,9 +115,8 @@ export default function RelatorioObra() {
 
       </div>
 
-      {/* RELATÓRIO POR SETOR */}
-
-      <div>
+      {/* 🔥 LISTA COM SCROLL */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
 
         <h2 className="text-xl font-semibold mb-4">
           📦 Relatório por setor
@@ -155,13 +128,13 @@ export default function RelatorioObra() {
           </p>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-4 pr-2">
 
           {setores.map((setor) => (
 
             <div
               key={setor.id}
-              className="flex justify-between items-center bg-white border p-4 rounded-lg shadow-sm"
+              className="flex justify-between items-center bg-white border p-4 rounded-lg shadow-sm hover:shadow-md transition"
             >
 
               <span className="font-medium">
