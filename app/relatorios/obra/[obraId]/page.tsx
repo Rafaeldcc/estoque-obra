@@ -41,26 +41,50 @@ export default function RelatorioObra() {
 
       for(const setorDoc of setoresSnap.docs){
 
-        const materiaisSnap = await getDocs(
+        let subcategoriasAgrupadas:any[] = [];
+
+        const subSnap = await getDocs(
           collection(
             db,
             "obras",
             obraId,
             "setores",
             setorDoc.id,
-            "materiais"
+            "subcategorias"
           )
         );
 
-        const materiais = materiaisSnap.docs.map(doc=>({
-          id:doc.id,
-          ...doc.data()
-        }));
+        for(const sub of subSnap.docs){
+
+          const matSnap = await getDocs(
+            collection(
+              db,
+              "obras",
+              obraId,
+              "setores",
+              setorDoc.id,
+              "subcategorias",
+              sub.id,
+              "materiais"
+            )
+          );
+
+          const mats = matSnap.docs.map(doc=>({
+            id: doc.id,
+            ...doc.data()
+          }));
+
+          subcategoriasAgrupadas.push({
+            nome: sub.data().nome,
+            materiais: mats
+          });
+
+        }
 
         lista.push({
           id:setorDoc.id,
           nome:setorDoc.data().nome,
-          materiais
+          subcategorias: subcategoriasAgrupadas
         });
 
       }
@@ -74,7 +98,6 @@ export default function RelatorioObra() {
     setLoading(false);
   }
 
-  // 🔥 PDF PROFISSIONAL CORRIGIDO
   function gerarPDF(){
 
     const pdf = new jsPDF("p","mm","a4");
@@ -108,6 +131,8 @@ export default function RelatorioObra() {
 
     cabecalho();
 
+    let totalGeral = 0;
+
     setores.forEach((setor:any)=>{
 
       if(y + 10 > pageHeight) novaPagina();
@@ -118,63 +143,59 @@ export default function RelatorioObra() {
 
       y += 8;
 
-      pdf.setFontSize(10);
+      setor.subcategorias.forEach((sub:any)=>{
 
-      pdf.text("Material",20,y);
-      pdf.text("Unid.",130,y);
-      pdf.text("Qtd.",170,y,{align:"right"});
+        if(y + 10 > pageHeight) novaPagina();
 
-      y += 2;
-      pdf.line(20,y,190,y);
-      y += 6;
+        pdf.setFont("helvetica","bold");
+        pdf.text(`SUBCATEGORIA: ${sub.nome}`,20,y);
 
-      let totalSetor = 0;
+        y += 6;
 
-      pdf.setFont("helvetica","normal");
+        pdf.setFont("helvetica","normal");
 
-      if(!setor.materiais || setor.materiais.length === 0){
+        let totalSub = 0;
 
-        pdf.text("Sem materiais cadastrados",20,y);
-        y += 8;
-
-      } else {
-
-        setor.materiais.forEach((m:any)=>{
+        sub.materiais.forEach((m:any)=>{
 
           const saldo = Number(m.saldo ?? 0);
           const unidade = m.unidade || "";
 
-          totalSetor += saldo;
+          totalSub += saldo;
+          totalGeral += saldo;
 
-          // 🔥 CORREÇÃO PRINCIPAL
           if(y + 8 > pageHeight){
             novaPagina();
           }
 
-          pdf.text(String(m.nome || "-"),20,y);
+          pdf.text(m.nome,20,y);
           pdf.text(unidade,130,y);
           pdf.text(saldo.toString(),170,y,{align:"right"});
 
           y += 6;
-
         });
 
-      }
+        y += 2;
 
-      y += 4;
+        pdf.setFont("helvetica","bold");
+        pdf.text(`Total Subcategoria: ${totalSub}`,20,y);
 
-      pdf.setFont("helvetica","bold");
+        y += 8;
 
-      pdf.line(130,y,190,y);
+      });
 
       y += 6;
 
-      pdf.text("TOTAL:",130,y);
-      pdf.text(totalSetor.toString(),170,y,{align:"right"});
-
-      y += 12;
-
     });
+
+    pdf.setFont("helvetica","bold");
+
+    if(y + 10 > pageHeight) novaPagina();
+
+    pdf.line(20,y,190,y);
+    y += 8;
+
+    pdf.text(`TOTAL GERAL DA OBRA: ${totalGeral}`,20,y);
 
     pdf.save(`relatorio-${obraNome}.pdf`);
   }
@@ -205,7 +226,6 @@ export default function RelatorioObra() {
         Gerar PDF da Obra
       </button>
 
-      {/* 🔥 SCROLL CORRIGIDO */}
       <div className="flex-1 min-h-0 overflow-y-auto pr-2 border rounded p-4 bg-white shadow">
 
         {loading && <p>Carregando...</p>}
@@ -221,25 +241,21 @@ export default function RelatorioObra() {
               {setor.nome}
             </h2>
 
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left border-b">
-                  <th>Material</th>
-                  <th className="text-right">Quantidade</th>
-                </tr>
-              </thead>
+            {setor.subcategorias.map((sub:any)=>(
+              <div key={sub.nome} className="mb-3">
 
-              <tbody>
-                {setor.materiais.map((m:any)=>(
-                  <tr key={m.id} className="border-b">
-                    <td>{m.nome}</td>
-                    <td className="text-right">
-                      {(m.saldo ?? 0)} {m.unidade || ""}
-                    </td>
-                  </tr>
+                <h3 className="font-semibold">
+                  {sub.nome}
+                </h3>
+
+                {sub.materiais.map((m:any)=>(
+                  <div key={m.id} className="text-sm ml-2">
+                    {m.nome} — {m.saldo} {m.unidade || ""}
+                  </div>
                 ))}
-              </tbody>
-            </table>
+
+              </div>
+            ))}
 
           </div>
         ))}
