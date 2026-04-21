@@ -15,6 +15,7 @@ export default function RelatorioObra() {
 
   const [obraNome,setObraNome] = useState("");
   const [setores,setSetores] = useState<any[]>([]);
+  const [loading,setLoading] = useState(true);
 
   useEffect(()=>{
     carregar();
@@ -22,189 +23,236 @@ export default function RelatorioObra() {
 
   async function carregar(){
 
-    const obraSnap = await getDoc(
-      doc(db,"obras",obraId)
-    );
+    try{
 
-    if(obraSnap.exists()){
-      setObraNome(obraSnap.data().nome);
-    }
-
-    const setoresSnap = await getDocs(
-      collection(db,"obras",obraId,"setores")
-    );
-
-    const lista:any[] = [];
-
-    for(const setorDoc of setoresSnap.docs){
-
-      const materiaisSnap = await getDocs(
-        collection(
-          db,
-          "obras",
-          obraId,
-          "setores",
-          setorDoc.id,
-          "materiais"
-        )
+      const obraSnap = await getDoc(
+        doc(db,"obras",obraId)
       );
 
-      const materiais = materiaisSnap.docs.map(doc=>({
-        id:doc.id,
-        ...doc.data()
-      }));
+      if(obraSnap.exists()){
+        setObraNome(obraSnap.data().nome);
+      }
 
-      lista.push({
-        id:setorDoc.id,
-        nome:setorDoc.data().nome,
-        materiais
-      });
+      const setoresSnap = await getDocs(
+        collection(db,"obras",obraId,"setores")
+      );
 
+      const lista:any[] = [];
+
+      for(const setorDoc of setoresSnap.docs){
+
+        const materiaisSnap = await getDocs(
+          collection(
+            db,
+            "obras",
+            obraId,
+            "setores",
+            setorDoc.id,
+            "materiais"
+          )
+        );
+
+        const materiais = materiaisSnap.docs.map(doc=>({
+          id:doc.id,
+          ...doc.data()
+        }));
+
+        lista.push({
+          id:setorDoc.id,
+          nome:setorDoc.data().nome,
+          materiais
+        });
+
+      }
+
+      setSetores(lista);
+
+    }catch(e){
+      console.error("Erro ao carregar relatório:",e);
     }
 
-    setSetores(lista);
-
+    setLoading(false);
   }
 
+  // 🔥 PDF PROFISSIONAL
   function gerarPDF(){
 
-    const pdf = new jsPDF();
+    const pdf = new jsPDF("p","mm","a4");
 
-    let y = 20;
+    let y = 15;
+    const pageHeight = 280;
 
-    pdf.setFontSize(20);
-    pdf.text("Relatório Geral da Obra",20,y);
+    function cabecalho(){
 
-    y += 10;
+      pdf.setFont("helvetica","bold");
+      pdf.setFontSize(16);
+      pdf.text("RELATÓRIO DE ESTOQUE DE OBRA",105,10,{align:"center"});
 
-    pdf.setFontSize(12);
-    pdf.text(`Obra: ${obraNome}`,20,y);
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica","normal");
 
-    y += 8;
+      pdf.text(`Obra: ${obraNome}`,20,18);
 
-    const data = new Date().toLocaleDateString();
+      const data = new Date().toLocaleDateString();
+      pdf.text(`Data: ${data}`,150,18);
 
-    pdf.text(`Data: ${data}`,20,y);
+      pdf.line(20,22,190,22);
 
-    y += 15;
+      y = 28;
+    }
+
+    function novaPagina(){
+      pdf.addPage();
+      cabecalho();
+    }
+
+    function rodape(){
+
+      const total = pdf.getNumberOfPages();
+
+      for(let i=1;i<=total;i++){
+        pdf.setPage(i);
+
+        pdf.setFontSize(8);
+
+        pdf.text(`Página ${i} de ${total}`,105,290,{align:"center"});
+
+        pdf.text("Sistema de Controle de Estoque de Obras",20,290);
+      }
+    }
+
+    cabecalho();
 
     setores.forEach((setor:any)=>{
 
-      pdf.setFontSize(14);
-      pdf.text(`Setor: ${setor.nome}`,20,y);
+      if(y > pageHeight) novaPagina();
 
-      y += 8;
+      pdf.setFont("helvetica","bold");
+      pdf.setFontSize(12);
+      pdf.text(`SETOR: ${setor.nome}`,20,y);
 
-      pdf.setFontSize(11);
+      y += 6;
 
-      pdf.text("Material",25,y);
-      pdf.text("Quantidade",150,y);
+      pdf.setFontSize(10);
+      pdf.text("Material",20,y);
+      pdf.text("Unid.",130,y);
+      pdf.text("Qtd.",170,y,{align:"right"});
 
-      y += 3;
+      y += 2;
+      pdf.line(20,y,190,y);
 
-      pdf.line(25,y,190,y);
+      y += 5;
 
-      y += 8;
+      let totalSetor = 0;
+
+      pdf.setFont("helvetica","normal");
 
       setor.materiais.forEach((m:any)=>{
 
         const saldo = m.saldo ?? 0;
         const unidade = m.unidade || "";
 
-        pdf.text(
-          m.nome,
-          25,
-          y
-        );
+        totalSetor += saldo;
 
-        pdf.text(
-          `${saldo} ${unidade}`,
-          150,
-          y
-        );
-
-        y += 7;
-
-        if(y > 270){
-          pdf.addPage();
-          y = 20;
+        if(y > pageHeight){
+          novaPagina();
         }
 
+        pdf.text(m.nome,20,y);
+        pdf.text(unidade,130,y);
+        pdf.text(saldo.toString(),170,y,{align:"right"});
+
+        y += 6;
       });
+
+      // TOTAL DO SETOR
+      y += 2;
+
+      pdf.setFont("helvetica","bold");
+
+      pdf.line(130,y,190,y);
+
+      y += 6;
+
+      pdf.text("TOTAL DO SETOR:",130,y);
+      pdf.text(totalSetor.toString(),170,y,{align:"right"});
 
       y += 10;
 
     });
 
-    pdf.save(`relatorio-${obraNome}.pdf`);
+    rodape();
 
+    pdf.save(`relatorio-${obraNome}.pdf`);
   }
 
   return (
 
-  <div className="p-10 h-screen flex flex-col">
+    <div className="p-10 h-screen flex flex-col">
 
-    {/* BOTÃO VOLTAR */}
-    <button
-      onClick={() => router.push(`/obra/${obraId}`)}
-      className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded mb-6 w-fit"
-    >
-      ← Voltar
-    </button>
+      <button
+        onClick={() => router.push(`/obra/${obraId}`)}
+        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded mb-6 w-fit"
+      >
+        ← Voltar
+      </button>
 
-    <h1 className="text-3xl font-bold mb-2">
-      Relatório Geral da Obra
-    </h1>
+      <h1 className="text-3xl font-bold mb-2">
+        Relatório Geral da Obra
+      </h1>
 
-    <p className="mb-4">
-      Obra: <b>{obraNome}</b>
-    </p>
+      <p className="mb-4">
+        Obra: <b>{obraNome}</b>
+      </p>
 
-    <button
-      onClick={gerarPDF}
-      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded mb-6 w-fit"
-    >
-      Gerar PDF da Obra
-    </button>
+      <button
+        onClick={gerarPDF}
+        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded mb-6 w-fit"
+      >
+        Gerar PDF da Obra
+      </button>
 
-    {/* 🔥 CONTAINER COM SCROLL */}
-    <div className="flex-1 overflow-y-auto pr-2 border rounded p-4">
+      <div className="flex-1 overflow-y-auto pr-2 border rounded p-4 bg-white shadow">
 
-      {setores.map((setor:any)=>(
-        <div key={setor.id} className="mb-6 border-b pb-4">
+        {loading && <p>Carregando...</p>}
 
-          <h2 className="text-xl font-semibold mb-2">
-            {setor.nome}
-          </h2>
+        {!loading && setores.length === 0 && (
+          <p>Nenhum setor encontrado.</p>
+        )}
 
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left border-b">
-                <th>Material</th>
-                <th className="text-right">Quantidade</th>
-              </tr>
-            </thead>
+        {setores.map((setor:any)=>(
+          <div key={setor.id} className="mb-6 border-b pb-4">
 
-            <tbody>
-              {setor.materiais.map((m:any)=>(
-                <tr key={m.id} className="border-b">
-                  <td>{m.nome}</td>
-                  <td className="text-right">
-                    {(m.saldo ?? 0)} {m.unidade || ""}
-                  </td>
+            <h2 className="text-xl font-semibold mb-2">
+              {setor.nome}
+            </h2>
+
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  <th>Material</th>
+                  <th className="text-right">Quantidade</th>
                 </tr>
-              ))}
-            </tbody>
+              </thead>
 
-          </table>
+              <tbody>
+                {setor.materiais.map((m:any)=>(
+                  <tr key={m.id} className="border-b">
+                    <td>{m.nome}</td>
+                    <td className="text-right">
+                      {(m.saldo ?? 0)} {m.unidade || ""}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-        </div>
-      ))}
+          </div>
+        ))}
+
+      </div>
 
     </div>
 
-  </div>
-
-);
-
+  );
 }
