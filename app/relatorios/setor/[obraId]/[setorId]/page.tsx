@@ -43,44 +43,23 @@ export default function RelatorioSetor() {
         setNomeSetor(setorSnap.data().nome);
       }
 
-      let lista:any[] = [];
+      const snap = await getDocs(
+        collection(
+          db,
+          "obras",
+          obraId,
+          "setores",
+          setorId,
+          "materiais"
+        )
+      );
 
-const subcategoriasSnap = await getDocs(
-  collection(
-    db,
-    "obras",
-    obraId,
-    "setores",
-    setorId,
-    "subcategorias"
-  )
-);
+      const lista = snap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
-for(const sub of subcategoriasSnap.docs){
-
-  const materiaisSnap = await getDocs(
-    collection(
-      db,
-      "obras",
-      obraId,
-      "setores",
-      setorId,
-      "subcategorias",
-      sub.id,
-      "materiais"
-    )
-  );
-
-  const materiais = materiaisSnap.docs.map(doc=>({
-    id: doc.id,
-    ...doc.data()
-  }));
-
-  lista.push(...materiais);
-
-}
-
-setMateriais(lista);
+      setMateriais(lista);
 
     } catch (e) {
       console.error("Erro ao carregar materiais:", e);
