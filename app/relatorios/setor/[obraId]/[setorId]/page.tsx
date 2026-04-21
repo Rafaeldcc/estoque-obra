@@ -175,7 +175,7 @@ export default function RelatorioSetor() {
       y += 6;
     });
 
-    // TOTAL SUB
+    // TOTAL SUBCATEGORIA
     y += 2;
 
     pdf.setFont("helvetica","bold");
@@ -245,29 +245,11 @@ export default function RelatorioSetor() {
           <p>Nenhum material encontrado.</p>
         )}
 
-        {materiais.map((sub:any)=>(
-  <div key={sub.id} className="mb-4 border-b pb-2">
-
-    <div className="flex justify-between items-center">
-
-      <strong>{sub.nome}</strong>
-
-      <button
-        onClick={() =>
-          window.open(
-            `/relatorios/subcategoria/${obraId}/${setorId}/${sub.id}`,
-            "_blank"
-          )
-        }
-        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
-      >
-        PDF
-      </button>
-
-    </div>
-
-  </div>
-))}
+        {materiais.map((m)=>(
+          <div key={m.id} className="border-b py-2">
+            {m.nome} — {m.saldo} {m.unidade || ""}
+          </div>
+        ))}
 
       </div>
 
