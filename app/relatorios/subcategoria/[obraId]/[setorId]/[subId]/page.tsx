@@ -19,6 +19,7 @@ export default function RelatorioSubcategoria(){
   const [nomeObra,setNomeObra] = useState("");
   const [nomeSetor,setNomeSetor] = useState("");
   const [nomeSub,setNomeSub] = useState("");
+  const [loading,setLoading] = useState(true);
 
   useEffect(()=>{
     if(!obraId || !setorId || !subId) return;
@@ -27,38 +28,46 @@ export default function RelatorioSubcategoria(){
 
   async function carregar(){
 
-    const obraSnap = await getDoc(doc(db,"obras",obraId));
-    if(obraSnap.exists()) setNomeObra(obraSnap.data().nome);
+    try{
 
-    const setorSnap = await getDoc(
-      doc(db,"obras",obraId,"setores",setorId)
-    );
-    if(setorSnap.exists()) setNomeSetor(setorSnap.data().nome);
+      const obraSnap = await getDoc(doc(db,"obras",obraId));
+      if(obraSnap.exists()) setNomeObra(obraSnap.data().nome);
 
-    const subSnap = await getDoc(
-      doc(db,"obras",obraId,"setores",setorId,"subcategorias",subId)
-    );
-    if(subSnap.exists()) setNomeSub(subSnap.data().nome);
+      const setorSnap = await getDoc(
+        doc(db,"obras",obraId,"setores",setorId)
+      );
+      if(setorSnap.exists()) setNomeSetor(setorSnap.data().nome);
 
-    const matSnap = await getDocs(
-      collection(
-        db,
-        "obras",
-        obraId,
-        "setores",
-        setorId,
-        "subcategorias",
-        subId,
-        "materiais"
-      )
-    );
+      const subSnap = await getDoc(
+        doc(db,"obras",obraId,"setores",setorId,"subcategorias",subId)
+      );
+      if(subSnap.exists()) setNomeSub(subSnap.data().nome);
 
-    const lista = matSnap.docs.map(doc=>({
-      id: doc.id,
-      ...doc.data()
-    }));
+      const matSnap = await getDocs(
+        collection(
+          db,
+          "obras",
+          obraId,
+          "setores",
+          setorId,
+          "subcategorias",
+          subId,
+          "materiais"
+        )
+      );
 
-    setMateriais(lista);
+      const lista = matSnap.docs.map(doc=>({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      setMateriais(lista);
+
+    }catch(e){
+      console.error("Erro:", e);
+    }
+
+    setLoading(false);
   }
 
   function gerarPDF(){
@@ -68,63 +77,89 @@ export default function RelatorioSubcategoria(){
       return;
     }
 
-    const pdf = new jsPDF();
+    const pdf = new jsPDF("p","mm","a4");
 
-    let y = 20;
+    let y = 15;
+    const pageHeight = 270;
 
-    pdf.setFontSize(16);
-    pdf.text("RELATÓRIO DE SUBCATEGORIA",20,y);
+    function cabecalho(){
 
-    y += 10;
+      pdf.setFont("helvetica","bold");
+      pdf.setFontSize(16);
+      pdf.text("RELATÓRIO DE SUBCATEGORIA",105,10,{align:"center"});
 
-    pdf.setFontSize(10);
-    pdf.text(`Obra: ${nomeObra}`,20,y);
-    y += 6;
-    pdf.text(`Setor: ${nomeSetor}`,20,y);
-    y += 6;
-    pdf.text(`Subcategoria: ${nomeSub}`,20,y);
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica","normal");
 
-    y += 10;
+      pdf.text(`Obra: ${nomeObra}`,20,18);
+      pdf.text(`Setor: ${nomeSetor}`,20,24);
+      pdf.text(`Subcategoria: ${nomeSub}`,20,30);
 
+      const data = new Date().toLocaleDateString();
+      pdf.text(`Data: ${data}`,150,18);
+
+      pdf.line(20,34,190,34);
+
+      y = 40;
+    }
+
+    function novaPagina(){
+      pdf.addPage();
+      cabecalho();
+    }
+
+    cabecalho();
+
+    pdf.setFont("helvetica","bold");
     pdf.text("Material",20,y);
-    pdf.text("Qtd.",170,y);
+    pdf.text("Qtd.",170,y,{align:"right"});
 
-    y += 4;
+    y += 2;
     pdf.line(20,y,190,y);
     y += 6;
 
     let total = 0;
 
+    pdf.setFont("helvetica","normal");
+
     materiais.forEach((m:any)=>{
 
       const saldo = Number(m.saldo ?? 0);
+      const unidade = m.unidade || "";
+
       total += saldo;
 
-      pdf.text(m.nome,20,y);
-      pdf.text(saldo.toString(),170,y);
+      if(y + 8 > pageHeight){
+        novaPagina();
+      }
+
+      pdf.text(String(m.nome || "-"),20,y);
+      pdf.text(`${saldo} ${unidade}`,170,y,{align:"right"});
 
       y += 6;
 
-      if(y > 270){
-        pdf.addPage();
-        y = 20;
-      }
-
     });
 
+    y += 4;
+
+    pdf.setFont("helvetica","bold");
+    pdf.line(130,y,190,y);
+
     y += 6;
-    pdf.text(`TOTAL: ${total}`,20,y);
+
+    pdf.text("TOTAL:",130,y);
+    pdf.text(total.toString(),170,y,{align:"right"});
 
     pdf.save(`subcategoria-${nomeSub}.pdf`);
   }
 
   return(
 
-    <div className="p-10">
+    <div className="p-10 flex flex-col h-[calc(100vh-80px)]">
 
       <button
         onClick={()=>router.back()}
-        className="mb-6 bg-gray-600 text-white px-4 py-2 rounded"
+        className="mb-6 bg-gray-600 text-white px-4 py-2 rounded w-fit"
       >
         ← Voltar
       </button>
@@ -139,16 +174,32 @@ export default function RelatorioSubcategoria(){
 
       <button
         onClick={gerarPDF}
-        className="bg-green-600 text-white px-6 py-2 rounded mb-6"
+        disabled={loading}
+        className={`px-6 py-2 rounded text-white mb-6 w-fit ${
+          loading
+            ? "bg-gray-400"
+            : "bg-green-600 hover:bg-green-700"
+        }`}
       >
-        Gerar PDF
+        {loading ? "Carregando..." : "Gerar PDF"}
       </button>
 
-      {materiais.map(m=>(
-        <div key={m.id}>
-          {m.nome} — {m.saldo}
-        </div>
-      ))}
+      {/* 🔥 SCROLL CORRIGIDO */}
+      <div className="flex-1 min-h-0 overflow-y-auto border rounded p-4 bg-white shadow">
+
+        {loading && <p>Carregando materiais...</p>}
+
+        {!loading && materiais.length === 0 && (
+          <p>Nenhum material encontrado.</p>
+        )}
+
+        {materiais.map((m)=>(
+          <div key={m.id} className="border-b py-2">
+            {m.nome} — {m.saldo} {m.unidade || ""}
+          </div>
+        ))}
+
+      </div>
 
     </div>
   );
