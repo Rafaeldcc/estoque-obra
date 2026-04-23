@@ -613,39 +613,39 @@ function MateriaisUsadosMes() {
 
   return(
 
-    <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100">
+  <div className="flex flex-col h-[calc(100vh-120px)] bg-white p-6 rounded-2xl shadow-md border">
 
-      <div className="flex justify-between mb-4">
+    {/* TOPO */}
+    <div className="flex justify-between mb-4">
 
-        <h2 className="text-xl font-bold">
-          🔥 Materiais mais usados
-        </h2>
+      <h2 className="text-xl font-bold">
+        🔥 Materiais mais usados
+      </h2>
 
-        <select
-          value={mes}
-          onChange={(e)=>setMes(Number(e.target.value))}
-          className="border p-2 rounded"
-        >
+      <select
+        value={mes}
+        onChange={(e)=>setMes(Number(e.target.value))}
+        className="border p-2 rounded"
+      >
+        <option value={1}>Janeiro</option>
+        <option value={2}>Fevereiro</option>
+        <option value={3}>Março</option>
+        <option value={4}>Abril</option>
+        <option value={5}>Maio</option>
+        <option value={6}>Junho</option>
+        <option value={7}>Julho</option>
+        <option value={8}>Agosto</option>
+        <option value={9}>Setembro</option>
+        <option value={10}>Outubro</option>
+        <option value={11}>Novembro</option>
+        <option value={12}>Dezembro</option>
+      </select>
 
-          <option value={1}>Janeiro</option>
-          <option value={2}>Fevereiro</option>
-          <option value={3}>Março</option>
-          <option value={4}>Abril</option>
-          <option value={5}>Maio</option>
-          <option value={6}>Junho</option>
-          <option value={7}>Julho</option>
-          <option value={8}>Agosto</option>
-          <option value={9}>Setembro</option>
-          <option value={10}>Outubro</option>
-          <option value={11}>Novembro</option>
-          <option value={12}>Dezembro</option>
-
-        </select>
-
-      </div>
+    </div>
 
 
-      {/* LISTA DE OBRAS */}
+    {/* 🔥 CONTEÚDO COM SCROLL */}
+    <div className="flex-1 overflow-y-auto pr-2">
 
       {!obraSelecionada && (
 
@@ -686,9 +686,6 @@ function MateriaisUsadosMes() {
       )}
 
 
-
-      {/* LISTA DE MATERIAIS DA OBRA */}
-
       {obraSelecionada && (
 
         <div>
@@ -707,14 +704,10 @@ function MateriaisUsadosMes() {
           <table className="w-full">
 
             <thead>
-
               <tr className="border-b">
-
                 <th className="text-left p-2">Material</th>
                 <th className="text-center p-2">Quantidade</th>
-
               </tr>
-
             </thead>
 
             <tbody>
@@ -743,15 +736,16 @@ function MateriaisUsadosMes() {
 
       )}
 
-      <button
-        onClick={gerarPDF}
-        className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-      >
-        📄 Gerar PDF
-      </button>
-
     </div>
 
-  )
+    {/* BOTÃO FIXO */}
+    <button
+      onClick={gerarPDF}
+      className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+    >
+      📄 Gerar PDF
+    </button>
 
-}
+  </div>
+
+)
